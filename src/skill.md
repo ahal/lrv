@@ -8,6 +8,33 @@ description: show diffs for human code review in lrv
 Run `lrv` to open a diff in a browser UI for code review. The user submits
 comments which are returned as JSON or text. Apply all comments as code fixes.
 
+## NEVER pipe or redirect lrv's output
+
+`lrv`'s **stdout is how the review comments reach you**. It is the entire point
+of running the tool. NEVER pipe it, NEVER redirect it, NEVER capture it.
+
+NEVER do any of these:
+
+```
+git diff | lrv > /tmp/review.json      # WRONG — comments lost
+git diff | lrv | tee /tmp/review.json  # WRONG — comments lost
+git diff | lrv | jq .                  # WRONG — comments lost
+git diff | lrv | cat                   # WRONG — comments lost
+RESULT=$(git diff | lrv)               # WRONG — comments lost
+git diff | lrv &                       # WRONG — comments lost
+```
+
+Do this instead — `lrv` is the last command in the pipeline, nothing after it:
+
+```
+git diff | lrv --title="description"
+```
+
+Piping a diff *into* `lrv` is required and correct. It is `lrv`'s own output
+that must never be piped, redirected, backgrounded, or captured into a variable
+or file. If you redirect it, the user's review is thrown away and their work is
+wasted.
+
 ## Usage
 
 ```
@@ -55,6 +82,8 @@ lrv --phab-mcp-comments /tmp/phab.md ...
 ## Behavior
 
 - Run `lrv` synchronously. Never use a sub-agent or background task.
+- Never pipe, redirect, background, or capture `lrv`'s output. Read the comments
+  from its stdout in the tool result.
 - Always print the URL(s) so the user can open them.
 - Wait for the user to submit comments.
 - Plan one fix per comment before touching any code. Never skip a comment.
@@ -69,6 +98,9 @@ lrv --phab-mcp-comments /tmp/phab.md ...
   global comments. In series mode, set `commit_idx` to the zero-based commit
   index.
 - Single-commit mode: put the change in the correct commit (amend, absorb, squash).
+- If comments are somehow lost anyway, they are also stored in a local SQLite
+  database: `lrv --list-reviews` lists stored review sessions and
+  `lrv --recover [<id>]` prints one session's comments as JSON.
 - Series mode: output is a `commits` array, each entry has `commit_hash`,
   `commit_message`, and a `comments` list. Work through the array in order:
   for each commit that has comments, edit that commit and apply all its fixes,

@@ -10,6 +10,33 @@ by the author (e.g. "open lrv on the diff of the entire branch" will pipe the
 diff from the current commit up to the main branch). On submission, fix issues
 without summary.
 
+## NEVER pipe or redirect lrv's output
+
+`lrv`'s **stdout is how the review comments reach you**. It is the entire point
+of running the tool. NEVER pipe it, NEVER redirect it, NEVER capture it.
+
+NEVER do any of these:
+
+```
+git diff | lrv > /tmp/review.json      # WRONG — comments lost
+git diff | lrv | tee /tmp/review.json  # WRONG — comments lost
+git diff | lrv | jq .                  # WRONG — comments lost
+git diff | lrv | cat                   # WRONG — comments lost
+RESULT=$(git diff | lrv)               # WRONG — comments lost
+git diff | lrv &                       # WRONG — comments lost
+```
+
+Do this instead — `lrv` is the last command in the pipeline, nothing after it:
+
+```
+git diff | lrv --title="description"
+```
+
+Piping a diff *into* `lrv` is required and correct. It is `lrv`'s own output
+that must never be piped, redirected, backgrounded, or captured into a variable
+or file. If you redirect it, the user's review is thrown away and their work is
+wasted.
+
 Do it like this (adapt those examples):
 
 ```
@@ -42,6 +69,8 @@ lrv --file /tmp/lrv.diff --review-notes-file /tmp/lrv-local-review.json
 
 - Silently run `lrv`. Never run it in a sub-agent or background task, this NEEDS
   to be synchronous.
+- Never pipe, redirect, background, or capture `lrv`'s output. Read the comments
+  from its stdout in the tool result.
 - Always print the URLs (plural) for the user to see. Otherwise the whole ordeal
   is useless.
 - Wait for user to submit comments
@@ -59,6 +88,9 @@ lrv --file /tmp/lrv.diff --review-notes-file /tmp/lrv-local-review.json
 - No explanations or commentary
 - Single-commit mode: put the change into the right commit (squash, absorb,
   git commit --amend, jj squash, etc.)
+- If comments are somehow lost anyway, they are also stored in a local SQLite
+  database: `lrv --list-reviews` lists stored review sessions and
+  `lrv --recover [<id>]` prints one session's comments as JSON.
 - Series mode: output is a `commits` array, each entry has `commit_hash`,
   `commit_message`, and a `comments` list. Work through commits in order:
   for each commit that has comments, edit it and apply all its fixes,
