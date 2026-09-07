@@ -87,6 +87,7 @@ fn make_jj_state(
             std::collections::HashMap::new(),
         )]),
         is_series: false,
+        store: None,
     }
 }
 

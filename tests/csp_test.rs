@@ -44,6 +44,7 @@ async fn test_csp_header_present() {
             std::collections::HashMap::new(),
         )]),
         is_series: false,
+        store: None,
     };
 
     let app = lrv::server::create_router(state, false);
@@ -101,6 +102,7 @@ async fn test_csp_on_assets_and_api() {
             std::collections::HashMap::new(),
         )]),
         is_series: false,
+        store: None,
     };
 
     let app = lrv::server::create_router(state, false);

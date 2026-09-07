@@ -30,6 +30,7 @@ async function startServer(port: number = 0): Promise<void> {
       env: {
         ...process.env,
         XDG_CONFIG_HOME: path.join(testRepoPath, '.config'),
+        LRV_COMMENT_DB: path.join(testRepoPath, '.config', 'lrv-comments.db'),
       },
     });
     let output = '';

@@ -44,6 +44,7 @@ async fn test_context_includes_title_when_set() {
             std::collections::HashMap::new(),
         )]),
         is_series: false,
+        store: None,
     };
 
     let app = lrv::server::create_router(state, false);
@@ -112,6 +113,7 @@ async fn test_context_title_null_when_unset() {
             std::collections::HashMap::new(),
         )]),
         is_series: false,
+        store: None,
     };
 
     let app = lrv::server::create_router(state, false);

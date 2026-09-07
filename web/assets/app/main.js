@@ -711,6 +711,17 @@ async function saveCommentDraft(key, comments) {
 		console.warn("Failed to persist review comments:", error);
 	}
 }
+async function syncCommentDraftToServer(comments) {
+	try {
+		await fetch("/api/comments/sync", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ comments })
+		});
+	} catch (error) {
+		console.warn("Failed to sync review comments to lrv:", error);
+	}
+}
 async function clearCommentDraft(key) {
 	const db = await openDraftDb();
 	if (!db) return;
@@ -13708,7 +13719,7 @@ var MonacoApp = class {
 		if (!this.commentDraftKey) return;
 		const key = this.commentDraftKey;
 		const comments = this.commentManager.getComments();
-		this.commentDraftWrite = this.commentDraftWrite.catch(() => void 0).then(() => saveCommentDraft(key, comments));
+		this.commentDraftWrite = this.commentDraftWrite.catch(() => void 0).then(() => saveCommentDraft(key, comments)).then(() => syncCommentDraftToServer(comments));
 	}
 	async restorePersistedComments() {
 		if (!this.commentDraftKey) return;

@@ -1,5 +1,6 @@
 use crate::config::UserConfig;
 use crate::skill::{skill_install_paths, EMBEDDED_SKILL};
+use crate::store::CommentStore;
 use crate::themes::{load_user_themes, UserTheme};
 use crate::types::*;
 use axum::{
@@ -57,6 +58,9 @@ pub struct AppState {
     pub old_caches: Arc<Vec<Mutex<HashMap<String, String>>>>,
     pub new_caches: Arc<Vec<Mutex<HashMap<String, String>>>>,
     pub is_series: bool,
+    // Durable comment store. `None` when the database could not be opened;
+    // reviewing still works, only crash recovery is unavailable.
+    pub store: Option<Arc<CommentStore>>,
 }
 
 impl AppState {
@@ -704,6 +708,7 @@ pub fn create_router(state: AppState, enable_trace: bool) -> Router {
         .route("/api/file/preview", get(get_file_preview))
         .route("/api/file/raw", get(get_file_raw))
         .route("/api/comment", post(add_comment))
+        .route("/api/comments/sync", post(sync_comments))
         .route(
             "/api/review-notes",
             get(get_review_notes).post(add_review_note),
@@ -1331,6 +1336,29 @@ async fn add_comment(State(state): State<AppState>, Json(comment): Json<Comment>
     StatusCode::OK
 }
 
+#[derive(Deserialize)]
+struct CommentSync {
+    comments: Vec<Comment>,
+}
+
+// Mirror the browser's comment drafts into the SQLite store on every change so
+// they outlive the tab and the process.
+async fn sync_comments(
+    State(state): State<AppState>,
+    Json(payload): Json<CommentSync>,
+) -> StatusCode {
+    if payload.comments.iter().any(|c| !c.is_valid()) {
+        return StatusCode::BAD_REQUEST;
+    }
+    let Some(store) = state.store.clone() else {
+        return StatusCode::OK;
+    };
+    if let Err(e) = store.replace_comments(&payload.comments) {
+        tracing::warn!("Failed to persist review comments: {e:#}");
+    }
+    StatusCode::OK
+}
+
 async fn get_review_notes(State(state): State<AppState>) -> Json<Vec<ReviewNote>> {
     let notes = state.review_notes.lock().await;
     Json(notes.clone())
@@ -1359,6 +1387,12 @@ async fn complete_review(
     *comments = payload.comments;
     let mut overall_comment = state.overall_comment.lock().await;
     *overall_comment = payload.overall_comment;
+
+    if let Some(store) = &state.store {
+        if let Err(e) = store.finish(&comments, overall_comment.as_deref()) {
+            tracing::warn!("Failed to persist submitted review: {e:#}");
+        }
+    }
 
     // Trigger shutdown
     if let Some(tx) = state.shutdown_tx.lock().await.take() {

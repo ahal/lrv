@@ -8,6 +8,7 @@ import {
   clearCommentDraft,
   loadCommentDraft,
   saveCommentDraft,
+  syncCommentDraftToServer,
 } from './comment-draft-storage';
 import { CUSTOM_THEMES } from './themes';
 import { markAppReady } from './ui-signals';
@@ -352,7 +353,8 @@ export class MonacoApp {
     const comments = this.commentManager.getComments();
     this.commentDraftWrite = this.commentDraftWrite
       .catch(() => undefined)
-      .then(() => saveCommentDraft(key, comments));
+      .then(() => saveCommentDraft(key, comments))
+      .then(() => syncCommentDraftToServer(comments));
   }
 
   private async restorePersistedComments() {

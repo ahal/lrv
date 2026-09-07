@@ -44,6 +44,7 @@ async function startServer(port: number = 0, options?: { title?: string }): Prom
       env: {
         ...process.env,
         XDG_CONFIG_HOME: path.join(testRepoPath, '.config'),
+        LRV_COMMENT_DB: path.join(testRepoPath, '.config', 'lrv-comments.db'),
       },
     });
 
@@ -243,6 +244,15 @@ async function commentDraftCount(page: Page): Promise<number> {
     (count, record) => count + (Array.isArray(record.comments) ? record.comments.length : 0),
     0,
   );
+}
+
+async function recoverStoredComments(): Promise<Array<{ body: string }>> {
+  const lrvBin = process.env.LRV_BIN || path.resolve(__dirname, '../../target/debug/lrv');
+  const dbPath = path.join(testRepoPath!, '.config', 'lrv-comments.db');
+  const { stdout } = await execAsync(`"${lrvBin}" --recover`, {
+    env: { ...process.env, LRV_COMMENT_DB: dbPath },
+  });
+  return (JSON.parse(stdout) as { comments: Array<{ body: string }> }).comments;
 }
 
 /**
@@ -719,6 +729,37 @@ test.describe('Review Workflow E2E', () => {
     await page.locator('.confirm-submit-btn').click();
     await expect(page.locator('text=Review Submitted')).toBeVisible({ timeout: 3000 });
     await expect.poll(() => commentDraftCount(page)).toBe(0);
+  });
+
+  test('records comments in the SQLite store as they are made', async ({ page }) => {
+    await openApp(page, { requireEditor: false });
+    await page.waitForFunction(() => {
+      const app = (window as any).__APP;
+      return app?.files?.length > 0 && app?.commentDraftKey;
+    });
+
+    await page.evaluate(() => {
+      const app = (window as any).__APP;
+      app.commentManager.addComment({
+        file: app.files[0].path,
+        line: 1,
+        side: 'new',
+        body: 'Recoverable from sqlite',
+      });
+    });
+
+    await expect
+      .poll(async () => (await recoverStoredComments()).map((c) => c.body))
+      .toEqual(['Recoverable from sqlite']);
+
+    // Submitting clears the browser drafts; the SQLite record must survive.
+    await page.locator('#submit-review').click();
+    await page.locator('.confirm-submit-btn').click();
+    await expect(page.locator('text=Review Submitted')).toBeVisible({ timeout: 3000 });
+    await expect.poll(() => commentDraftCount(page)).toBe(0);
+
+    const recovered = await recoverStoredComments();
+    expect(recovered.map((c) => c.body)).toEqual(['Recoverable from sqlite']);
   });
 
   test('should open and save settings', async ({ page }) => {
