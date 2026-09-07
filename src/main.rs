@@ -6,6 +6,7 @@ mod phab_mcp;
 mod phabricator;
 mod server;
 mod skill;
+mod store;
 mod themes;
 mod types;
 
@@ -246,6 +247,15 @@ struct Args {
     /// Validate a review notes JSON file and exit (exit 0 on success, 1 on error)
     #[arg(long)]
     validate_review_notes: Option<String>,
+
+    /// List review sessions stored in the local comment database and exit
+    #[arg(long)]
+    list_reviews: bool,
+
+    /// Print the comments of a stored review session and exit (session id, or
+    /// nothing/"latest" for the most recent one with comments)
+    #[arg(long, num_args = 0..=1, default_missing_value = "latest")]
+    recover: Option<String>,
 }
 
 fn is_jj_repo(root: &str) -> bool {
@@ -531,6 +541,71 @@ fn line_exists_in_file(file: &crate::types::FileDiff, line: &CommentLine, side: 
     })
 }
 
+fn list_stored_reviews() -> Result<()> {
+    let path = store::default_db_path()?;
+    let sessions = store::CommentStore::list_sessions(&path, 50)?;
+    if sessions.is_empty() {
+        eprintln!("No stored review sessions in {}", path.display());
+        return Ok(());
+    }
+    for session in sessions {
+        let label = session
+            .title
+            .as_deref()
+            .or(session.commit_hash.as_deref())
+            .or(session.git_branch.as_deref())
+            .unwrap_or("(no title)");
+        println!(
+            "{:>5}  {}  {:>3} comment{}  {:<11}  {:<6}  {}  {}",
+            session.id,
+            session.updated_at,
+            session.comment_count,
+            if session.comment_count == 1 { " " } else { "s" },
+            if session.submitted_at.is_some() {
+                "submitted"
+            } else {
+                "unsubmitted"
+            },
+            if session.is_series {
+                "series"
+            } else {
+                "single"
+            },
+            session.working_directory,
+            label,
+        );
+    }
+    Ok(())
+}
+
+fn recover_stored_review(selector: &str, format: &OutputFormat) -> Result<()> {
+    let id = if selector == "latest" {
+        None
+    } else {
+        Some(
+            selector
+                .parse::<i64>()
+                .with_context(|| format!("Invalid session id: {selector}"))?,
+        )
+    };
+    let path = store::default_db_path()?;
+    let Some((session, comments)) = store::CommentStore::load_session(&path, id)? else {
+        eprintln!("No stored review comments found");
+        std::process::exit(1);
+    };
+    eprintln!(
+        "Recovered session {} ({}, {})",
+        session.id, session.updated_at, session.working_directory
+    );
+    // Printed in single-diff shape: commit_idx is preserved on each comment,
+    // and the original diffs are no longer available to group by commit.
+    println!(
+        "{}",
+        output::format_output(comments, format, &[], false, session.overall_comment)
+    );
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
@@ -549,6 +624,14 @@ async fn main() -> Result<()> {
             .context("Could not determine config directory")?
             .join("lrv");
         println!("{}", dir.display());
+        return Ok(());
+    }
+    if args.list_reviews {
+        list_stored_reviews()?;
+        return Ok(());
+    }
+    if let Some(selector) = &args.recover {
+        recover_stored_review(selector, &args.format.parse()?)?;
         return Ok(());
     }
     if let Some(path) = args.validate_review_notes {
@@ -739,6 +822,22 @@ async fn main() -> Result<()> {
         maps
     };
 
+    let store_meta = store::SessionMeta {
+        working_directory: project_context.working_directory.clone(),
+        git_branch: project_context.git_branch.clone(),
+        title: project_context.title.clone(),
+        commit_hash: diffs.first().and_then(|d| d.commit_hash.clone()),
+        jj_change_id: diffs.first().and_then(|d| d.jj_change_id.clone()),
+        is_series,
+    };
+    let store = match store::CommentStore::open_default(store_meta) {
+        Ok(store) => Some(Arc::new(store)),
+        Err(e) => {
+            eprintln!("warning: comments will not be saved for recovery: {e:#}");
+            None
+        }
+    };
+
     // Create app state
     let state = AppState {
         diffs: Arc::new(diffs),
@@ -751,6 +850,7 @@ async fn main() -> Result<()> {
         old_caches: Arc::new(old_caches),
         new_caches: Arc::new(new_caches),
         is_series,
+        store,
     };
 
     // Create router (we'll clone per listener)

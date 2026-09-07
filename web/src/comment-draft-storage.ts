@@ -88,6 +88,20 @@ export async function saveCommentDraft(key: string, comments: ReviewComment[]): 
   }
 }
 
+// Mirror the draft to the lrv process, which stores it in SQLite so comments
+// survive losing the browser profile, the tab, or the terminal output.
+export async function syncCommentDraftToServer(comments: ReviewComment[]): Promise<void> {
+  try {
+    await fetch('/api/comments/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comments }),
+    });
+  } catch (error) {
+    console.warn('Failed to sync review comments to lrv:', error);
+  }
+}
+
 export async function clearCommentDraft(key: string): Promise<void> {
   const db = await openDraftDb();
   if (!db) {

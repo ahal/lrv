@@ -34,6 +34,7 @@ async function startSeriesServer(port: number = 0, range: string = 'HEAD~2..HEAD
       env: {
         ...process.env,
         XDG_CONFIG_HOME: path.join(testRepoPath, '.config'),
+        LRV_COMMENT_DB: path.join(testRepoPath, '.config', 'lrv-comments.db'),
       },
     });
 
@@ -330,6 +331,7 @@ test.describe('Series: first commit has no file changes', () => {
         env: {
           ...process.env,
           XDG_CONFIG_HOME: path.join(repoDir!, '.config'),
+          LRV_COMMENT_DB: path.join(repoDir!, '.config', 'lrv-comments.db'),
         },
       });
       let settled = false;
@@ -429,6 +431,7 @@ test.describe('Series: stacked-mode comments stay scoped to their own commit', (
         env: {
           ...process.env,
           XDG_CONFIG_HOME: path.join(repoDir!, '.config'),
+          LRV_COMMENT_DB: path.join(repoDir!, '.config', 'lrv-comments.db'),
         },
       });
       let settled = false;
@@ -548,6 +551,7 @@ test.describe('Series: overall feedback is series-wide, not attached to a single
         env: {
           ...process.env,
           XDG_CONFIG_HOME: path.join(repoDir!, '.config'),
+          LRV_COMMENT_DB: path.join(repoDir!, '.config', 'lrv-comments.db'),
         },
       });
       let settled = false;

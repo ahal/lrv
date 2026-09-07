@@ -22,7 +22,7 @@ just setup-e2e   # first time only
 
 ## Architecture
 
-Backend: `main.rs` (CLI), `server.rs` (routes), `diff.rs` (parsing), `types.rs`, `output.rs`, `config.rs`, `github.rs`, `phab_mcp.rs`, `phabricator.rs`.
+Backend: `main.rs` (CLI), `server.rs` (routes), `diff.rs` (parsing), `types.rs`, `output.rs`, `config.rs`, `github.rs`, `phab_mcp.rs`, `phabricator.rs`, `store.rs` (SQLite comment persistence).
 
 Frontend (`web/src/`): `monaco-app.ts` (entry), `file-loading-methods.ts`, `stacked-view-methods.ts`, `comments-ui-methods.ts`, `commit-methods.ts`, `series-methods.ts`, `comment-draft-storage.ts`, `themes.ts`.
 
@@ -40,6 +40,7 @@ Any comment UX change (shortcuts, edit, delete, validation) must go in both.
 
 - **Port**: derived from CWD hash (32768–40959); falls back to ephemeral if taken.
 - **Comment drafts**: IndexedDB, keyed by `working_directory + git_branch + jj_change_id` (stable across amends). On reload, a banner prompts to restore rather than auto-restoring.
+- **Comment persistence**: every draft change is also mirrored to `store.rs` (SQLite, one session row per `lrv` run, created lazily on the first comment) via `POST /api/comments/sync`. Submitting freezes the session, so the UI clearing its drafts afterwards can't erase the record. Read back with `--list-reviews` / `--recover`.
 - **jj**: `diff.rs` parses `Change ID:` from `jj show --git` for stable draft keys.
 - **Added-file dimming**: `file-added-view` / `stacked-file-added` classes scope green reduction to entirely new files only (not individual added lines). Uses `color-mix()` so it works with any theme.
 - **Series**: commit strip shows per-commit comment counts; mixed-author series shows author names.
@@ -56,6 +57,8 @@ Any comment UX change (shortcuts, edit, delete, validation) must go in both.
 --github-pr-comments <path>        pipe output of: gh api repos/OWNER/REPO/pulls/N/comments
 --phab-mcp-comments <path>         pipe output of: mcp__moz__get_phabricator_revision
 --phab-revision <D123>             fetch via Conduit API (needs PHABRICATOR_API_KEY)
+--list-reviews                     list stored review sessions
+--recover [<id>]                   print a stored session's comments
 --bind, --public, --tailscale, --port, --no-open, --format, --title, --dev-log
 ```
 

@@ -72,6 +72,8 @@ Useful flags:
 --phab-revision D123456
                   Render Phabricator review comments inline with the diff
 --config-dir       Print the config directory path and exit
+--list-reviews     List review sessions stored in the local comment database
+--recover [<ID>]   Print a stored session's comments (default: the most recent)
 --bind <ADDR>      Bind a specific address (default: 127.0.0.1)
 --public           Bind on all interfaces
 --tailscale        Also bind detected Tailscale IPv4 addresses
@@ -87,7 +89,14 @@ Network exposure:
 
 Notes:
 
-- Submitted comments are written to stdout, so you can pipe or capture them.
+- Submitted comments are written to stdout. When an agent runs `lrv`, that
+  stdout is how the comments reach it, so the agent must not pipe, redirect,
+  or background `lrv`'s output.
+- Every comment is also recorded in a SQLite database as it is made, so a
+  review survives losing the browser tab, the `lrv` process, or the terminal
+  output. Use `lrv --list-reviews` and `lrv --recover [<ID>]` to get it back.
+  The database lives next to the config (`comments.db` in the platform data
+  directory); `LRV_COMMENT_DB` overrides its path.
 - Review notes are display-only annotations. They reserve space below the
   target line in the diff and are not included in submitted review output.
   `--review-notes-file` accepts a JSON array of objects with `file`, `line`,
