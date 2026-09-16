@@ -80,21 +80,18 @@ fn parse_header(header: &str, body: String) -> Option<ReviewNote> {
         let file = header.split(" on `").nth(1)?.split('`').next()?.to_string();
 
         // Extract line(s): "at Line N" or "at Lines N-M"
-        let line = if let Some(at_pos) = header.find(" at Line") {
-            let after = header[at_pos..]
-                .trim_start_matches(" at Lines")
-                .trim_start_matches(" at Line")
-                .trim();
-            // Strip trailing " [RESOLVED]" or end
-            let num_str = after
-                .split_whitespace()
-                .next()
-                .unwrap_or("")
-                .trim_matches(|c: char| !c.is_ascii_digit() && c != '-');
-            parse_line_spec(num_str)?
-        } else {
-            return None;
-        };
+        let at_pos = header.find(" at Line")?;
+        let after = header[at_pos..]
+            .trim_start_matches(" at Lines")
+            .trim_start_matches(" at Line")
+            .trim();
+        // Strip trailing " [RESOLVED]" or end
+        let num_str = after
+            .split_whitespace()
+            .next()
+            .unwrap_or("")
+            .trim_matches(|c: char| !c.is_ascii_digit() && c != '-');
+        let line = parse_line_spec(num_str)?;
 
         Some(ReviewNote {
             id: None,

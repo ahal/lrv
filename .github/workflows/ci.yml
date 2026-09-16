@@ -75,3 +75,11 @@ jobs:
       - name: Run Playwright e2e
         run: just ci-e2e
 
+      - name: Upload e2e results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: e2e/test-results
+          retention-days: 7
+
