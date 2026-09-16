@@ -221,6 +221,7 @@ export class FileLoadingMethods {
         fontSize: 14,
         fontFamily: mono,
         lineNumbers: 'on',
+        wordWrap: this.config.word_wrap ? 'on' : 'off',
         renderOverviewRuler: true,
         hideUnchangedRegions: MONACO_HIDE_UNCHANGED,
         scrollbar: {
@@ -295,6 +296,7 @@ export class FileLoadingMethods {
     diffEditor.updateOptions({
       renderSideBySide,
       fontFamily: mono,
+      wordWrap: this.config.word_wrap ? 'on' : 'off',
       glyphMargin: true,
       folding: false,
       lineDecorationsWidth: 0,

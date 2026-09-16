@@ -652,7 +652,8 @@ const DEFAULT_APP_CONFIG = {
 	font: "JetBrains Mono",
 	split_view: true,
 	auto_close_tab: true,
-	stacked_view: false
+	stacked_view: false,
+	word_wrap: false
 };
 function resolveAppConfig(input) {
 	return {
@@ -660,7 +661,8 @@ function resolveAppConfig(input) {
 		font: input.font?.trim() || DEFAULT_APP_CONFIG.font,
 		split_view: input.split_view ?? DEFAULT_APP_CONFIG.split_view,
 		auto_close_tab: input.auto_close_tab ?? DEFAULT_APP_CONFIG.auto_close_tab,
-		stacked_view: input.stacked_view ?? DEFAULT_APP_CONFIG.stacked_view
+		stacked_view: input.stacked_view ?? DEFAULT_APP_CONFIG.stacked_view,
+		word_wrap: input.word_wrap ?? DEFAULT_APP_CONFIG.word_wrap
 	};
 }
 
@@ -11023,6 +11025,7 @@ var FileLoadingMethods = class {
 			fontSize: 14,
 			fontFamily: mono,
 			lineNumbers: "on",
+			wordWrap: this.config.word_wrap ? "on" : "off",
 			renderOverviewRuler: true,
 			hideUnchangedRegions: MONACO_HIDE_UNCHANGED,
 			scrollbar: {
@@ -11074,6 +11077,7 @@ var FileLoadingMethods = class {
 		diffEditor.updateOptions({
 			renderSideBySide,
 			fontFamily: mono,
+			wordWrap: this.config.word_wrap ? "on" : "off",
 			glyphMargin: true,
 			folding: false,
 			lineDecorationsWidth: 0,
@@ -12503,11 +12507,13 @@ var DialogMethods = class {
 		const currentFont = this.config.font;
 		const currentSplitView = this.config.split_view;
 		const currentAutoCloseTab = this.config.auto_close_tab;
+		const currentWordWrap = this.config.word_wrap;
 		if (window.DEBUG) console.info("Settings modal - current values:", {
 			currentColorScheme,
 			currentFont,
 			currentSplitView,
-			currentAutoCloseTab
+			currentAutoCloseTab,
+			currentWordWrap
 		});
 		const opt = (value, text) => el("option", {
 			attrs: { value },
@@ -12569,9 +12575,19 @@ var DialogMethods = class {
 			name: "auto_close_tab",
 			checked: currentAutoCloseTab
 		} }), el("span", { text: "Automatically close tab after submitting review" })])]);
+		const wordWrapField = el("div", { className: "settings-field" }, [el("label", {
+			attrs: { for: "word-wrap" },
+			text: "Word Wrap"
+		}), el("div", { className: "checkbox-wrapper" }, [el("input", { attrs: {
+			type: "checkbox",
+			id: "word-wrap",
+			name: "word_wrap",
+			checked: currentWordWrap
+		} }), el("span", { text: "Wrap long lines instead of scrolling horizontally" })])]);
 		form.appendChild(themeField);
 		form.appendChild(fontField);
 		form.appendChild(splitViewField);
+		form.appendChild(wordWrapField);
 		form.appendChild(autoCloseField);
 		body.appendChild(form);
 		const colorField = form.querySelector("#color-scheme");
@@ -12587,6 +12603,7 @@ var DialogMethods = class {
 				font: String(formData.get("font") ?? ""),
 				split_view: formData.get("split_view") === "on",
 				auto_close_tab: formData.get("auto_close_tab") === "on",
+				word_wrap: formData.get("word_wrap") === "on",
 				stacked_view: this.config.stacked_view
 			});
 			try {
@@ -12602,7 +12619,8 @@ var DialogMethods = class {
 					saveBtn.textContent = "Saved!";
 					setTimeout(() => {
 						close();
-						this.loadFile(this.currentFileIndex);
+						if (this.isStacked) this.showStackedView();
+						else this.loadFile(this.currentFileIndex);
 					}, 500);
 				} else {
 					alert("Failed to save settings");
@@ -13084,6 +13102,7 @@ var StackedViewMethods = class {
 		});
 		const view = new CodeView({
 			diffStyle: "split",
+			overflow: this.config.word_wrap ? "wrap" : "scroll",
 			theme: DIFFS_THEME,
 			lineHoverHighlight: "both",
 			hunkSeparators: "line-info-basic",

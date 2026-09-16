@@ -39,6 +39,7 @@ export type AppConfig = {
   split_view: boolean;
   stacked_view: boolean;
   auto_close_tab: boolean;
+  word_wrap: boolean;
 };
 
 export type AppConfigInput = Partial<AppConfig>;

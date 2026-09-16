@@ -15,6 +15,8 @@ pub struct UserConfig {
     pub auto_close_tab: bool,
     #[serde(default)]
     pub stacked_view: bool,
+    #[serde(default)]
+    pub word_wrap: bool,
 }
 
 fn default_color_scheme() -> String {
@@ -41,6 +43,7 @@ impl Default for UserConfig {
             split_view: default_split_view(),
             auto_close_tab: default_auto_close_tab(),
             stacked_view: false,
+            word_wrap: false,
         }
     }
 }

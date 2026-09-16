@@ -7,6 +7,7 @@ fn test_config_defaults() {
     assert_eq!(config.font, "JetBrains Mono");
     assert!(config.split_view);
     assert!(config.auto_close_tab);
+    assert!(!config.word_wrap);
 }
 
 /// Test config serialization/deserialization
@@ -18,6 +19,7 @@ fn test_config_serde() {
         split_view: false,
         auto_close_tab: false,
         stacked_view: false,
+        word_wrap: true,
     };
 
     // Serialize to TOML
@@ -31,6 +33,7 @@ fn test_config_serde() {
     assert_eq!(deserialized.font, "Monaco");
     assert!(!deserialized.split_view);
     assert!(!deserialized.auto_close_tab);
+    assert!(deserialized.word_wrap);
 }
 
 /// Test config with missing fields (should use defaults)
