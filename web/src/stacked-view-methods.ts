@@ -271,6 +271,7 @@ export class StackedViewMethods {
     const view = new CodeView<StackedAnnotation>(
       {
         diffStyle: 'split',
+        overflow: this.config.word_wrap ? 'wrap' : 'scroll',
         theme: DIFFS_THEME,
         lineHoverHighlight: 'both',
         hunkSeparators: 'line-info-basic',

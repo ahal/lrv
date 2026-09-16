@@ -6,6 +6,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   split_view: true,
   auto_close_tab: true,
   stacked_view: false,
+  word_wrap: false,
 };
 
 export function resolveAppConfig(input: AppConfigInput): AppConfig {
@@ -15,5 +16,6 @@ export function resolveAppConfig(input: AppConfigInput): AppConfig {
     split_view: input.split_view ?? DEFAULT_APP_CONFIG.split_view,
     auto_close_tab: input.auto_close_tab ?? DEFAULT_APP_CONFIG.auto_close_tab,
     stacked_view: input.stacked_view ?? DEFAULT_APP_CONFIG.stacked_view,
+    word_wrap: input.word_wrap ?? DEFAULT_APP_CONFIG.word_wrap,
   };
 }

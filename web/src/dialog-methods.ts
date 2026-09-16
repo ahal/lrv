@@ -92,6 +92,8 @@ export class DialogMethods {
   declare applyThemeToUI: (theme: string) => void;
   declare loadFile: (index: number) => Promise<void>;
   declare userThemes: AppContext['userThemes'];
+  declare isStacked: boolean;
+  declare showStackedView: () => void;
 
   showKeyboardHelp() {
     const { overlay, modal, body, close } = openModal({
@@ -184,6 +186,7 @@ export class DialogMethods {
     const currentFont = this.config.font;
     const currentSplitView = this.config.split_view;
     const currentAutoCloseTab = this.config.auto_close_tab;
+    const currentWordWrap = this.config.word_wrap;
 
     if (window.DEBUG) {
       console.info('Settings modal - current values:', {
@@ -191,6 +194,7 @@ export class DialogMethods {
         currentFont,
         currentSplitView,
         currentAutoCloseTab,
+        currentWordWrap,
       });
     }
 
@@ -288,9 +292,25 @@ export class DialogMethods {
       ]),
     ]);
 
+    const wordWrapField = el('div', { className: 'settings-field' }, [
+      el('label', { attrs: { for: 'word-wrap' }, text: 'Word Wrap' }),
+      el('div', { className: 'checkbox-wrapper' }, [
+        el('input', {
+          attrs: {
+            type: 'checkbox',
+            id: 'word-wrap',
+            name: 'word_wrap',
+            checked: currentWordWrap,
+          },
+        }),
+        el('span', { text: 'Wrap long lines instead of scrolling horizontally' }),
+      ]),
+    ]);
+
     form.appendChild(themeField);
     form.appendChild(fontField);
     form.appendChild(splitViewField);
+    form.appendChild(wordWrapField);
     form.appendChild(autoCloseField);
 
     body.appendChild(form);
@@ -313,6 +333,7 @@ export class DialogMethods {
         font: String(formData.get('font') ?? ''),
         split_view: formData.get('split_view') === 'on',
         auto_close_tab: formData.get('auto_close_tab') === 'on',
+        word_wrap: formData.get('word_wrap') === 'on',
         stacked_view: this.config.stacked_view,
       });
 
@@ -332,7 +353,11 @@ export class DialogMethods {
 
           setTimeout(() => {
             close();
-            this.loadFile(this.currentFileIndex);
+            if (this.isStacked) {
+              this.showStackedView();
+            } else {
+              this.loadFile(this.currentFileIndex);
+            }
           }, 500);
         } else {
           alert('Failed to save settings');
