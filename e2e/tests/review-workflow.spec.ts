@@ -249,9 +249,16 @@ async function commentDraftCount(page: Page): Promise<number> {
 async function recoverStoredComments(): Promise<Array<{ body: string }>> {
   const lrvBin = process.env.LRV_BIN || path.resolve(__dirname, '../../target/debug/lrv');
   const dbPath = path.join(testRepoPath!, '.config', 'lrv-comments.db');
-  const { stdout } = await execAsync(`"${lrvBin}" --recover`, {
-    env: { ...process.env, LRV_COMMENT_DB: dbPath },
-  });
+  // `--recover` exits 1 until the first comment has been synced; report that
+  // as "nothing stored yet" so callers can poll instead of failing outright.
+  let stdout: string;
+  try {
+    ({ stdout } = await execAsync(`"${lrvBin}" --recover`, {
+      env: { ...process.env, LRV_COMMENT_DB: dbPath },
+    }));
+  } catch {
+    return [];
+  }
   return (JSON.parse(stdout) as { comments: Array<{ body: string }> }).comments;
 }
 
