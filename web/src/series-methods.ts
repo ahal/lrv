@@ -1,6 +1,5 @@
 import { clearEl, el } from './dom';
 import { fetchJSON } from './api';
-import { showNavIndicator } from './ui-signals';
 import type { AppContext, DiffFile, DiffStats, SeriesInfo } from './types/app';
 
 export class SeriesMethods {
@@ -143,10 +142,6 @@ export class SeriesMethods {
     } else {
       this.loadCommitView();
     }
-
-    showNavIndicator(
-      `Commit ${clamped + 1}/${series.commits.length}: ${series.commits[clamped]?.commit_message?.split('\n')[0] ?? ''}`,
-    );
   }
 
   nextCommit() {

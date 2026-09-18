@@ -1,4 +1,3 @@
-let navTimer: ReturnType<typeof setTimeout> | null = null;
 const FIRST_LINE_SELECTOR = '.monaco-editor .view-lines .view-line';
 const STACKED_READY_SELECTOR = '.stacked-code-view diffs-container, .stacked-empty';
 
@@ -28,21 +27,6 @@ function setAppReady(debugMessage: string) {
   if (window.DEBUG) {
     console.info(debugMessage);
   }
-}
-
-export function showNavIndicator(text: string): void {
-  const indicatorEl = document.getElementById('nav-indicator');
-  if (!indicatorEl) {
-    return;
-  }
-  indicatorEl.textContent = text;
-  indicatorEl.style.display = 'inline-block';
-  if (navTimer) {
-    clearTimeout(navTimer);
-  }
-  navTimer = setTimeout(() => {
-    indicatorEl.style.display = 'none';
-  }, 900);
 }
 
 export function markAppReady() {

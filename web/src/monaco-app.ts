@@ -122,6 +122,8 @@ export class MonacoApp {
   declare setupCommitStripResizer: () => void;
   declare setupFileListControls: () => void;
   declare setupKeyboardShortcuts: () => void;
+  declare toggleView: () => void;
+  declare updateViewToggleLabel: () => void;
 
   constructor() {
     this.commentManager = new CommentManager();
@@ -237,6 +239,7 @@ export class MonacoApp {
 
     // Apply split view setting from config
     this.isInline = !this.config.split_view;
+    this.updateViewToggleLabel();
 
     // Wait for AMD loader to be ready
     window.Perf.mark('init:amd-wait:start');
@@ -602,8 +605,7 @@ export class MonacoApp {
 
     // Toggle view
     $('#toggle-view')?.addEventListener('click', () => {
-      this.isInline = !this.isInline;
-      this.loadFile(this.currentFileIndex);
+      this.toggleView();
     });
 
     $('#toggle-stacked')?.addEventListener('click', () => {

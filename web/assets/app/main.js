@@ -814,7 +814,6 @@ function hashString(value) {
 
 //#endregion
 //#region web/src/ui-signals.ts
-let navTimer = null;
 const FIRST_LINE_SELECTOR = ".monaco-editor .view-lines .view-line";
 const STACKED_READY_SELECTOR = ".stacked-code-view diffs-container, .stacked-empty";
 function recordFirstLineVisible() {
@@ -828,16 +827,6 @@ function setAppReady(debugMessage) {
 	window.Perf.mark("init:app-ready");
 	if (performance.getEntriesByName("appInit").length > 0) window.Perf.measure("init:app-ready-after-appInit", "appInitEnd", "init:app-ready");
 	if (window.DEBUG) console.info(debugMessage);
-}
-function showNavIndicator(text) {
-	const indicatorEl = document.getElementById("nav-indicator");
-	if (!indicatorEl) return;
-	indicatorEl.textContent = text;
-	indicatorEl.style.display = "inline-block";
-	if (navTimer) clearTimeout(navTimer);
-	navTimer = setTimeout(() => {
-		indicatorEl.style.display = "none";
-	}, 900);
 }
 function markAppReady() {
 	if (window.__APP_READY) return;
@@ -11354,13 +11343,14 @@ var NavigationMethods = class {
 	}
 	toggleView() {
 		this.isInline = !this.isInline;
+		this.updateViewToggleLabel();
 		this.loadFile(this.currentFileIndex);
-		const file = this.getCurrentFile();
-		if (this.isAddedFile(file)) {
-			showNavIndicator("Inline (new file)");
-			return;
-		}
-		showNavIndicator(this.isInline ? "Inline" : "Side-by-Side");
+	}
+	updateViewToggleLabel() {
+		const btn = document.getElementById("toggle-view");
+		if (!btn) return;
+		btn.textContent = this.isInline ? "View: Inline" : "View: Side-by-Side";
+		btn.setAttribute("aria-pressed", String(this.isInline));
 	}
 	matchKeyboardShortcut(e) {
 		const modKey = IS_MAC ? e.metaKey : e.ctrlKey;
@@ -11401,16 +11391,10 @@ var NavigationMethods = class {
 		return e.key === key;
 	}
 	nextFile() {
-		if (this.currentFileIndex < this.files.length - 1) {
-			this.loadFile(this.currentFileIndex + 1);
-			showNavIndicator(`File ${this.currentFileIndex + 2}/${this.files.length}`);
-		}
+		if (this.currentFileIndex < this.files.length - 1) this.loadFile(this.currentFileIndex + 1);
 	}
 	previousFile() {
-		if (this.currentFileIndex > 0) {
-			this.loadFile(this.currentFileIndex - 1);
-			showNavIndicator(`File ${this.currentFileIndex}/${this.files.length}`);
-		}
+		if (this.currentFileIndex > 0) this.loadFile(this.currentFileIndex - 1);
 	}
 	nextHunk() {
 		const file = this.getCurrentFile();
@@ -11454,16 +11438,10 @@ var NavigationMethods = class {
 			this.editor.getOriginalEditor().revealLineInCenter(hunkRange.start, reduceMotion ? monaco.editor.ScrollType.Immediate : smooth);
 			this.highlightFocusedHunk(hunkRange.start, hunkRange.end, "old");
 			this.setFocusedLine("old", hunkRange.start, false);
-			const idx = (this.currentHunkIndex[file.path] ?? 0) + 1;
-			const total = hunks.length;
-			showNavIndicator(`Hunk ${idx}/${total} • old`);
 		} else {
 			this.editor.getModifiedEditor().revealLineInCenter(hunkRange.start, reduceMotion ? monaco.editor.ScrollType.Immediate : smooth);
 			this.highlightFocusedHunk(hunkRange.start, hunkRange.end, "new");
 			this.setFocusedLine("new", hunkRange.start, false);
-			const idx = (this.currentHunkIndex[file.path] ?? 0) + 1;
-			const total = hunks.length;
-			showNavIndicator(`Hunk ${idx}/${total} • new`);
 		}
 	}
 	highlightFocusedHunk(startLine, endLine, side = "new") {
@@ -11508,7 +11486,6 @@ var NavigationMethods = class {
 			this.focusedLineDecorationsNew = modifiedEditor.deltaDecorations([], dec);
 			if (reveal) modifiedEditor.revealLineInCenterIfOutsideViewport(monacoLine, scrollType);
 		}
-		showNavIndicator(`Line ${monacoLine} • ${side === "old" ? "old" : "new"}`);
 	}
 	moveLine(delta) {
 		if (!this.editor) return;
@@ -11790,7 +11767,6 @@ var CommitMethods = class {
 				body
 			};
 			this.commentManager.addComment(comment);
-			showNavIndicator("Commit comment added");
 			cleanup();
 		};
 	}
@@ -12916,7 +12892,6 @@ var SeriesMethods = class {
 		else if (this.isStacked) this.renderStackedView();
 		else if (this.files.length > 0) await this.loadFile(0);
 		else this.loadCommitView();
-		showNavIndicator(`Commit ${clamped + 1}/${series.commits.length}: ${series.commits[clamped]?.commit_message?.split("\n")[0] ?? ""}`);
 	}
 	nextCommit() {
 		if (!this.seriesInfo?.is_series) return;
@@ -13666,6 +13641,7 @@ var MonacoApp = class {
 		this.commentDraftKey = buildCommentDraftKey(this.context, this.diff, this.seriesInfo);
 		await this.restorePersistedComments();
 		this.isInline = !this.config.split_view;
+		this.updateViewToggleLabel();
 		window.Perf.mark("init:amd-wait:start");
 		await new Promise((resolve, reject) => {
 			const start = performance.now();
@@ -13917,8 +13893,7 @@ var MonacoApp = class {
 			this.showSubmitConfirmation();
 		});
 		$$2("#toggle-view")?.addEventListener("click", () => {
-			this.isInline = !this.isInline;
-			this.loadFile(this.currentFileIndex);
+			this.toggleView();
 		});
 		$$2("#toggle-stacked")?.addEventListener("click", () => {
 			this.toggleStackedView();

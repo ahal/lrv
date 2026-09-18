@@ -3,7 +3,6 @@ import { commentContainsLine, commentLineLabel, commentStartLine } from './comme
 import { appendLinkifiedText } from './linkify';
 import { openModal } from './modal';
 import { MOD_KEY_LABEL } from './platform';
-import { showNavIndicator } from './ui-signals';
 import type { AppContext } from './types/app';
 import type { ReviewNote } from './review-notes';
 
@@ -178,7 +177,6 @@ export class CommitMethods {
         body,
       };
       this.commentManager.addComment(comment);
-      showNavIndicator('Commit comment added');
       cleanup();
     };
   }
