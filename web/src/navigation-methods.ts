@@ -1,7 +1,6 @@
 import { IS_MAC } from './platform';
 import { KEYBOARD_SHORTCUTS, type KeyboardAction } from './shortcuts';
 import { prefersReducedMotion } from './font';
-import { showNavIndicator } from './ui-signals';
 import type { AppContext, Side } from './types/app';
 import type { editor } from 'monaco-editor';
 
@@ -108,14 +107,17 @@ export class NavigationMethods {
 
   toggleView() {
     this.isInline = !this.isInline;
+    this.updateViewToggleLabel();
     this.loadFile(this.currentFileIndex);
-    const file = this.getCurrentFile();
-    const isAddedFile = this.isAddedFile(file);
-    if (isAddedFile) {
-      showNavIndicator('Inline (new file)');
+  }
+
+  updateViewToggleLabel() {
+    const btn = document.getElementById('toggle-view');
+    if (!btn) {
       return;
     }
-    showNavIndicator(this.isInline ? 'Inline' : 'Side-by-Side');
+    btn.textContent = this.isInline ? 'View: Inline' : 'View: Side-by-Side';
+    btn.setAttribute('aria-pressed', String(this.isInline));
   }
 
   matchKeyboardShortcut(e: KeyboardEvent): KeyboardAction | null {
@@ -187,14 +189,12 @@ export class NavigationMethods {
   nextFile() {
     if (this.currentFileIndex < this.files.length - 1) {
       this.loadFile(this.currentFileIndex + 1);
-      showNavIndicator(`File ${this.currentFileIndex + 2}/${this.files.length}`);
     }
   }
 
   previousFile() {
     if (this.currentFileIndex > 0) {
       this.loadFile(this.currentFileIndex - 1);
-      showNavIndicator(`File ${this.currentFileIndex}/${this.files.length}`);
     }
   }
 
@@ -257,9 +257,6 @@ export class NavigationMethods {
       );
       this.highlightFocusedHunk(hunkRange.start, hunkRange.end, 'old');
       this.setFocusedLine('old', hunkRange.start, false);
-      const idx = (this.currentHunkIndex[file.path] ?? 0) + 1;
-      const total = hunks.length;
-      showNavIndicator(`Hunk ${idx}/${total} • old`);
     } else {
       const modifiedEditor = this.editor.getModifiedEditor();
       modifiedEditor.revealLineInCenter(
@@ -268,9 +265,6 @@ export class NavigationMethods {
       );
       this.highlightFocusedHunk(hunkRange.start, hunkRange.end, 'new');
       this.setFocusedLine('new', hunkRange.start, false);
-      const idx = (this.currentHunkIndex[file.path] ?? 0) + 1;
-      const total = hunks.length;
-      showNavIndicator(`Hunk ${idx}/${total} • new`);
     }
   }
 
@@ -345,7 +339,6 @@ export class NavigationMethods {
         modifiedEditor.revealLineInCenterIfOutsideViewport(monacoLine, scrollType);
       }
     }
-    showNavIndicator(`Line ${monacoLine} • ${side === 'old' ? 'old' : 'new'}`);
   }
 
   moveLine(delta: number) {

@@ -10,7 +10,10 @@ fi
 VERSION="$1"
 
 # Bump version
-sed -i "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
+tmp_cargo_toml=$(mktemp)
+trap 'rm -f "$tmp_cargo_toml"' EXIT
+sed "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml > "$tmp_cargo_toml"
+mv "$tmp_cargo_toml" Cargo.toml
 cargo generate-lockfile
 
 cargo fmt

@@ -178,19 +178,23 @@ body {
   color: var(--accent-color);
 }
 
-/* Small delayed fetch spinner shown only when /api/file requests run long */
+/* Ephemeral signals are overlaid to the left of the actions and are taken out
+   of flow, so showing/hiding them can never move any box in the header. */
 .fetch-spinner {
   display: none;
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 12px);
+  transform: translateY(-50%);
   width: 14px;
   height: 14px;
   border: 2px solid color-mix(in srgb, var(--text-secondary), transparent 40%);
   border-top-color: var(--accent-color);
   border-radius: 50%;
   animation: fetch-spin 0.8s linear infinite;
-  margin-left: 10px;
 }
 .fetch-spinner.visible {
-  display: inline-block;
+  display: block;
 }
 @keyframes fetch-spin {
   from {
@@ -206,6 +210,10 @@ body {
   font-size: 12px;
   font-weight: 400;
   line-height: 1.1;
+  /* Must never wrap: a long commit message squeezes this item, and wrapping it
+     is what used to make the header taller. */
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .project-info {
@@ -213,6 +221,8 @@ body {
   font-size: 12px;
   font-weight: 400;
   line-height: 1.1;
+  /* This is the item that absorbs the squeeze and truncates. */
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
@@ -301,6 +311,8 @@ body {
   gap: 12px;
   align-items: center;
   flex-shrink: 0;
+  /* Containing block for the ephemeral status overlays below. */
+  position: relative;
 }
 
 .settings-btn {
@@ -320,16 +332,6 @@ body {
   border-radius: 0px;
   font-size: 11px;
   font-weight: 500;
-}
-
-/* Navigation indicator (ephemeral) */
-.nav-indicator {
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
 }
 
 .header button {
@@ -357,6 +359,15 @@ body {
 .header button:disabled {
   background: var(--text-tertiary);
   cursor: not-allowed;
+}
+
+/* These two buttons change their label; fixed widths keep the rest of the row
+   from moving when they do. */
+#toggle-view {
+  min-width: 152px;
+}
+#toggle-stacked {
+  min-width: 150px;
 }
 
 /* Smooth, short transitions for theme changes (no heavy animations) */
@@ -2066,7 +2077,9 @@ body {
   gap: 8px;
   padding: 6px 12px;
   cursor: pointer;
-  border-left: 2px solid transparent;
+  /* Constant width: only the colour changes, so selecting a commit cannot
+     move the row's content. */
+  border-left: 4px solid transparent;
   transition: background 0.1s;
 }
 
@@ -2076,14 +2089,12 @@ body {
 
 .series-commit.active {
   border-left-color: var(--accent-color, #f97316);
-  border-left-width: 4px;
   background: var(--bg-elevated);
   font-weight: 600;
 }
 
 .series-commit.has-comments {
   border-left-color: var(--accent-color, #f97316);
-  border-left-width: 3px;
 }
 
 .series-commit-num {
