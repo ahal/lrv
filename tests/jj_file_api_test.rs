@@ -24,7 +24,7 @@ fn unique_dir(tag: &str) -> PathBuf {
 /// For `jj file show -r <anything else>`, prints NEW_CONTENT.
 fn write_fake_jj(dir: &std::path::Path, old_content: &str, new_content: &str) {
     let script = format!(
-        "#!/bin/sh\nREV=\"$4\"\ncase \"$REV\" in\n  parents*) printf '%s' '{}' ;;\n  *)        printf '%s' '{}' ;;\nesac\n",
+        "#!/bin/sh\nREV=\"$4\"\ncase \"$REV\" in\n  parents*|@-) printf '%s' '{}' ;;\n  *)             printf '%s' '{}' ;;\nesac\n",
         old_content.replace('\'', "'\\''"),
         new_content.replace('\'', "'\\''"),
     );
@@ -41,7 +41,7 @@ fn write_fake_jj(dir: &std::path::Path, old_content: &str, new_content: &str) {
 
 fn make_jj_state(
     working_dir: &std::path::Path,
-    commit_hash: &str,
+    commit_hash: Option<&str>,
     file_path: &str,
 ) -> lrv::server::AppState {
     let diff_data = lrv::types::DiffResponse {
@@ -59,7 +59,7 @@ fn make_jj_state(
             additions: 1,
             deletions: 1,
         },
-        commit_hash: Some(commit_hash.to_string()),
+        commit_hash: commit_hash.map(str::to_string),
         commit_author: None,
         commit_date: None,
         commit_message: None,
@@ -104,6 +104,23 @@ async fn get_content(app: axum::Router, path: &str, side: &str) -> String {
     v["content"].as_str().unwrap_or("").to_string()
 }
 
+async fn get_raw_content(
+    app: axum::Router,
+    path: &str,
+    side: &str,
+) -> (axum::http::StatusCode, String) {
+    let uri = format!("/api/file/raw?path={}&side={}", path, side);
+    let res = app
+        .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    let status = res.status();
+    let bytes = axum::body::to_bytes(res.into_body(), 1_000_000)
+        .await
+        .unwrap();
+    (status, String::from_utf8(bytes.to_vec()).unwrap())
+}
+
 #[tokio::test]
 async fn test_jj_new_side_uses_commit_hash() {
     let _guard = PATH_LOCK.lock().await;
@@ -120,7 +137,7 @@ async fn test_jj_new_side_uses_commit_hash() {
         format!("{}:{}", bin_dir.to_str().unwrap(), orig_path),
     );
 
-    let state = make_jj_state(&repo_dir, "deadbeef", "file.c");
+    let state = make_jj_state(&repo_dir, Some("deadbeef"), "file.c");
     let app = lrv::server::create_router(state, false);
     let content = get_content(app, "file.c", "new").await;
 
@@ -146,7 +163,7 @@ async fn test_jj_old_side_uses_parents_of_commit_hash() {
         format!("{}:{}", bin_dir.to_str().unwrap(), orig_path),
     );
 
-    let state = make_jj_state(&repo_dir, "deadbeef", "file.c");
+    let state = make_jj_state(&repo_dir, Some("deadbeef"), "file.c");
     let app = lrv::server::create_router(state, false);
     let content = get_content(app, "file.c", "old").await;
 
@@ -172,7 +189,7 @@ async fn test_jj_old_and_new_differ() {
         format!("{}:{}", bin_dir.to_str().unwrap(), orig_path),
     );
 
-    let state = make_jj_state(&repo_dir, "cafebabe", "file.c");
+    let state = make_jj_state(&repo_dir, Some("cafebabe"), "file.c");
     let app = lrv::server::create_router(state.clone(), false);
     let new_content = get_content(app, "file.c", "new").await;
 
@@ -186,4 +203,55 @@ async fn test_jj_old_and_new_differ() {
     assert_ne!(old_content, new_content, "old and new content must differ");
     assert_eq!(old_content, "before the change\n");
     assert_eq!(new_content, "after the change\n");
+}
+
+#[tokio::test]
+async fn test_jj_raw_old_side_ignores_git_blob_ids() {
+    let _guard = PATH_LOCK.lock().await;
+    let bin_dir = unique_dir("bin-raw-old");
+    let repo_dir = unique_dir("repo-raw-old");
+    fs::create_dir_all(repo_dir.join(".jj")).unwrap();
+    write_fake_jj(&bin_dir, "old raw content\n", "new raw content\n");
+
+    let orig_path = std::env::var("PATH").unwrap_or_default();
+    std::env::set_var(
+        "PATH",
+        format!("{}:{}", bin_dir.to_str().unwrap(), orig_path),
+    );
+
+    let state = make_jj_state(&repo_dir, Some("cafebabe"), "file.c");
+    let app = lrv::server::create_router(state, false);
+    let (status, content) = get_raw_content(app, "file.c", "old").await;
+
+    std::env::set_var("PATH", &orig_path);
+    let _ = fs::remove_dir_all(&bin_dir);
+    let _ = fs::remove_dir_all(&repo_dir);
+
+    assert_eq!(status, axum::http::StatusCode::OK);
+    assert_eq!(content, "old raw content\n");
+}
+
+#[tokio::test]
+async fn test_jj_working_copy_old_side_uses_parent_revision() {
+    let _guard = PATH_LOCK.lock().await;
+    let bin_dir = unique_dir("bin-working-copy-old");
+    let repo_dir = unique_dir("repo-working-copy-old");
+    fs::create_dir_all(repo_dir.join(".jj")).unwrap();
+    write_fake_jj(&bin_dir, "parent content\n", "working copy content\n");
+
+    let orig_path = std::env::var("PATH").unwrap_or_default();
+    std::env::set_var(
+        "PATH",
+        format!("{}:{}", bin_dir.to_str().unwrap(), orig_path),
+    );
+
+    let state = make_jj_state(&repo_dir, None, "file.c");
+    let app = lrv::server::create_router(state, false);
+    let content = get_content(app, "file.c", "old").await;
+
+    std::env::set_var("PATH", &orig_path);
+    let _ = fs::remove_dir_all(&bin_dir);
+    let _ = fs::remove_dir_all(&repo_dir);
+
+    assert_eq!(content, "parent content\n");
 }

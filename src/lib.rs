@@ -3,6 +3,7 @@ pub mod diff;
 pub mod netutil;
 pub mod output;
 pub mod phabricator;
+pub mod repository;
 pub mod server;
 pub mod skill;
 pub mod store;
