@@ -1,6 +1,7 @@
 import { clearEl, el } from './dom';
 import { fetchJSON } from './api';
 import type { AppContext, DiffFile, DiffStats, SeriesInfo } from './types/app';
+import { sortDiffFiles } from './file-order';
 
 export class SeriesMethods {
   declare seriesInfo: AppContext['seriesInfo'];
@@ -118,8 +119,8 @@ export class SeriesMethods {
       commit_hash?: string;
     }>(`/api/diff?commit=${clamped}`);
 
-    this.diff = diffData;
-    this.files = diffData.files;
+    this.files = sortDiffFiles(diffData.files);
+    this.diff = { ...diffData, files: this.files };
     this.stats = diffData.stats;
 
     // Reset per-commit navigation state (fileCache is keyed by commitIdx:path so no reset needed)

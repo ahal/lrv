@@ -13,6 +13,7 @@ import {
 import { CUSTOM_THEMES } from './themes';
 import { markAppReady } from './ui-signals';
 import { appendLinkifiedText } from './linkify';
+import { sortDiffFiles } from './file-order';
 
 import { FileDataMethods } from './file-data-methods';
 import { FileListMethods } from './file-list-methods';
@@ -231,8 +232,8 @@ export class MonacoApp {
     this.commentManager.currentCommitIdx = seriesData.is_series ? 0 : null;
     this.reviewNoteManager.currentCommitIdx = seriesData.is_series ? 0 : null;
     this.reviewNoteManager.setNotes(reviewNotesData ?? []);
-    this.diff = diffData;
-    this.files = diffData.files;
+    this.files = sortDiffFiles(diffData.files);
+    this.diff = { ...diffData, files: this.files };
     this.stats = diffData.stats;
     this.commentDraftKey = buildCommentDraftKey(this.context, this.diff, this.seriesInfo);
     await this.restorePersistedComments();
