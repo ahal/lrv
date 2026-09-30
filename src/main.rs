@@ -24,44 +24,37 @@ use crate::output::OutputFormat;
 use crate::phabricator::PhabricatorClient;
 use crate::server::{create_router, AppState};
 use crate::types::{CommentLine, DiffResponse, LineType, ProjectContext, ReviewNote, Side};
+use lrv::repository;
 
 fn get_project_context() -> ProjectContext {
-    // Get git repository root as working directory
-    let working_directory = Command::new("git")
-        .args(["rev-parse", "--show-toplevel"])
-        .output()
-        .ok()
-        .and_then(|output| {
-            if output.status.success() {
-                String::from_utf8(output.stdout)
-                    .ok()
-                    .map(|s| s.trim().to_string())
-            } else {
-                None
-            }
-        })
-        .or_else(|| {
-            // Fallback to current directory if not in a git repo
-            std::env::current_dir()
-                .ok()
-                .and_then(|p| p.to_str().map(String::from))
-        })
+    let current_directory = std::env::current_dir().ok();
+    let working_directory = current_directory
+        .as_deref()
+        .and_then(repository::root)
+        .or(current_directory)
+        .map(|path| path.to_string_lossy().into_owned())
         .unwrap_or_else(|| String::from("unknown"));
 
-    // Try to get git branch
-    let git_branch = Command::new("git")
-        .args(["rev-parse", "--abbrev-ref", "HEAD"])
-        .output()
-        .ok()
-        .and_then(|output| {
-            if output.status.success() {
-                String::from_utf8(output.stdout)
-                    .ok()
-                    .map(|s| s.trim().to_string())
-            } else {
-                None
-            }
-        });
+    // A jj-only repository has no Git branch to report, and probing Git here
+    // only produces an avoidable failed command.
+    let git_branch = if repository::is_jj_repo(&working_directory) {
+        None
+    } else {
+        Command::new("git")
+            .args(["rev-parse", "--abbrev-ref", "HEAD"])
+            .current_dir(&working_directory)
+            .output()
+            .ok()
+            .and_then(|output| {
+                if output.status.success() {
+                    String::from_utf8(output.stdout)
+                        .ok()
+                        .map(|s| s.trim().to_string())
+                } else {
+                    None
+                }
+            })
+    };
 
     ProjectContext {
         working_directory,
@@ -258,12 +251,8 @@ struct Args {
     recover: Option<String>,
 }
 
-fn is_jj_repo(root: &str) -> bool {
-    std::path::Path::new(root).join(".jj").exists()
-}
-
 fn enumerate_series_commits(revset: &str, working_dir: &str) -> Result<Vec<String>> {
-    if is_jj_repo(working_dir) {
+    if repository::is_jj_repo(working_dir) {
         let output = Command::new("jj")
             .args([
                 "log",
@@ -400,7 +389,7 @@ fn get_series_diffs_jj(revset: &str, working_dir: &str) -> Result<Vec<crate::typ
 }
 
 fn get_commit_diff_text(commit_id: &str, working_dir: &str) -> Result<String> {
-    if is_jj_repo(working_dir) {
+    if repository::is_jj_repo(working_dir) {
         let output = Command::new("jj")
             .args(["show", "--git", "-r", commit_id])
             .current_dir(working_dir)
@@ -693,7 +682,7 @@ async fn main() -> Result<()> {
         if args.cmd.is_some() || args.file.is_some() {
             anyhow::bail!("--series cannot be combined with --cmd or --file");
         }
-        let parsed = if is_jj_repo(&working_dir) {
+        let parsed = if repository::is_jj_repo(&working_dir) {
             let revset = revset.clone();
             let wd = working_dir.clone();
             let spinner = Spinner::start("Loading commits");

@@ -1,4 +1,5 @@
 use crate::config::UserConfig;
+use crate::repository;
 use crate::skill::{skill_install_paths, EMBEDDED_SKILL};
 use crate::store::CommentStore;
 use crate::themes::{load_user_themes, UserTheme};
@@ -87,12 +88,21 @@ fn failed_status() -> ExitStatus {
     ExitStatus::from_raw(1)
 }
 
-fn is_jj_repo(root: &str) -> bool {
-    Path::new(root).join(".jj").exists()
-}
-
 fn is_null_oid(oid: &str) -> bool {
     oid.chars().all(|c| c == '0')
+}
+
+fn jj_old_revisions(diff: &DiffResponse) -> Vec<String> {
+    if let Some(hash) = &diff.commit_hash {
+        vec![
+            format!("parents({hash})"),
+            "@-".to_string(),
+            "@".to_string(),
+        ]
+    } else {
+        // `jj diff` compares the working copy (@) to its parent (@-).
+        vec!["@-".to_string(), "@".to_string()]
+    }
 }
 
 fn html_escape_text(input: &str) -> String {
@@ -237,42 +247,33 @@ fn resolve_old_content(diff: &DiffResponse, working_dir: &str, req_path: &str) -
         let repo = working_dir;
         let old_key = fe.old_path.clone().unwrap_or_else(|| fe.path.clone());
 
-        if let Some(oid) = &fe.old_blob {
-            if !is_null_oid(oid) {
-                let output = std::process::Command::new("git")
-                    .current_dir(repo)
-                    .args(["cat-file", "-p", oid])
-                    .output();
-                if let Ok(output) = output {
-                    if output.status.success() {
-                        if let Ok(s) = String::from_utf8(output.stdout) {
-                            return s;
+        if !repository::is_jj_repo(repo) {
+            if let Some(oid) = &fe.old_blob {
+                if !is_null_oid(oid) {
+                    let output = std::process::Command::new("git")
+                        .current_dir(repo)
+                        .args(["cat-file", "-p", oid])
+                        .output();
+                    if let Ok(output) = output {
+                        if output.status.success() {
+                            if let Ok(s) = String::from_utf8(output.stdout) {
+                                return s;
+                            }
                         }
                     }
                 }
             }
         }
 
-        if is_jj_repo(repo) {
+        if repository::is_jj_repo(repo) {
             let cmd_old = |rev: &str| -> std::process::Output {
                 std::process::Command::new("jj")
                     .current_dir(repo)
-                    .args([
-                        "file",
-                        "show",
-                        "-r",
-                        &format!("parents({})", rev),
-                        "--",
-                        &old_key,
-                    ])
+                    .args(["file", "show", "-r", rev, "--", &old_key])
                     .output()
                     .unwrap_or_else(|_| failed_output())
             };
-            let revs: Vec<String> = if let Some(hash) = &diff.commit_hash {
-                vec![hash.clone(), "@-".to_string(), "@".to_string()]
-            } else {
-                vec!["@-".to_string(), "@".to_string()]
-            };
+            let revs = jj_old_revisions(diff);
             let out = run_with_delayed_notice(
                 format!("Fetching old content from jj for {}...", old_key),
                 400,
@@ -295,7 +296,7 @@ fn resolve_old_content(diff: &DiffResponse, working_dir: &str, req_path: &str) -
     }
 
     // 3) jj fallback for files not in current diff (e.g. race condition with commit switch)
-    if is_jj_repo(working_dir) {
+    if repository::is_jj_repo(working_dir) {
         if let Some(hash) = &diff.commit_hash {
             let repo = working_dir;
             let rev = hash.clone();
@@ -322,7 +323,12 @@ fn resolve_old_content(diff: &DiffResponse, working_dir: &str, req_path: &str) -
         }
     }
 
-    // 4) Fallback to VCS: git show HEAD:path
+    // A jj-only repository has no Git object database to query.
+    if repository::is_jj_repo(working_dir) {
+        return String::new();
+    }
+
+    // 4) Fallback to Git: git show HEAD:path
     let rel_for_vcs = rel_path
         .to_str()
         .map(|s| s.replace(std::path::MAIN_SEPARATOR, "/"))
@@ -359,13 +365,15 @@ pub async fn prefetch_old_files(state: AppState, commit_idx: usize) {
         .map(|f| (f.path.clone(), f.old_path.clone(), f.old_blob.clone()))
         .collect();
 
-    // 0) Fast path: batch-fetch any available old blobs in one git process
+    // 0) Fast path: batch-fetch any available old blobs in one Git process.
+    // jj's --git output contains blob IDs too, but those IDs are not in a Git
+    // object database in a jj-only repository.
     let mut prefilled: HashSet<String> = HashSet::new();
     let blob_items: Vec<(String, Option<String>, String)> = items
         .iter()
         .filter_map(|(p, op, ob)| ob.as_ref().map(|b| (p.clone(), op.clone(), b.clone())))
         .collect();
-    if !blob_items.is_empty() {
+    if !repository::is_jj_repo(&state.context.working_directory) && !blob_items.is_empty() {
         if let Some(blob_map) = batch_cat_file_blobs(
             &state.context.working_directory,
             &blob_items.iter().map(|t| t.2.clone()).collect::<Vec<_>>(),
@@ -642,7 +650,7 @@ pub async fn precompute_series_content(
     diffs: &[DiffResponse],
     working_dir: &str,
 ) -> (Vec<HashMap<String, String>>, Vec<HashMap<String, String>>) {
-    if !is_jj_repo(working_dir) {
+    if !repository::is_jj_repo(working_dir) {
         return precompute_via_blobs(diffs, working_dir);
     }
 
@@ -938,7 +946,7 @@ async fn get_file_content(
             let mut content_new = String::new();
 
             // For jj repos with a known commit hash, fetch directly from jj.
-            if is_jj_repo(repo) {
+            if repository::is_jj_repo(repo) {
                 if let Some(hash) = &diff.commit_hash {
                     let out = std::process::Command::new("jj")
                         .current_dir(repo)
@@ -959,15 +967,18 @@ async fn get_file_content(
                     }) {
                         let mut content = String::new();
 
-                        if let Some(oid) = &fe.new_blob {
-                            let output = std::process::Command::new("git")
-                                .current_dir(repo)
-                                .args(["cat-file", "-p", oid])
-                                .output()
-                                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-                            if output.status.success() {
-                                if let Ok(s) = String::from_utf8(output.stdout) {
-                                    content = s;
+                        if !repository::is_jj_repo(repo) {
+                            if let Some(oid) = &fe.new_blob {
+                                if let Ok(output) = std::process::Command::new("git")
+                                    .current_dir(repo)
+                                    .args(["cat-file", "-p", oid])
+                                    .output()
+                                {
+                                    if output.status.success() {
+                                        if let Ok(s) = String::from_utf8(output.stdout) {
+                                            content = s;
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1059,7 +1070,7 @@ async fn get_file_raw(
                 }
             }
 
-            if is_jj_repo(repo) {
+            if repository::is_jj_repo(repo) {
                 if let Some(hash) = &diff.commit_hash {
                     let out = std::process::Command::new("jj")
                         .current_dir(repo)
@@ -1068,33 +1079,6 @@ async fn get_file_raw(
                         .unwrap_or_else(|_| failed_output());
                     if out.status.success() {
                         out.stdout
-                    } else if let Some(file) = file_entry {
-                        if let Some(oid) = &file.new_blob {
-                            let output = std::process::Command::new("git")
-                                .current_dir(repo)
-                                .args(["cat-file", "-p", oid])
-                                .output()
-                                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-                            if output.status.success() {
-                                output.stdout
-                            } else {
-                                let joined = base_path.join(rel_path);
-                                let file_path = std::fs::canonicalize(&joined)
-                                    .map_err(|_| StatusCode::NOT_FOUND)?;
-                                if !file_path.starts_with(&base_canon) {
-                                    return Err(StatusCode::FORBIDDEN);
-                                }
-                                std::fs::read(&file_path).map_err(|_| StatusCode::NOT_FOUND)?
-                            }
-                        } else {
-                            let joined = base_path.join(rel_path);
-                            let file_path = std::fs::canonicalize(&joined)
-                                .map_err(|_| StatusCode::NOT_FOUND)?;
-                            if !file_path.starts_with(&base_canon) {
-                                return Err(StatusCode::FORBIDDEN);
-                            }
-                            std::fs::read(&file_path).map_err(|_| StatusCode::NOT_FOUND)?
-                        }
                     } else {
                         let joined = base_path.join(rel_path);
                         let file_path =
@@ -1156,7 +1140,32 @@ async fn get_file_raw(
                 return Err(StatusCode::NOT_FOUND);
             }
 
-            if let Some(oid) = &file.old_blob {
+            if repository::is_jj_repo(repo) {
+                let old_key = file.old_path.clone().unwrap_or_else(|| file.path.clone());
+                let cmd_old = |rev: &str| -> std::process::Output {
+                    std::process::Command::new("jj")
+                        .current_dir(repo)
+                        .args(["file", "show", "-r", rev, "--", &old_key])
+                        .output()
+                        .unwrap_or_else(|_| failed_output())
+                };
+                let revs = jj_old_revisions(diff);
+                let mut result = None;
+                for rev in &revs {
+                    let out = cmd_old(rev);
+                    if out.status.success() {
+                        result = Some(out.stdout);
+                        break;
+                    }
+                }
+                if let Some(content) = result {
+                    content
+                } else if !file.is_binary {
+                    resolve_old_content(diff, repo, &query.path).into_bytes()
+                } else {
+                    return Err(StatusCode::NOT_FOUND);
+                }
+            } else if let Some(oid) = &file.old_blob {
                 if !is_null_oid(oid) {
                     let output = std::process::Command::new("git")
                         .current_dir(repo)
@@ -1171,36 +1180,6 @@ async fn get_file_raw(
                 } else {
                     Vec::new()
                 }
-            } else if is_jj_repo(repo) {
-                let old_key = file.old_path.clone().unwrap_or_else(|| file.path.clone());
-                let cmd_old = |rev: &str| -> std::process::Output {
-                    std::process::Command::new("jj")
-                        .current_dir(repo)
-                        .args([
-                            "file",
-                            "show",
-                            "-r",
-                            &format!("parents({})", rev),
-                            "--",
-                            &old_key,
-                        ])
-                        .output()
-                        .unwrap_or_else(|_| failed_output())
-                };
-                let revs: Vec<String> = if let Some(hash) = &diff.commit_hash {
-                    vec![hash.clone(), "@-".to_string(), "@".to_string()]
-                } else {
-                    vec!["@-".to_string(), "@".to_string()]
-                };
-                let mut result = None;
-                for rev in &revs {
-                    let out = cmd_old(rev);
-                    if out.status.success() {
-                        result = Some(out.stdout);
-                        break;
-                    }
-                }
-                result.ok_or(StatusCode::NOT_FOUND)?
             } else if !file.is_binary {
                 resolve_old_content(diff, repo, &query.path).into_bytes()
             } else {
