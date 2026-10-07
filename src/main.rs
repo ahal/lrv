@@ -214,8 +214,14 @@ struct Args {
     github_pr_comments: Option<String>,
 
     /// Load a GitHub PR's review comments as inline review notes, fetched with `gh`. Takes a PR
-    /// number, OWNER/REPO#N or a PR URL.
-    #[arg(long = "github-pr", value_name = "PR")]
+    /// number, OWNER/REPO#N or a PR URL. Without a value, find the open PR containing the top
+    /// commit.
+    #[arg(
+        long = "github-pr",
+        num_args = 0..=1,
+        default_missing_value = "",
+        value_name = "PR"
+    )]
     github_pr: Option<String>,
 
     /// Load Phabricator review comments as inline review notes. Can be repeated for series mode.
@@ -491,6 +497,23 @@ async fn load_phabricator_notes(
 
     validate_review_notes(&notes)?;
     Ok(notes)
+}
+
+/// Load the comments of the open GitHub PR containing the top commit. `None` when there isn't
+/// exactly one.
+async fn auto_fetch_github(diffs: &[DiffResponse]) -> Option<Vec<ReviewNote>> {
+    let pr = github::detect_pr(diffs).await?;
+    eprintln!(
+        "Loading review comments from GitHub {}/{}#{}...",
+        pr.owner, pr.repo, pr.number
+    );
+    Some(match github::fetch_pr_notes(&pr, diffs).await {
+        Ok(notes) => notes,
+        Err(e) => {
+            eprintln!("warning: failed to load comments from GitHub PR: {e:#}");
+            Vec::new()
+        }
+    })
 }
 
 fn infer_review_note_side(
@@ -795,13 +818,21 @@ async fn main() -> Result<()> {
     if let Some(path) = &args.github_pr_comments {
         review_notes.extend(github::load_github_notes(path, &diffs)?);
     }
-    if let Some(pr) = &args.github_pr {
-        let pr = github::parse_pr_ref(pr, &github::github_remotes())?;
-        eprintln!(
-            "Loading review comments from GitHub {}/{}#{}...",
-            pr.owner, pr.repo, pr.number
-        );
-        review_notes.extend(github::fetch_pr_notes(&pr, &diffs).await?);
+    // A bare `--github-pr` is an empty string: detect the PR from the commits instead.
+    match args.github_pr.as_deref() {
+        Some("") => match auto_fetch_github(&diffs).await {
+            Some(notes) => review_notes.extend(notes),
+            None => eprintln!("warning: no open GitHub PR found for the reviewed commit"),
+        },
+        Some(pr) => {
+            let pr = github::parse_pr_ref(pr, &github::github_remotes())?;
+            eprintln!(
+                "Loading review comments from GitHub {}/{}#{}...",
+                pr.owner, pr.repo, pr.number
+            );
+            review_notes.extend(github::fetch_pr_notes(&pr, &diffs).await?);
+        }
+        None => {}
     }
 
     // Setup shutdown channel

@@ -242,6 +242,46 @@ async fn run_gh(args: &[&str], timeout: Duration) -> Option<Vec<u8>> {
     out.status.success().then_some(out.stdout)
 }
 
+/// Find the open GitHub PR the reviewed commits belong to: ask GitHub which PRs contain the top
+/// commit, in each GitHub remote of the working directory. Only an unambiguous answer counts.
+/// Silent when `gh` is missing, unauthenticated or slow, since most reviews aren't of a PR and
+/// must not be held up.
+pub async fn detect_pr(diffs: &[DiffResponse]) -> Option<PrRef> {
+    detect_pr_in(&github_remotes(), diffs).await
+}
+
+/// `detect_pr` against an explicit list of `(owner, repo)` candidates.
+pub async fn detect_pr_in(remotes: &[(String, String)], diffs: &[DiffResponse]) -> Option<PrRef> {
+    let sha = diffs.last()?.commit_hash.as_deref()?;
+    for (owner, repo) in remotes {
+        let path = format!("repos/{owner}/{repo}/commits/{sha}/pulls");
+        let args = [
+            "api",
+            path.as_str(),
+            "--jq",
+            r#"[.[] | select(.state == "open") | [.base.repo.full_name, .number]] | @json"#,
+        ];
+        let Some(out) = run_gh(&args, Duration::from_secs(5)).await else {
+            continue;
+        };
+        let Ok(numbers) = serde_json::from_slice::<Vec<(String, u64)>>(&out) else {
+            continue;
+        };
+        // The PR may live in another repo than the remote asked (a fork's commit also lists the
+        // upstream's PRs), so use the PR's base repo.
+        if let [(full_name, number)] = &numbers[..] {
+            if let Some((owner, repo)) = full_name.split_once('/') {
+                return Some(PrRef {
+                    owner: owner.to_string(),
+                    repo: repo.to_string(),
+                    number: *number,
+                });
+            }
+        }
+    }
+    None
+}
+
 /// Parse `123`, `#123`, `OWNER/REPO#123` or a `github.com/OWNER/REPO/pull/123` URL. A bare number
 /// refers to the first of `remotes`.
 pub fn parse_pr_ref(input: &str, remotes: &[(String, String)]) -> Result<PrRef> {
