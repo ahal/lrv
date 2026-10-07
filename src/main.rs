@@ -213,6 +213,11 @@ struct Args {
     #[arg(long = "github-pr-comments")]
     github_pr_comments: Option<String>,
 
+    /// Load a GitHub PR's review comments as inline review notes, fetched with `gh`. Takes a PR
+    /// number, OWNER/REPO#N or a PR URL.
+    #[arg(long = "github-pr", value_name = "PR")]
+    github_pr: Option<String>,
+
     /// Load Phabricator review comments as inline review notes. Can be repeated for series mode.
     #[arg(long = "phab-revision")]
     phab_revisions: Vec<String>,
@@ -789,6 +794,14 @@ async fn main() -> Result<()> {
     }
     if let Some(path) = &args.github_pr_comments {
         review_notes.extend(github::load_github_notes(path, &diffs)?);
+    }
+    if let Some(pr) = &args.github_pr {
+        let pr = github::parse_pr_ref(pr, &github::github_remotes())?;
+        eprintln!(
+            "Loading review comments from GitHub {}/{}#{}...",
+            pr.owner, pr.repo, pr.number
+        );
+        review_notes.extend(github::fetch_pr_notes(&pr, &diffs).await?);
     }
 
     // Setup shutdown channel
