@@ -225,7 +225,13 @@ struct Args {
     github_pr: Option<String>,
 
     /// Load Phabricator review comments as inline review notes. Can be repeated for series mode.
-    #[arg(long = "phab-revision")]
+    /// Without a value, find the revision from the commits' `Differential Revision:` trailer.
+    #[arg(
+        long = "phab-revision",
+        num_args = 0..=1,
+        default_missing_value = "",
+        value_name = "REVISION"
+    )]
     phab_revisions: Vec<String>,
 
     /// Base Phabricator URL
@@ -475,11 +481,7 @@ async fn load_phabricator_notes(
     for (idx, revision) in revisions.iter().enumerate() {
         eprintln!("Loading review comments from Phabricator {}...", revision);
         let mut revision_notes = client.fetch_review_notes(revision, include_done).await?;
-        let commit_idx = if revisions.len() > 1 || diffs.len() > 1 {
-            Some(idx)
-        } else {
-            None
-        };
+        let commit_idx = Some(idx);
         for note in &mut revision_notes {
             if note.file != "(commit)" {
                 note.side = infer_review_note_side(note, diffs, commit_idx);
@@ -497,6 +499,63 @@ async fn load_phabricator_notes(
 
     validate_review_notes(&notes)?;
     Ok(notes)
+}
+
+/// Load the comments of the Phabricator revision(s) named by the commits' `Differential Revision:`
+/// trailers. `None` when no commit has one. Failures are warnings: the review must open regardless.
+async fn auto_fetch_phab(diffs: &[DiffResponse], include_done: bool) -> Option<Vec<ReviewNote>> {
+    let revisions: Vec<(usize, String, u32)> = diffs
+        .iter()
+        .enumerate()
+        .filter_map(|(i, diff)| {
+            let (base, id) = phabricator::detect_revision(diff.commit_message.as_deref()?)?;
+            Some((i, base, id))
+        })
+        .collect();
+    if revisions.is_empty() {
+        return None;
+    }
+
+    let token = match phabricator_token_from_env() {
+        Ok(token) => token,
+        Err(e) => {
+            eprintln!("warning: not loading Phabricator comments: {e:#}");
+            return Some(Vec::new());
+        }
+    };
+    let mut notes = Vec::new();
+    for (i, base, id) in revisions {
+        eprintln!("Loading review comments from Phabricator D{id}...");
+        let fetched = async {
+            let client = PhabricatorClient::new(base, token.clone())?;
+            tokio::time::timeout(
+                std::time::Duration::from_secs(30),
+                client.fetch_review_notes(&format!("D{id}"), include_done),
+            )
+            .await
+            .context("timed out")?
+        }
+        .await;
+        match fetched {
+            Ok(mut revision_notes) => {
+                let commit_idx = Some(i);
+                for note in &mut revision_notes {
+                    if note.file != "(commit)" {
+                        note.side = infer_review_note_side(note, diffs, commit_idx);
+                    }
+                    note.commit_idx = commit_idx;
+                }
+                eprintln!(
+                    "Loaded {} active review note{} from D{id}",
+                    revision_notes.len(),
+                    if revision_notes.len() == 1 { "" } else { "s" },
+                );
+                notes.extend(revision_notes);
+            }
+            Err(e) => eprintln!("warning: failed to load comments from D{id}: {e:#}"),
+        }
+    }
+    Some(notes)
 }
 
 /// Load the comments of the open GitHub PR containing the top commit. `None` when there isn't
@@ -801,15 +860,28 @@ async fn main() -> Result<()> {
         .clone()
         .or_else(|| std::env::var("PHABRICATOR_BASE_URL").ok())
         .unwrap_or_else(|| "https://phabricator.services.mozilla.com".to_string());
+    // A bare `--phab-revision` is an empty string: detect the revision from the commits instead.
+    let named_revisions: Vec<String> = args
+        .phab_revisions
+        .iter()
+        .filter(|r| !r.is_empty())
+        .cloned()
+        .collect();
     review_notes.extend(
         load_phabricator_notes(
-            &args.phab_revisions,
+            &named_revisions,
             &phab_base_url,
             args.phab_include_done,
             &diffs,
         )
         .await?,
     );
+    if named_revisions.len() < args.phab_revisions.len() {
+        match auto_fetch_phab(&diffs, args.phab_include_done).await {
+            Some(notes) => review_notes.extend(notes),
+            None => eprintln!("warning: no commit has a Differential Revision trailer"),
+        }
+    }
     if let Some(path) = &args.phab_mcp_comments {
         let text = std::fs::read_to_string(path)
             .with_context(|| format!("Failed to read Phabricator MCP comments file: {}", path))?;
