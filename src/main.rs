@@ -936,6 +936,18 @@ async fn main() -> Result<()> {
         }
         None => {}
     }
+    // Explicitly requested comments win; fetching on top of them would duplicate notes.
+    let explicit_comments = !args.phab_revisions.is_empty()
+        || args.phab_mcp_comments.is_some()
+        || args.github_pr_comments.is_some()
+        || args.github_pr.is_some();
+    if user_config.auto_fetch_comments && !explicit_comments {
+        let notes = match auto_fetch_phab(&diffs, args.phab_include_done).await {
+            Some(notes) => Some(notes),
+            None => auto_fetch_github(&diffs).await,
+        };
+        review_notes.extend(notes.unwrap_or_default());
+    }
 
     // Setup shutdown channel
     let (shutdown_tx, mut shutdown_rx) = mpsc::channel::<()>(1);
