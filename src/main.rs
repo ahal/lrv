@@ -499,12 +499,12 @@ fn infer_review_note_side(
     commit_idx: Option<usize>,
 ) -> Side {
     let Some(diff) = diffs.get(commit_idx.unwrap_or(0)) else {
-        return note.side.clone();
+        return note.side;
     };
     let Some(file) = diff.files.iter().find(|file| {
         file.path == note.file || file.old_path.as_deref() == Some(note.file.as_str())
     }) else {
-        return note.side.clone();
+        return note.side;
     };
 
     if line_exists_in_file(file, &note.line, Side::New) {
@@ -513,7 +513,7 @@ fn infer_review_note_side(
     if line_exists_in_file(file, &note.line, Side::Old) {
         return Side::Old;
     }
-    note.side.clone()
+    note.side
 }
 
 fn line_exists_in_file(file: &crate::types::FileDiff, line: &CommentLine, side: Side) -> bool {

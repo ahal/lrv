@@ -1,3 +1,4 @@
+use crate::diff::{attribute_line, diff_shows_line};
 use crate::types::{CommentLine, DiffResponse, ReviewNote, Side};
 use anyhow::{bail, Context, Result};
 use serde::Deserialize;
@@ -95,10 +96,31 @@ fn notes_from_comments(comments: Vec<GhComment>, diffs: &[DiffResponse]) -> Vec<
             }
         }
 
-        let commit_idx = comment
+        let mut line = line;
+        let mut commit_idx = comment
             .commit_id
             .as_ref()
             .and_then(|h| commit_hash_to_idx.get(h).copied());
+
+        // "Files changed" comments are stamped with the PR head and use
+        // combined-diff line numbers; trace them back to the owning commit.
+        if diffs.len() > 1 && is_head(comment.commit_id.as_deref(), diffs) {
+            let head = diffs.len() - 1;
+            if !diff_shows_line(&diffs[head], path, end_line, side) {
+                if let Some((idx, mapped_end)) = attribute_line(diffs, path, end_line, side) {
+                    commit_idx = Some(idx);
+                    line = match line {
+                        CommentLine::Range((s, _)) => match attribute_line(diffs, path, s, side) {
+                            Some((i, mapped_start)) if i == idx && mapped_start < mapped_end => {
+                                CommentLine::Range((mapped_start, mapped_end))
+                            }
+                            _ => CommentLine::Single(mapped_end),
+                        },
+                        CommentLine::Single(_) => CommentLine::Single(mapped_end),
+                    };
+                }
+            }
+        }
 
         notes.push(ReviewNote {
             id: Some(comment.id.to_string()),
@@ -119,6 +141,17 @@ fn notes_from_comments(comments: Vec<GhComment>, diffs: &[DiffResponse]) -> Vec<
         if notes.len() == 1 { "" } else { "s" }
     );
     notes
+}
+
+/// Whether `commit_id` is the head (last) commit of the series.
+fn is_head(commit_id: Option<&str>, diffs: &[DiffResponse]) -> bool {
+    let (Some(id), Some(head)) = (
+        commit_id,
+        diffs.last().and_then(|d| d.commit_hash.as_deref()),
+    ) else {
+        return false;
+    };
+    !id.is_empty() && !head.is_empty() && (id.starts_with(head) || head.starts_with(id))
 }
 
 /// A pull request: `owner/repo#number`.
