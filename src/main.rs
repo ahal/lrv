@@ -458,6 +458,20 @@ fn validate_review_notes(notes: &[ReviewNote]) -> Result<()> {
     Ok(())
 }
 
+/// The series UI only shows notes whose `commit_idx` matches the selected commit, but loaders
+/// leave it unset when there is a single diff. Pin those notes to commit 0 so they stay visible
+/// in a one-commit series.
+fn tag_single_commit_notes(notes: &mut [ReviewNote], is_series: bool, commit_count: usize) {
+    if !is_series || commit_count != 1 {
+        return;
+    }
+    for note in notes {
+        if note.commit_idx.is_none() {
+            note.commit_idx = Some(0);
+        }
+    }
+}
+
 /// The Phabricator API token: from the environment, else from `~/.arcrc` (shared with moz-phab
 /// and arc), where it is stored per host.
 fn phabricator_token(base_url: &str) -> Result<String> {
@@ -948,6 +962,7 @@ async fn main() -> Result<()> {
         };
         review_notes.extend(notes.unwrap_or_default());
     }
+    tag_single_commit_notes(&mut review_notes, is_series, diffs.len());
 
     // Setup shutdown channel
     let (shutdown_tx, mut shutdown_rx) = mpsc::channel::<()>(1);
@@ -1153,4 +1168,44 @@ async fn main() -> Result<()> {
     println!("{}", output);
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn note(file: &str, commit_idx: Option<usize>) -> ReviewNote {
+        ReviewNote {
+            id: None,
+            file: file.to_string(),
+            line: CommentLine::Single(1),
+            side: Side::New,
+            body: "x".to_string(),
+            author: None,
+            date: None,
+            source_url: None,
+            commit_idx,
+        }
+    }
+
+    #[test]
+    fn single_commit_series_notes_are_pinned_to_commit_zero() {
+        let mut notes = vec![
+            note("(commit)", None),
+            note("a.rs", None),
+            note("b.rs", Some(0)),
+        ];
+        tag_single_commit_notes(&mut notes, true, 1);
+        let got: Vec<_> = notes.iter().map(|n| n.commit_idx).collect();
+        assert_eq!(got, [Some(0), Some(0), Some(0)]);
+    }
+
+    #[test]
+    fn notes_untouched_outside_single_commit_series() {
+        for (is_series, count) in [(false, 1), (true, 2)] {
+            let mut notes = vec![note("a.rs", None)];
+            tag_single_commit_notes(&mut notes, is_series, count);
+            assert_eq!(notes[0].commit_idx, None);
+        }
+    }
 }

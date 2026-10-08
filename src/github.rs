@@ -32,6 +32,55 @@ struct GhUser {
     login: String,
 }
 
+/// A PR-level comment: an issue comment on the PR conversation, or a review's summary body.
+#[derive(Debug, Deserialize)]
+struct GhDiscussion {
+    id: u64,
+    body: Option<String>,
+    html_url: Option<String>,
+    /// Issue comments carry `created_at`, reviews carry `submitted_at`.
+    #[serde(alias = "submitted_at")]
+    created_at: Option<String>,
+    user: Option<GhUser>,
+}
+
+/// Commit-message notes (`file: "(commit)"`) from the PR conversation and review summaries, shown
+/// like Phabricator's general comments. They belong to the PR as a whole, so in a series they go on
+/// `commit_idx`. Empty bodies are skipped: approving or commenting inline produces a review with
+/// no summary.
+fn discussion_notes(
+    issue_comments: Vec<GhDiscussion>,
+    reviews: Vec<GhDiscussion>,
+    commit_idx: Option<usize>,
+) -> Vec<ReviewNote> {
+    let tagged = issue_comments
+        .into_iter()
+        .map(|c| ("issue", c))
+        .chain(reviews.into_iter().map(|c| ("review", c)));
+    let mut notes: Vec<ReviewNote> = tagged
+        .filter_map(|(kind, c)| {
+            let body = c.body.as_deref().unwrap_or("").trim();
+            if body.is_empty() {
+                return None;
+            }
+            Some(ReviewNote {
+                id: Some(format!("{kind}-{}", c.id)),
+                file: "(commit)".to_string(),
+                line: CommentLine::Single(1),
+                side: Side::New,
+                body: body.to_string(),
+                author: c.user.map(|u| u.login),
+                date: c.created_at,
+                source_url: c.html_url,
+                commit_idx,
+            })
+        })
+        .collect();
+    // ISO 8601 timestamps sort lexically.
+    notes.sort_by(|a, b| a.date.cmp(&b.date));
+    notes
+}
+
 /// Parse the JSON output of `gh api repos/OWNER/REPO/pulls/N/comments`
 /// into lrv review notes.
 pub fn load_github_notes(path: &str, diffs: &[DiffResponse]) -> Result<Vec<ReviewNote>> {
@@ -96,11 +145,14 @@ fn notes_from_comments(comments: Vec<GhComment>, diffs: &[DiffResponse]) -> Vec<
             }
         }
 
+        // Comments on a commit that's no longer in the series (e.g. before a force-push) were
+        // made against the PR head, so show them on the last commit.
         let mut line = line;
         let mut commit_idx = comment
             .commit_id
             .as_ref()
-            .and_then(|h| commit_hash_to_idx.get(h).copied());
+            .and_then(|h| commit_hash_to_idx.get(h).copied())
+            .or_else(|| (diffs.len() > 1).then(|| diffs.len() - 1));
 
         // "Files changed" comments are stamped with the PR head and use
         // combined-diff line numbers; trace them back to the owning commit.
@@ -318,22 +370,38 @@ pub fn parse_pr_ref(input: &str, remotes: &[(String, String)]) -> Result<PrRef> 
     })
 }
 
-/// Fetch a PR's inline review comments through the `gh` CLI, so lrv never handles a GitHub token.
-pub async fn fetch_pr_notes(pr: &PrRef, diffs: &[DiffResponse]) -> Result<Vec<ReviewNote>> {
-    let path = format!(
-        "repos/{}/{}/pulls/{}/comments",
-        pr.owner, pr.repo, pr.number
-    );
+/// Run `gh api --paginate` on `path` and parse the stream of objects it prints.
+async fn gh_api_list<T: serde::de::DeserializeOwned>(path: &str) -> Result<Vec<T>> {
     // `--jq '.[]'` makes paginated output one object per page entry instead of several arrays.
-    let args = ["api", "--paginate", path.as_str(), "--jq", ".[]"];
+    let args = ["api", "--paginate", path, "--jq", ".[]"];
     let Some(out) = run_gh(&args, Duration::from_secs(30)).await else {
         bail!("`gh api {path}` failed (is the GitHub CLI installed and authenticated?)");
     };
-    let comments = serde_json::Deserializer::from_slice(&out)
-        .into_iter::<GhComment>()
+    serde_json::Deserializer::from_slice(&out)
+        .into_iter::<T>()
         .collect::<Result<Vec<_>, _>>()
-        .context("Failed to parse GitHub PR comments")?;
-    Ok(notes_from_comments(comments, diffs))
+        .with_context(|| format!("Failed to parse `gh api {path}` output"))
+}
+
+/// Fetch a PR's comments through the `gh` CLI, so lrv never handles a GitHub token: inline review
+/// comments, plus the PR conversation and review summaries as review-scoped notes.
+pub async fn fetch_pr_notes(pr: &PrRef, diffs: &[DiffResponse]) -> Result<Vec<ReviewNote>> {
+    let base = format!("repos/{}/{}", pr.owner, pr.repo);
+    let n = pr.number;
+    let inline: Vec<GhComment> = gh_api_list(&format!("{base}/pulls/{n}/comments")).await?;
+    let mut notes = notes_from_comments(inline, diffs);
+    let issue_comments: Vec<GhDiscussion> =
+        gh_api_list(&format!("{base}/issues/{n}/comments")).await?;
+    let reviews: Vec<GhDiscussion> = gh_api_list(&format!("{base}/pulls/{n}/reviews")).await?;
+    let last_commit = (diffs.len() > 1).then(|| diffs.len() - 1);
+    let discussion = discussion_notes(issue_comments, reviews, last_commit);
+    eprintln!(
+        "Loaded {} PR discussion note{} from GitHub PR",
+        discussion.len(),
+        if discussion.len() == 1 { "" } else { "s" }
+    );
+    notes.extend(discussion);
+    Ok(notes)
 }
 
 #[cfg(test)]
@@ -358,6 +426,34 @@ mod tests {
         }
         assert!(parse_pr_ref("nope", &remotes).is_err());
         assert!(parse_pr_ref("7", &[]).is_err());
+    }
+
+    #[test]
+    fn discussion_notes_merge_comments_and_reviews() {
+        let parse = |json: &str| serde_json::from_str::<Vec<GhDiscussion>>(json).unwrap();
+        let issue = parse(
+            r#"[{"id": 1, "body": "later", "created_at": "2026-02-01T00:00:00Z",
+                 "user": {"login": "a"}, "html_url": "u1"}]"#,
+        );
+        let reviews = parse(
+            r#"[{"id": 1, "body": "first", "submitted_at": "2026-01-01T00:00:00Z",
+                 "user": {"login": "b"}},
+                {"id": 2, "body": "  ", "submitted_at": "2026-03-01T00:00:00Z"},
+                {"id": 3, "body": null, "submitted_at": "2026-03-01T00:00:00Z"}]"#,
+        );
+        let notes = discussion_notes(issue, reviews, Some(2));
+        let got: Vec<_> = notes
+            .iter()
+            .map(|n| (n.id.as_deref().unwrap(), n.body.as_str(), n.file.as_str()))
+            .collect();
+        assert_eq!(
+            got,
+            [
+                ("review-1", "first", "(commit)"),
+                ("issue-1", "later", "(commit)")
+            ]
+        );
+        assert!(notes.iter().all(|n| n.commit_idx == Some(2)));
     }
 
     #[test]
