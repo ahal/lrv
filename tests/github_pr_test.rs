@@ -19,6 +19,13 @@ case "$*" in
     echo '{"id":1,"body":"first","path":"f.txt","line":2,"side":"RIGHT","user":{"login":"alice"}}'
     echo '{"id":2,"body":"reply","path":"f.txt","line":2,"in_reply_to_id":1,"user":{"login":"bob"}}'
     ;;
+  *"repos/o/r/issues/7/comments"*)
+    echo '{"id":5,"body":"conversation","created_at":"2026-01-02T00:00:00Z","user":{"login":"carol"}}'
+    ;;
+  *"repos/o/r/pulls/7/reviews"*)
+    echo '{"id":6,"body":"","submitted_at":"2026-01-01T00:00:00Z","user":{"login":"dave"}}'
+    echo '{"id":7,"body":"summary","submitted_at":"2026-01-03T00:00:00Z","user":{"login":"dave"}}'
+    ;;
   *) exit 1 ;;
 esac
 "#,
@@ -34,6 +41,9 @@ esac
         number: 7,
     };
     let notes = fetch_pr_notes(&pr, &[diff]).await.unwrap();
-    assert_eq!(notes.len(), 1, "the reply folds into its parent");
+    assert_eq!(notes.len(), 3, "the reply folds into its parent");
     assert!(notes[0].body.contains("**bob:** reply"));
+    let review: Vec<_> = notes.iter().filter(|n| n.file == "(commit)").collect();
+    let bodies: Vec<_> = review.iter().map(|n| n.body.as_str()).collect();
+    assert_eq!(bodies, ["conversation", "summary"], "empty review skipped");
 }

@@ -67,4 +67,5 @@ Any comment UX change (shortcuts, edit, delete, validation) must go in both.
 
 Required: `file`, `line` (int or `[start, end]`), `side` (`"new"`/`"old"`), `body`.
 Optional: `id`, `author`, `date`, `source_url`, `commit_idx`.
-Commit-level: `file: "(commit)"`, `line: 1`, `side: "new"`.
+Commit-message-level: `file: "(commit)"`, `line: 1`, `side: "new"`.
+Pull-request-level comments (`--github-pr` fills them from the PR conversation and review summaries) are `file: "(commit)"` notes like Phabricator's general comments, placed on the last commit of a series. Notes without `commit_idx` in a one-commit series are pinned to commit 0 (`tag_single_commit_notes`).
