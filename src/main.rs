@@ -458,10 +458,40 @@ fn validate_review_notes(notes: &[ReviewNote]) -> Result<()> {
     Ok(())
 }
 
-fn phabricator_token_from_env() -> Result<String> {
-    std::env::var("PHABRICATOR_API_KEY")
-        .or_else(|_| std::env::var("PHABRICATOR_TOKEN"))
-        .context("Set PHABRICATOR_API_KEY or PHABRICATOR_TOKEN to load Phabricator comments")
+/// The Phabricator API token: from the environment, else from `~/.arcrc` (shared with moz-phab
+/// and arc), where it is stored per host.
+fn phabricator_token(base_url: &str) -> Result<String> {
+    if let Ok(token) =
+        std::env::var("PHABRICATOR_API_KEY").or_else(|_| std::env::var("PHABRICATOR_TOKEN"))
+    {
+        return Ok(token);
+    }
+    if let Some(token) =
+        dirs::home_dir().and_then(|home| arcrc_token(&home.join(".arcrc"), base_url))
+    {
+        return Ok(token);
+    }
+    anyhow::bail!(
+        "Set PHABRICATOR_API_KEY or PHABRICATOR_TOKEN (or log in with moz-phab) to load Phabricator comments"
+    )
+}
+
+fn arcrc_token(path: &std::path::Path, base_url: &str) -> Option<String> {
+    let value: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(path).ok()?).ok()?;
+    let normalize = |url: &str| {
+        url.trim_end_matches('/')
+            .trim_end_matches("/api")
+            .to_string()
+    };
+    let wanted = normalize(base_url);
+    value
+        .get("hosts")?
+        .as_object()?
+        .iter()
+        .find(|(host, _)| normalize(host) == wanted)
+        .and_then(|(_, entry)| entry.get("token")?.as_str())
+        .map(str::to_string)
 }
 
 async fn load_phabricator_notes(
@@ -474,7 +504,7 @@ async fn load_phabricator_notes(
         return Ok(Vec::new());
     }
 
-    let token = phabricator_token_from_env()?;
+    let token = phabricator_token(base_url)?;
     let client = PhabricatorClient::new(base_url.to_string(), token)?;
     let mut notes = Vec::new();
 
@@ -516,7 +546,7 @@ async fn auto_fetch_phab(diffs: &[DiffResponse], include_done: bool) -> Option<V
         return None;
     }
 
-    let token = match phabricator_token_from_env() {
+    let token = match phabricator_token(&revisions[0].1) {
         Ok(token) => token,
         Err(e) => {
             eprintln!("warning: not loading Phabricator comments: {e:#}");
