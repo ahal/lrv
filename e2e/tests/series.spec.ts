@@ -16,14 +16,18 @@ let serverUrl: string | null = null;
 let testRepoPath: string | null = null;
 let serverLogPath: string | null = null;
 
-async function startSeriesServer(port: number = 0, range: string = 'HEAD~2..HEAD'): Promise<void> {
+async function startSeriesServer(
+  port: number = 0,
+  range: string = 'HEAD~2..HEAD',
+  extraArgs: string = '',
+): Promise<void> {
   if (!testRepoPath) {
     throw new Error('Test repo not initialized');
   }
 
   return new Promise((resolve, reject) => {
     const cargoPath = process.env.LRV_BIN || path.resolve(__dirname, '../../target/debug/lrv');
-    const cmd = `cd "${testRepoPath}" && "${cargoPath}" --series "${range}" --port ${port} --no-open`;
+    const cmd = `cd "${testRepoPath}" && "${cargoPath}" --series "${range}" --port ${port} --no-open ${extraArgs}`;
 
     serverUrl = null;
     const resultsDir = path.resolve(__dirname, '../test-results');
@@ -835,5 +839,37 @@ test.describe('Series: overall feedback is series-wide, not attached to a single
     for (const commit of result.commits) {
       expect(commit.comments).toEqual([]);
     }
+  });
+});
+
+test.describe('Commit-message notes in a one-commit series', () => {
+  test.beforeAll(async () => {
+    const suffix = `${Date.now()}-${process.pid}-${Math.floor(Math.random() * 1e9)}`;
+    testRepoPath = path.join(os.tmpdir(), `lrv-series-notes-${suffix}`);
+    await makeSeriesRepo(testRepoPath);
+    const notesPath = path.join(testRepoPath, 'notes.json');
+    fs.writeFileSync(
+      notesPath,
+      JSON.stringify([{ file: '(commit)', line: 1, side: 'new', body: 'commit-level note' }]),
+    );
+    await startSeriesServer(0, 'HEAD~1..HEAD', `--review-notes-file "${notesPath}"`);
+  });
+
+  test.afterAll(async () => {
+    await stopServer();
+    await new Promise((r) => setTimeout(r, 2000));
+    if (testRepoPath) {
+      await execAsync(`rm -rf "${testRepoPath}"`);
+      testRepoPath = null;
+    }
+  });
+
+  test('untagged notes are pinned to the commit', async ({ page }) => {
+    await openApp(page);
+
+    const commitRow = page.locator('.tree-row-summary', { hasText: 'Commit message' });
+    await expect(commitRow.locator('.file-comment-badge')).toHaveText('1');
+    await commitRow.click();
+    await expect(page.locator('.commit-view')).toContainText('commit-level note');
   });
 });
