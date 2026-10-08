@@ -57,7 +57,7 @@ Any comment UX change (shortcuts, edit, delete, validation) must go in both.
 --github-pr-comments <path>        pipe output of: gh api repos/OWNER/REPO/pulls/N/comments
 --github-pr [<N|O/R#N|url>]        fetch a PR's comments with gh; no value = detect PR
 --phab-mcp-comments <path>         pipe output of: mcp__moz__get_phabricator_revision
---phab-revision [<D123>]           fetch via Conduit API (needs PHABRICATOR_API_KEY); no value = detect from trailer
+--phab-revision [<D123>]           fetch via Conduit API (needs PHABRICATOR_API_KEY or ~/.arcrc); no value = detect from trailer
 --list-reviews                     list stored review sessions
 --recover [<id>]                   print a stored session's comments
 --bind, --public, --tailscale, --port, --no-open, --format, --title, --dev-log
