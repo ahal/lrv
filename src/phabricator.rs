@@ -94,6 +94,12 @@ struct UserFields {
     username: Option<String>,
 }
 
+/// Result of `phid.query`: the display name of any object, e.g. the Herald application.
+#[derive(Debug, Deserialize)]
+struct PhidInfo {
+    name: Option<String>,
+}
+
 #[derive(Clone)]
 pub struct PhabricatorClient {
     base_url: String,
@@ -250,7 +256,37 @@ impl PhabricatorClient {
             let display_name = display_user_name(&user.fields).unwrap_or_else(|| user.phid.clone());
             users.insert(user.phid, display_name);
         }
+        // Authors that aren't users, such as Herald rules, only resolve through `phid.query`.
+        let unresolved: Vec<&String> = phids.iter().filter(|p| !users.contains_key(*p)).collect();
+        users.extend(self.fetch_phid_names(&unresolved).await);
         users
+    }
+
+    async fn fetch_phid_names(&self, phids: &[&String]) -> HashMap<String, String> {
+        if phids.is_empty() {
+            return HashMap::new();
+        }
+        let url = format!("{}/api/phid.query", self.base_url);
+        let mut params = vec![("api.token".to_string(), self.token.clone())];
+        for (idx, phid) in phids.iter().enumerate() {
+            params.push((format!("phids[{}]", idx), (*phid).clone()));
+        }
+        let Ok(response) = self.client.post(url).form(&params).send().await else {
+            return HashMap::new();
+        };
+        let Ok(response) = response
+            .json::<ConduitResponse<HashMap<String, PhidInfo>>>()
+            .await
+        else {
+            return HashMap::new();
+        };
+        let Ok(infos) = response.into_result() else {
+            return HashMap::new();
+        };
+        infos
+            .into_iter()
+            .filter_map(|(phid, info)| Some((phid, info.name.filter(|n| !n.is_empty())?)))
+            .collect()
     }
 
     fn append_inline_notes(
