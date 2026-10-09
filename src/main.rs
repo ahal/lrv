@@ -548,14 +548,13 @@ async fn load_phabricator_notes(
 /// Load the comments of the Phabricator revision(s) named by the commits' `Differential Revision:`
 /// trailers. `None` when no commit has one. Failures are warnings: the review must open regardless.
 async fn auto_fetch_phab(diffs: &[DiffResponse], include_done: bool) -> Option<Vec<ReviewNote>> {
-    let revisions: Vec<(usize, String, u32)> = diffs
-        .iter()
-        .enumerate()
-        .filter_map(|(i, diff)| {
-            let (base, id) = phabricator::detect_revision(diff.commit_message.as_deref()?)?;
-            Some((i, base, id))
-        })
-        .collect();
+    let messages: Vec<Option<&str>> = diffs.iter().map(|d| d.commit_message.as_deref()).collect();
+    let revisions: Vec<(usize, String, u32)> =
+        phabricator::resolve_phab_targets(&[], "", &messages)
+            .into_iter()
+            .enumerate()
+            .filter_map(|(i, target)| target.map(|t| (i, t.base_url, t.id)))
+            .collect();
     if revisions.is_empty() {
         return None;
     }

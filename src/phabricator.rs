@@ -408,6 +408,36 @@ pub fn detect_revision(commit_message: &str) -> Option<(String, u32)> {
     Some((base.to_string(), parse_revision_id(url)?))
 }
 
+/// A Phabricator revision a commit is reviewed on.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PhabTarget {
+    pub base_url: String,
+    pub id: u32,
+}
+
+/// The revision of each commit: the `named` revision at the same position when given, else the
+/// commit's `Differential Revision:` trailer. `None` for commits with neither.
+pub fn resolve_phab_targets(
+    named: &[String],
+    base_url: &str,
+    commit_messages: &[Option<&str>],
+) -> Vec<Option<PhabTarget>> {
+    commit_messages
+        .iter()
+        .enumerate()
+        .map(|(i, message)| {
+            if let Some(id) = named.get(i).and_then(|r| parse_revision_id(r)) {
+                return Some(PhabTarget {
+                    base_url: base_url.to_string(),
+                    id,
+                });
+            }
+            let (base_url, id) = detect_revision((*message)?)?;
+            Some(PhabTarget { base_url, id })
+        })
+        .collect()
+}
+
 fn parse_revision_id(input: &str) -> Option<u32> {
     let trimmed = input.trim();
     if let Some((_, tail)) = trimmed.rsplit_once("/D") {
@@ -445,7 +475,7 @@ fn note_line_start(line: &CommentLine) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::{detect_revision, parse_revision_id};
+    use super::{detect_revision, parse_revision_id, resolve_phab_targets, PhabTarget};
 
     #[test]
     fn detects_revision_trailer() {
@@ -473,5 +503,29 @@ mod tests {
             Some(301379)
         );
         assert_eq!(parse_revision_id("Dnope"), None);
+    }
+
+    #[test]
+    fn resolves_named_then_trailer_targets() {
+        let trailer = "Bug 1\n\nDifferential Revision: https://phab.example/D7\n";
+        let target = |base: &str, id| {
+            Some(PhabTarget {
+                base_url: base.to_string(),
+                id,
+            })
+        };
+        let targets = resolve_phab_targets(
+            &["D5".to_string()],
+            "https://named.example",
+            &[Some("Bug 0"), Some(trailer), None],
+        );
+        assert_eq!(
+            targets,
+            vec![
+                target("https://named.example", 5),
+                target("https://phab.example", 7),
+                None
+            ]
+        );
     }
 }
