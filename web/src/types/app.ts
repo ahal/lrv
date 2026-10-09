@@ -45,12 +45,22 @@ export type AppConfig = {
 
 export type AppConfigInput = Partial<AppConfig>;
 
+export type ReviewAction = 'comment' | 'accept' | 'request-changes';
+
+/** Where Submit publishes the review; absent when it is printed for the agent. */
+export type SubmitTarget = {
+  kind: string;
+  user: string;
+  revisions: Array<{ commit_idx: number; id: string; url: string }>;
+};
+
 export type AppContextData = {
   title?: string;
   working_directory?: string;
   git_branch?: string;
   is_public?: boolean;
   claude_skill_installed?: boolean;
+  submit_target?: SubmitTarget;
 };
 
 export type UserTheme = {

@@ -620,6 +620,57 @@ test.describe('Review Workflow E2E', () => {
     await expect(page.locator('text=Review Submitted')).toBeVisible({ timeout: 3000 });
   });
 
+  test('publish mode shows the destination, sends the action and shows publish errors', async ({
+    page,
+  }) => {
+    await page.route('**/api/context', async (route) => {
+      const response = await route.fetch();
+      const context = await response.json();
+      context.submit_target = {
+        kind: 'phabricator',
+        user: 'reviewer',
+        revisions: [{ commit_idx: 0, id: 'D123', url: 'https://phab.example/D123' }],
+      };
+      await route.fulfill({ response, json: context });
+    });
+    const completeBodies: any[] = [];
+    await page.route('**/api/complete', async (route) => {
+      completeBodies.push(route.request().postDataJSON());
+      if (completeBodies.length === 1) {
+        await route.fulfill({ status: 502, body: 'Failed to publish to D123: boom' });
+      } else {
+        await route.fulfill({ status: 200, body: '' });
+      }
+    });
+    await openApp(page);
+    await page.locator('.monaco-editor').first().waitFor({ timeout: 10000 });
+    await page.waitForTimeout(500);
+
+    await page.locator('#submit-review').click();
+    const modal = page.locator('.submit-review-modal');
+    await expect(modal.locator('.submit-destination')).toContainText('Publish to D123 as reviewer');
+    await expect(modal.locator('.submit-destination a')).toHaveAttribute(
+      'href',
+      'https://phab.example/D123',
+    );
+    // Nothing to publish yet: a plain comment with no text would post nothing.
+    const confirm = modal.locator('.confirm-submit-btn');
+    await expect(confirm).toHaveText('Publish to Phabricator');
+    await expect(confirm).toBeDisabled();
+
+    await modal.locator('.submit-action-option', { hasText: 'Request Changes' }).click();
+    await expect(confirm).toBeEnabled();
+
+    await confirm.click();
+    await expect(modal.locator('.submit-error')).toContainText('boom');
+    await expect(confirm).toBeEnabled();
+
+    await confirm.click();
+    await expect(page.locator('text=Review Published')).toBeVisible({ timeout: 3000 });
+    expect(completeBodies).toHaveLength(2);
+    expect(completeBodies[1].action).toBe('request-changes');
+  });
+
   test('stacked mode should add, edit, and delete a comment', async ({ page }) => {
     await openStackedView(page);
 

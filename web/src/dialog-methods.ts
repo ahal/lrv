@@ -6,7 +6,7 @@ import { fetchJSON } from './api';
 import { resolveAppConfig } from './config';
 import { IS_MAC } from './platform';
 import { KEYBOARD_SHORTCUTS } from './shortcuts';
-import type { AppContext } from './types/app';
+import type { AppContext, ReviewAction, SubmitTarget } from './types/app';
 import { appendLinkifiedText } from './linkify';
 
 type QueuedReviewNoteBody = {
@@ -89,6 +89,7 @@ export class DialogMethods {
   declare loadCommitView: () => void;
   declare currentFileIsCommit: boolean;
   declare overallReviewComment: AppContext['overallReviewComment'];
+  declare context: AppContext['context'];
   declare applyThemeToUI: (theme: string) => void;
   declare loadFile: (index: number) => Promise<void>;
   declare userThemes: AppContext['userThemes'];
@@ -411,11 +412,13 @@ export class DialogMethods {
   async showSubmitConfirmation() {
     const comments = this.commentManager.getComments();
     const submissionComments = [...comments];
+    const target = this.context.submit_target;
+    const submitLabel = target ? 'Publish to Phabricator' : 'Submit Review';
     let submit: () => void | Promise<void> = () => {};
 
     const footerContent = [
       el('button', { className: 'btn-secondary cancel-submit-btn', text: 'Cancel' }),
-      el('button', { className: 'btn-primary confirm-submit-btn', text: 'Submit Review' }),
+      el('button', { className: 'btn-primary confirm-submit-btn', text: submitLabel }),
     ];
 
     const { overlay, modal, body, footer, close } = openModal({
@@ -435,7 +438,9 @@ export class DialogMethods {
     });
 
     if (submissionComments.length === 0) {
-      const noCommentsMsg = el('p', { text: 'No comments. Submit to approve this review.' });
+      const noCommentsMsg = el('p', {
+        text: target ? 'No comments.' : 'No comments. Submit to approve this review.',
+      });
       noCommentsMsg.style.padding = '20px';
       noCommentsMsg.style.textAlign = 'center';
       noCommentsMsg.style.color = 'var(--text-secondary)';
@@ -451,6 +456,20 @@ export class DialogMethods {
     }) as HTMLTextAreaElement;
     summaryInput.value = this.overallReviewComment;
     summaryField.appendChild(summaryInput);
+
+    const errorBox = el('div', { className: 'submit-error' });
+    errorBox.hidden = true;
+    body.appendChild(errorBox);
+
+    let action: ReviewAction = 'comment';
+    if (target) {
+      body.appendChild(
+        this.renderPublishTarget(target, (value) => {
+          action = value;
+          updateSubmittable();
+        }),
+      );
+    }
     body.appendChild(summaryField);
 
     const commentsByFile: Record<string, ReviewComment[]> = {};
@@ -475,7 +494,9 @@ export class DialogMethods {
           ]),
           el('div', {
             className: 'submit-review-summary-hint',
-            text: 'These comments will be sent to the agent when you submit.',
+            text: target
+              ? 'These comments will be published when you submit.'
+              : 'These comments will be sent to the agent when you submit.',
           }),
         ]),
       );
@@ -555,14 +576,26 @@ export class DialogMethods {
       body.appendChild(preview);
     });
 
+    // Publishing nothing would silently close the review.
+    const updateSubmittable = () => {
+      const btn = footer.querySelector<HTMLButtonElement>('.confirm-submit-btn');
+      if (btn && target) {
+        btn.disabled =
+          submissionComments.length === 0 && !summaryInput.value.trim() && action === 'comment';
+      }
+    };
+    summaryInput.addEventListener('input', updateSubmittable);
+    updateSubmittable();
+
     submit = async () => {
       const submitBtn = footer.querySelector<HTMLButtonElement>('.confirm-submit-btn');
-      if (!submitBtn) {
+      if (!submitBtn || submitBtn.disabled) {
         return;
       }
+      errorBox.hidden = true;
       this.overallReviewComment = summaryInput.value.trim();
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Submitting...';
+      submitBtn.textContent = target ? 'Publishing...' : 'Submitting...';
 
       try {
         const resp = await fetch('/api/complete', {
@@ -571,10 +604,12 @@ export class DialogMethods {
           body: JSON.stringify({
             comments,
             overall_comment: this.overallReviewComment || undefined,
+            action: target ? action : undefined,
           }),
         });
         if (!resp.ok) {
-          throw new Error(`HTTP ${resp.status}`);
+          const detail = (await resp.text()).trim();
+          throw new Error(detail || `HTTP ${resp.status}`);
         }
 
         await this.clearPersistedComments();
@@ -586,13 +621,13 @@ export class DialogMethods {
           this.loadCommitView();
         }
 
-        submitBtn.textContent = 'Submitted!';
+        submitBtn.textContent = target ? 'Published!' : 'Submitted!';
         const submitReviewBtn = document.getElementById(
           'submit-review',
         ) as HTMLButtonElement | null;
         if (submitReviewBtn) {
           submitReviewBtn.disabled = true;
-          submitReviewBtn.textContent = 'Review Submitted';
+          submitReviewBtn.textContent = target ? 'Review Published' : 'Review Submitted';
         }
 
         setTimeout(() => {
@@ -602,9 +637,15 @@ export class DialogMethods {
           }
         }, 1000);
       } catch (error) {
-        alert(`Failed to submit review: ${error}`);
+        if (target) {
+          errorBox.textContent = `Failed to publish review: ${error instanceof Error ? error.message : error}`;
+          errorBox.hidden = false;
+          errorBox.scrollIntoView({ block: 'nearest' });
+        } else {
+          alert(`Failed to submit review: ${error}`);
+        }
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit Review';
+        submitBtn.textContent = submitLabel;
       }
     };
 
@@ -623,6 +664,45 @@ export class DialogMethods {
         f.focus();
       }
     }, 0);
+  }
+
+  private renderPublishTarget(
+    target: SubmitTarget,
+    onAction: (action: ReviewAction) => void,
+  ): HTMLElement {
+    const links = target.revisions.map((revision) =>
+      el('a', {
+        className: 'auto-link',
+        text: revision.id,
+        attrs: { href: revision.url, target: '_blank', rel: 'noopener noreferrer' },
+      }),
+    );
+    const destination = el('div', { className: 'submit-destination' }, [
+      el('span', { text: 'Publish to ' }),
+    ]);
+    links.forEach((link, i) => {
+      if (i > 0) {
+        destination.appendChild(document.createTextNode(', '));
+      }
+      destination.appendChild(link);
+    });
+    destination.appendChild(document.createTextNode(` as ${target.user}`));
+
+    const options: Array<[ReviewAction, string]> = [
+      ['comment', 'Comment'],
+      ['accept', 'Accept'],
+      ['request-changes', 'Request Changes'],
+    ];
+    const actions = el('div', { className: 'submit-actions' });
+    options.forEach(([value, label]) => {
+      const input = el('input', {
+        attrs: { type: 'radio', name: 'submit-action', value },
+      }) as HTMLInputElement;
+      input.checked = value === 'comment';
+      input.addEventListener('change', () => onAction(value));
+      actions.appendChild(el('label', { className: 'submit-action-option' }, [input, label]));
+    });
+    return el('div', { className: 'submit-publish-target' }, [destination, actions]);
   }
 
   private renderSubmitCommentBody(comment: ReviewComment): HTMLElement {

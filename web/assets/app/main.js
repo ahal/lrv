@@ -12697,13 +12697,15 @@ var DialogMethods = class {
 	async showSubmitConfirmation() {
 		const comments = this.commentManager.getComments();
 		const submissionComments = [...comments];
+		const target = this.context.submit_target;
+		const submitLabel = target ? "Publish to Phabricator" : "Submit Review";
 		let submit = () => {};
 		const footerContent = [el("button", {
 			className: "btn-secondary cancel-submit-btn",
 			text: "Cancel"
 		}), el("button", {
 			className: "btn-primary confirm-submit-btn",
-			text: "Submit Review"
+			text: submitLabel
 		})];
 		const { overlay, modal, body, footer, close } = openModal({
 			title: submissionComments.length === 0 ? "Submit Review" : `Review Comments (${submissionComments.length})`,
@@ -12718,7 +12720,7 @@ var DialogMethods = class {
 			}
 		});
 		if (submissionComments.length === 0) {
-			const noCommentsMsg = el("p", { text: "No comments. Submit to approve this review." });
+			const noCommentsMsg = el("p", { text: target ? "No comments." : "No comments. Submit to approve this review." });
 			noCommentsMsg.style.padding = "20px";
 			noCommentsMsg.style.textAlign = "center";
 			noCommentsMsg.style.color = "var(--text-secondary)";
@@ -12734,6 +12736,14 @@ var DialogMethods = class {
 		});
 		summaryInput.value = this.overallReviewComment;
 		summaryField.appendChild(summaryInput);
+		const errorBox = el("div", { className: "submit-error" });
+		errorBox.hidden = true;
+		body.appendChild(errorBox);
+		let action = "comment";
+		if (target) body.appendChild(this.renderPublishTarget(target, (value) => {
+			action = value;
+			updateSubmittable();
+		}));
 		body.appendChild(summaryField);
 		const commentsByFile = {};
 		submissionComments.forEach((comment) => {
@@ -12747,7 +12757,7 @@ var DialogMethods = class {
 				el("div", { className: "submit-review-summary-item" }, [el("strong", { text: fileCount }), el("span", { text: fileCount === 1 ? "location" : "locations" })]),
 				el("div", {
 					className: "submit-review-summary-hint",
-					text: "These comments will be sent to the agent when you submit."
+					text: target ? "These comments will be published when you submit." : "These comments will be sent to the agent when you submit."
 				})
 			]));
 		}
@@ -12806,42 +12816,57 @@ var DialogMethods = class {
 			preview.appendChild(this.renderSubmitCommentBody(comment));
 			body.appendChild(preview);
 		});
+		const updateSubmittable = () => {
+			const btn = footer.querySelector(".confirm-submit-btn");
+			if (btn && target) btn.disabled = submissionComments.length === 0 && !summaryInput.value.trim() && action === "comment";
+		};
+		summaryInput.addEventListener("input", updateSubmittable);
+		updateSubmittable();
 		submit = async () => {
 			const submitBtn = footer.querySelector(".confirm-submit-btn");
-			if (!submitBtn) return;
+			if (!submitBtn || submitBtn.disabled) return;
+			errorBox.hidden = true;
 			this.overallReviewComment = summaryInput.value.trim();
 			submitBtn.disabled = true;
-			submitBtn.textContent = "Submitting...";
+			submitBtn.textContent = target ? "Publishing..." : "Submitting...";
 			try {
 				const resp = await fetch("/api/complete", {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						comments,
-						overall_comment: this.overallReviewComment || void 0
+						overall_comment: this.overallReviewComment || void 0,
+						action: target ? action : void 0
 					})
 				});
-				if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+				if (!resp.ok) {
+					const detail = (await resp.text()).trim();
+					throw new Error(detail || `HTTP ${resp.status}`);
+				}
 				await this.clearPersistedComments();
 				this.commentManager.setComments([]);
 				this.overallReviewComment = "";
 				this.updateDecorations();
 				this.renderFileList();
 				if (this.currentFileIsCommit) this.loadCommitView();
-				submitBtn.textContent = "Submitted!";
+				submitBtn.textContent = target ? "Published!" : "Submitted!";
 				const submitReviewBtn = document.getElementById("submit-review");
 				if (submitReviewBtn) {
 					submitReviewBtn.disabled = true;
-					submitReviewBtn.textContent = "Review Submitted";
+					submitReviewBtn.textContent = target ? "Review Published" : "Review Submitted";
 				}
 				setTimeout(() => {
 					close();
 					if (this.config.auto_close_tab) window.close();
 				}, 1e3);
 			} catch (error) {
-				alert(`Failed to submit review: ${error}`);
+				if (target) {
+					errorBox.textContent = `Failed to publish review: ${error instanceof Error ? error.message : error}`;
+					errorBox.hidden = false;
+					errorBox.scrollIntoView({ block: "nearest" });
+				} else alert(`Failed to submit review: ${error}`);
 				submitBtn.disabled = false;
-				submitBtn.textContent = "Submit Review";
+				submitBtn.textContent = submitLabel;
 			}
 		};
 		const cancelSubmitBtn = footer.querySelector(".cancel-submit-btn");
@@ -12852,6 +12877,40 @@ var DialogMethods = class {
 			const f = footer.querySelector(".confirm-submit-btn");
 			if (f) f.focus();
 		}, 0);
+	}
+	renderPublishTarget(target, onAction) {
+		const links = target.revisions.map((revision) => el("a", {
+			className: "auto-link",
+			text: revision.id,
+			attrs: {
+				href: revision.url,
+				target: "_blank",
+				rel: "noopener noreferrer"
+			}
+		}));
+		const destination = el("div", { className: "submit-destination" }, [el("span", { text: "Publish to " })]);
+		links.forEach((link, i) => {
+			if (i > 0) destination.appendChild(document.createTextNode(", "));
+			destination.appendChild(link);
+		});
+		destination.appendChild(document.createTextNode(` as ${target.user}`));
+		const options = [
+			["comment", "Comment"],
+			["accept", "Accept"],
+			["request-changes", "Request Changes"]
+		];
+		const actions = el("div", { className: "submit-actions" });
+		options.forEach(([value, label]) => {
+			const input = el("input", { attrs: {
+				type: "radio",
+				name: "submit-action",
+				value
+			} });
+			input.checked = value === "comment";
+			input.addEventListener("change", () => onAction(value));
+			actions.appendChild(el("label", { className: "submit-action-option" }, [input, label]));
+		});
+		return el("div", { className: "submit-publish-target" }, [destination, actions]);
 	}
 	renderSubmitCommentBody(comment) {
 		const container = el("div", { className: "comment-preview-text" });
