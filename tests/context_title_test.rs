@@ -44,6 +44,7 @@ async fn test_context_includes_title_when_set() {
             std::collections::HashMap::new(),
         )]),
         is_series: false,
+        pull_requests: Default::default(),
         store: None,
     };
 
@@ -113,6 +114,7 @@ async fn test_context_title_null_when_unset() {
             std::collections::HashMap::new(),
         )]),
         is_series: false,
+        pull_requests: Default::default(),
         store: None,
     };
 

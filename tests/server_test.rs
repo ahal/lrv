@@ -50,6 +50,7 @@ fn test_app_state_construction() {
             std::collections::HashMap::new(),
         )]),
         is_series: false,
+        pull_requests: Default::default(),
         store: None,
     };
 }
@@ -100,6 +101,7 @@ fn test_create_router() {
             std::collections::HashMap::new(),
         )]),
         is_series: false,
+        pull_requests: Default::default(),
         store: None,
     };
 
@@ -152,6 +154,7 @@ async fn test_review_note_api_round_trip() {
             std::collections::HashMap::new(),
         )]),
         is_series: false,
+        pull_requests: Default::default(),
         store: None,
     };
 

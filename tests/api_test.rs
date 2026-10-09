@@ -64,6 +64,7 @@ fn test_appstate_required_fields() {
             std::collections::HashMap::new(),
         )]),
         is_series: false,
+        pull_requests: Default::default(),
         store: None,
     };
 
