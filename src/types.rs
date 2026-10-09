@@ -122,6 +122,16 @@ pub enum Side {
     Old,
 }
 
+/// How a review published to a code host ends: a plain comment, or a verdict.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ReviewAction {
+    #[default]
+    Comment,
+    Accept,
+    RequestChanges,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReviewComplete {
     pub comments: Vec<Comment>,
