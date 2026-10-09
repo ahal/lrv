@@ -671,6 +671,58 @@ test.describe('Review Workflow E2E', () => {
     expect(completeBodies[1].action).toBe('request-changes');
   });
 
+  test('publish mode replies to a review note with a plain comment', async ({ page }) => {
+    await page.route('**/api/context', async (route) => {
+      const response = await route.fetch();
+      const context = await response.json();
+      context.submit_target = {
+        kind: 'phabricator',
+        user: 'reviewer',
+        revisions: [{ commit_idx: 0, id: 'D123', url: 'https://phab.example/D123' }],
+      };
+      await route.fulfill({ response, json: context });
+    });
+    await page.route('**/api/review-notes', async (route) => {
+      if (route.request().method() !== 'GET') {
+        return route.continue();
+      }
+      const notes = ['test.txt', 'file2.txt', 'file3.txt'].map((file) => ({
+        id: file,
+        file,
+        line: 1,
+        side: 'new',
+        body: 'Why is this needed?',
+        author: 'Author',
+      }));
+      await route.fulfill({ json: notes });
+    });
+    await openApp(page);
+    await page.locator('.monaco-editor').first().waitFor({ timeout: 10000 });
+
+    const note = page.locator('.review-note').first();
+    await expect(note).toBeVisible();
+    // Monaco view zones are aria-hidden, so look the buttons up by text rather than by role.
+    await expect(note.locator('button', { hasText: 'Reply' })).toHaveCount(1);
+    await expect(note.locator('button', { hasText: 'Address' })).toHaveCount(0);
+    await expect(note.locator('button', { hasText: 'Ignore' })).toHaveCount(0);
+
+    await note.locator('button', { hasText: 'Reply' }).click();
+    await expect(note.locator('.review-note-reply-text')).toHaveAttribute(
+      'placeholder',
+      'Reply...',
+    );
+    await note.locator('.review-note-reply-text').fill('Because of the cache.');
+    await note.locator('button', { hasText: 'Queue' }).click();
+    await expect(note.locator('.review-note-status')).toHaveText('Reply queued');
+    await expect(note.locator('button', { hasText: 'Undo' })).toHaveCount(0);
+
+    // The reply is a plain comment, without the agent-instruction wrapper.
+    await expect(page.locator('#comment-count')).toHaveText('1');
+    await page.locator('#submit-review').click();
+    const preview = page.locator('.submit-review-modal .comment-preview-text');
+    await expect(preview).toHaveText('Because of the cache.');
+  });
+
   test('stacked mode should add, edit, and delete a comment', async ({ page }) => {
     await openStackedView(page);
 

@@ -11,6 +11,7 @@ export class ReviewNoteMethods {
   declare currentFileIndex: number;
   declare reviewNoteManager: AppContext['reviewNoteManager'];
   declare commentManager: AppContext['commentManager'];
+  declare context: AppContext['context'];
   declare modifiedReviewNoteDecorations: string[];
   declare originalReviewNoteDecorations: string[];
   declare modifiedReviewNoteZoneIds: string[];
@@ -220,17 +221,28 @@ export class ReviewNoteMethods {
     return box;
   }
 
+  // When the review is published to a code host, notes are other people's comments to answer:
+  // Address and Ignore only mean something to an agent, and a reply is a plain comment.
+  private get isPublishing() {
+    return this.context.submit_target !== undefined;
+  }
+
   private buildReviewNoteActions(note: ReviewNote) {
     const actions = el('div', { className: 'review-note-actions' });
     const disposition = note.disposition ?? 'open';
 
     if (disposition === 'addressed' || disposition === 'ignored') {
+      const queuedText = this.isPublishing ? 'Reply queued' : 'Queued for agent';
       actions.appendChild(
         el('span', {
           className: `review-note-status review-note-status-${disposition}`,
-          text: disposition === 'addressed' ? 'Queued for agent' : 'Ignored',
+          text: disposition === 'addressed' ? queuedText : 'Ignored',
         }),
       );
+      if (this.isPublishing) {
+        // The reply is already a queued comment; undoing only the note would allow a duplicate.
+        return actions;
+      }
       const undo = el('button', { className: 'btn-secondary review-note-btn', text: 'Undo' });
       undo.addEventListener('click', (event) => {
         event.preventDefault();
@@ -262,7 +274,11 @@ export class ReviewNoteMethods {
       this.reviewNoteManager.updateNote(note, { disposition: 'ignored' });
     });
 
-    actions.append(address, reply, ignore);
+    if (this.isPublishing) {
+      actions.append(reply);
+    } else {
+      actions.append(address, reply, ignore);
+    }
     return actions;
   }
 
@@ -274,7 +290,7 @@ export class ReviewNoteMethods {
     const form = el('div', { className: 'review-note-reply' });
     const textarea = el('textarea', {
       className: 'review-note-reply-text',
-      attrs: { placeholder: 'Instructions for the agent...' },
+      attrs: { placeholder: this.isPublishing ? 'Reply...' : 'Instructions for the agent...' },
     });
     const controls = el('div', { className: 'review-note-reply-actions' });
     const save = el('button', { className: 'btn-primary review-note-btn', text: 'Queue' });
@@ -307,7 +323,10 @@ export class ReviewNoteMethods {
       file: note.file,
       line: note.line,
       side: note.side,
-      body: this.formatReviewNoteInstruction(note, instruction),
+      body:
+        this.isPublishing && instruction
+          ? instruction
+          : this.formatReviewNoteInstruction(note, instruction),
     };
     this.commentManager.addComment(
       note.commit_idx === undefined ? comment : { ...comment, commit_idx: note.commit_idx },

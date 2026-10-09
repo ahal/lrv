@@ -12327,14 +12327,19 @@ var ReviewNoteMethods = class {
 		if (!note.read_only) box.appendChild(this.buildReviewNoteActions(note));
 		return box;
 	}
+	get isPublishing() {
+		return this.context.submit_target !== void 0;
+	}
 	buildReviewNoteActions(note) {
 		const actions = el("div", { className: "review-note-actions" });
 		const disposition = note.disposition ?? "open";
 		if (disposition === "addressed" || disposition === "ignored") {
+			const queuedText = this.isPublishing ? "Reply queued" : "Queued for agent";
 			actions.appendChild(el("span", {
 				className: `review-note-status review-note-status-${disposition}`,
-				text: disposition === "addressed" ? "Queued for agent" : "Ignored"
+				text: disposition === "addressed" ? queuedText : "Ignored"
 			}));
+			if (this.isPublishing) return actions;
 			const undo = el("button", {
 				className: "btn-secondary review-note-btn",
 				text: "Undo"
@@ -12377,7 +12382,8 @@ var ReviewNoteMethods = class {
 			event.stopPropagation();
 			this.reviewNoteManager.updateNote(note, { disposition: "ignored" });
 		});
-		actions.append(address, reply, ignore);
+		if (this.isPublishing) actions.append(reply);
+		else actions.append(address, reply, ignore);
 		return actions;
 	}
 	showReviewNoteReplyForm(actions, note) {
@@ -12385,7 +12391,7 @@ var ReviewNoteMethods = class {
 		const form = el("div", { className: "review-note-reply" });
 		const textarea = el("textarea", {
 			className: "review-note-reply-text",
-			attrs: { placeholder: "Instructions for the agent..." }
+			attrs: { placeholder: this.isPublishing ? "Reply..." : "Instructions for the agent..." }
 		});
 		const controls = el("div", { className: "review-note-reply-actions" });
 		const save = el("button", {
@@ -12421,7 +12427,7 @@ var ReviewNoteMethods = class {
 			file: note.file,
 			line: note.line,
 			side: note.side,
-			body: this.formatReviewNoteInstruction(note, instruction)
+			body: this.isPublishing && instruction ? instruction : this.formatReviewNoteInstruction(note, instruction)
 		};
 		this.commentManager.addComment(note.commit_idx === void 0 ? comment : {
 			...comment,
