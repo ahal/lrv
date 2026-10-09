@@ -62,6 +62,7 @@ fn get_project_context() -> ProjectContext {
         title: None,
         is_public: false,
         claude_skill_installed: skill::all_skills_installed(),
+        submit_target: None,
     }
 }
 
@@ -233,6 +234,12 @@ struct Args {
         value_name = "REVISION"
     )]
     phab_revisions: Vec<String>,
+
+    /// Publish the review to the Phabricator revision of each commit when you submit, instead of
+    /// printing it. The revisions come from `--phab-revision` or the commits'
+    /// `Differential Revision:` trailers.
+    #[arg(long)]
+    publish: bool,
 
     /// Base Phabricator URL
     #[arg(long)]
@@ -506,6 +513,77 @@ fn arcrc_token(path: &std::path::Path, base_url: &str) -> Option<String> {
         .find(|(host, _)| normalize(host) == wanted)
         .and_then(|(_, entry)| entry.get("token")?.as_str())
         .map(str::to_string)
+}
+
+/// Resolve each commit's Phabricator revision for `--publish` and check that the local commits
+/// are the revisions' latest diffs, so the inline comments land on the right lines.
+async fn setup_publisher(
+    named_revisions: &[String],
+    base_url: &str,
+    diffs: &[DiffResponse],
+) -> Result<(phabricator::Publisher, types::SubmitTarget)> {
+    let messages: Vec<Option<&str>> = diffs.iter().map(|d| d.commit_message.as_deref()).collect();
+    let mut resolved = Vec::new();
+    for (idx, target) in phabricator::resolve_phab_targets(named_revisions, base_url, &messages)
+        .into_iter()
+        .enumerate()
+    {
+        resolved.push(target.with_context(|| {
+            format!(
+                "--publish: commit {} has no Differential Revision trailer; name it with --phab-revision",
+                idx + 1
+            )
+        })?);
+    }
+    let base_url = resolved[0].base_url.clone();
+    if let Some(other) = resolved.iter().find(|t| t.base_url != base_url) {
+        anyhow::bail!(
+            "--publish: commits are on different Phabricator servers ({} and {})",
+            base_url,
+            other.base_url
+        );
+    }
+
+    let client = PhabricatorClient::new(base_url.clone(), phabricator_token(&base_url)?)?;
+    let viewer = client
+        .whoami()
+        .await
+        .context("--publish: the Phabricator token was not accepted")?;
+    eprintln!("Publishing to {base_url} as {}", viewer.username);
+
+    let mut targets = Vec::new();
+    let mut revisions = Vec::new();
+    for (idx, (target, diff)) in resolved.iter().zip(diffs).enumerate() {
+        let name = format!("D{}", target.id);
+        let active = client.fetch_active_diff(target.id).await?;
+        phabricator::check_diff_matches(&name, &phabricator::local_file_stats(diff), &active)?;
+        if active.closed {
+            eprintln!("warning: {name} is closed, abandoned or has changes planned");
+        }
+        if active.author_phid.as_deref() == Some(viewer.phid.as_str()) {
+            eprintln!(
+                "warning: {name} is your own revision; you can't accept or request changes on it"
+            );
+        }
+        revisions.push(types::SubmitRevision {
+            commit_idx: idx,
+            id: name,
+            url: active.uri.clone(),
+        });
+        targets.push(phabricator::PublishTarget {
+            revision: target.id,
+            diff_id: active.diff_id,
+            uri: active.uri,
+        });
+    }
+    Ok((
+        phabricator::Publisher::new(client, targets),
+        types::SubmitTarget {
+            kind: "phabricator".to_string(),
+            user: viewer.username,
+            revisions,
+        },
+    ))
 }
 
 async fn load_phabricator_notes(
@@ -940,6 +1018,17 @@ async fn main() -> Result<()> {
         .filter(|r| !r.is_empty())
         .cloned()
         .collect();
+    let publisher = if args.publish {
+        if args.github_pr.is_some() || args.github_pr_comments.is_some() {
+            anyhow::bail!("--publish only supports Phabricator");
+        }
+        let (publisher, submit_target) =
+            setup_publisher(&named_revisions, &phab_base_url, &diffs).await?;
+        project_context.submit_target = Some(submit_target);
+        Some(Arc::new(publisher))
+    } else {
+        None
+    };
     review_notes.extend(
         load_phabricator_notes(
             &named_revisions,
@@ -1053,6 +1142,7 @@ async fn main() -> Result<()> {
         is_series,
         pull_requests: Arc::new(pull_requests),
         store,
+        publish: publisher,
     };
 
     // Create router (we'll clone per listener)

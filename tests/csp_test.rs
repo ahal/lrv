@@ -27,6 +27,7 @@ async fn test_csp_header_present() {
         title: None,
         is_public: false,
         claude_skill_installed: false,
+        submit_target: None,
     };
     let (shutdown_tx, _rx) = tokio::sync::mpsc::channel::<()>(1);
     let state = lrv::server::AppState {
@@ -46,6 +47,7 @@ async fn test_csp_header_present() {
         is_series: false,
         pull_requests: Default::default(),
         store: None,
+        publish: None,
     };
 
     let app = lrv::server::create_router(state, false);
@@ -86,6 +88,7 @@ async fn test_csp_on_assets_and_api() {
         title: None,
         is_public: false,
         claude_skill_installed: false,
+        submit_target: None,
     };
     let (shutdown_tx, _rx) = tokio::sync::mpsc::channel::<()>(1);
     let state = lrv::server::AppState {
@@ -105,6 +108,7 @@ async fn test_csp_on_assets_and_api() {
         is_series: false,
         pull_requests: Default::default(),
         store: None,
+        publish: None,
     };
 
     let app = lrv::server::create_router(state, false);

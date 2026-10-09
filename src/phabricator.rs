@@ -407,7 +407,6 @@ impl PhabricatorClient {
 
 /// The user the API token belongs to.
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct Viewer {
     pub phid: String,
     pub username: String,
@@ -415,9 +414,7 @@ pub struct Viewer {
 
 /// A revision's active diff, as far as it is needed to check that a local commit matches it.
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct ActiveDiff {
-    pub revision_phid: String,
     pub uri: String,
     pub author_phid: Option<String>,
     /// Closed or abandoned revisions can still be commented on, but rarely should be.
@@ -429,7 +426,6 @@ pub struct ActiveDiff {
 
 /// A draft inline comment: `length` is the number of lines it covers.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code)]
 pub struct InlineDraft {
     pub file: String,
     pub is_new_file: bool,
@@ -440,7 +436,6 @@ pub struct InlineDraft {
 
 /// Everything to publish on one revision.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code)]
 pub struct RevisionPublish {
     pub commit_idx: usize,
     pub inlines: Vec<InlineDraft>,
@@ -450,7 +445,6 @@ pub struct RevisionPublish {
 
 /// How far publishing a revision got, so that retrying after a failure doesn't repeat it.
 #[derive(Debug, Clone, Copy, Default)]
-#[allow(dead_code)]
 pub struct PublishProgress {
     pub inlines_created: usize,
     pub published: bool,
@@ -460,7 +454,6 @@ pub struct PublishProgress {
 /// `(commit)` comments become the revision's general comment, and the overall comment goes on the
 /// last commit's. `action` applies to every revision. A revision with nothing to say is left out
 /// unless the action is a verdict.
-#[allow(dead_code)]
 pub fn build_publish_plan(
     comments: &[Comment],
     overall_comment: Option<&str>,
@@ -518,7 +511,6 @@ pub fn build_publish_plan(
 }
 
 /// Per-path lines added and deleted of a local commit, to compare with a revision's diff.
-#[allow(dead_code)]
 pub fn local_file_stats(diff: &DiffResponse) -> HashMap<String, (usize, usize)> {
     diff.files
         .iter()
@@ -539,7 +531,6 @@ pub fn local_file_stats(diff: &DiffResponse) -> HashMap<String, (usize, usize)> 
 
 /// Inline comments are anchored to lines of the revision's diff, so publishing from a commit that
 /// differs from it would put them on the wrong lines. Binary files have no line counts to compare.
-#[allow(dead_code)]
 pub fn check_diff_matches(
     revision: &str,
     local: &HashMap<String, (usize, usize)>,
@@ -590,7 +581,6 @@ impl PhabricatorClient {
     }
 
     /// The user the token belongs to; also proves the token works.
-    #[allow(dead_code)]
     pub async fn whoami(&self) -> Result<Viewer> {
         let value: serde_json::Value = self.conduit("user.whoami", Vec::new()).await?;
         let text = |key: &str| value.get(key).and_then(|v| v.as_str()).map(str::to_string);
@@ -601,7 +591,6 @@ impl PhabricatorClient {
     }
 
     /// The revision and the files of its latest diff.
-    #[allow(dead_code)]
     pub async fn fetch_active_diff(&self, revision: u32) -> Result<ActiveDiff> {
         let revision = self.fetch_revision(revision).await?;
         let diff_phid = revision
@@ -650,7 +639,6 @@ impl PhabricatorClient {
 
         let status = revision.fields.status.as_ref();
         Ok(ActiveDiff {
-            revision_phid: revision.phid,
             uri: revision.fields.uri.unwrap_or_default(),
             author_phid: revision.fields.author_phid,
             closed: status.is_some_and(|s| {
@@ -686,7 +674,6 @@ impl PhabricatorClient {
     /// Publish a revision's review: create its inline comments as drafts, then post the comment
     /// (and verdict) with the drafts attached. `progress` records how far it got, so that calling
     /// this again after an error continues instead of creating the inlines twice.
-    #[allow(dead_code)]
     pub async fn publish_revision(
         &self,
         revision: u32,
@@ -719,6 +706,72 @@ impl PhabricatorClient {
         let _: serde_json::Value = self.conduit("differential.createcomment", params).await?;
         progress.published = true;
         Ok(())
+    }
+}
+
+/// A commit's revision, resolved and checked against the local commit.
+#[derive(Debug, Clone)]
+pub struct PublishTarget {
+    pub revision: u32,
+    pub diff_id: u64,
+    pub uri: String,
+}
+
+/// Publishes a review to the Phabricator revisions of a series' commits.
+pub struct Publisher {
+    client: PhabricatorClient,
+    /// One per commit.
+    targets: Vec<PublishTarget>,
+    /// What was last tried per commit, to resume a publish that failed halfway.
+    attempts: tokio::sync::Mutex<HashMap<usize, (RevisionPublish, PublishProgress)>>,
+}
+
+impl Publisher {
+    pub fn new(client: PhabricatorClient, targets: Vec<PublishTarget>) -> Self {
+        Self {
+            client,
+            targets,
+            attempts: Default::default(),
+        }
+    }
+
+    /// Publish the review and return the URLs of the revisions it went to. After a failure,
+    /// calling this again with the same review continues where it stopped.
+    pub async fn publish(
+        &self,
+        comments: &[Comment],
+        overall_comment: Option<&str>,
+        action: ReviewAction,
+    ) -> Result<Vec<String>> {
+        let plan = build_publish_plan(comments, overall_comment, action, self.targets.len());
+        let mut attempts = self.attempts.lock().await;
+        let mut uris = Vec::new();
+        for revision in plan {
+            let idx = revision.commit_idx;
+            let target = &self.targets[idx];
+            let (last, progress) = attempts
+                .entry(idx)
+                .or_insert_with(|| (revision.clone(), PublishProgress::default()));
+            if *last != revision {
+                // Inline drafts that were already created can't be taken back through the API
+                // and would be published with the next comment.
+                if progress.inlines_created > 0 && !progress.published {
+                    anyhow::bail!(
+                        "the review changed after a failed publish left {} draft inline comment(s) on D{}; delete them on Phabricator, then publish again",
+                        progress.inlines_created,
+                        target.revision
+                    );
+                }
+                *last = revision.clone();
+                *progress = PublishProgress::default();
+            }
+            self.client
+                .publish_revision(target.revision, target.diff_id, &revision, progress)
+                .await
+                .with_context(|| format!("Failed to publish to D{}", target.revision))?;
+            uris.push(target.uri.clone());
+        }
+        Ok(uris)
     }
 }
 
@@ -921,7 +974,6 @@ mod tests {
     #[test]
     fn diff_match_reports_differing_files() {
         let active = ActiveDiff {
-            revision_phid: String::new(),
             uri: String::new(),
             author_phid: None,
             closed: false,

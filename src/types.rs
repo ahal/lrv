@@ -135,6 +135,9 @@ pub enum ReviewAction {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReviewComplete {
     pub comments: Vec<Comment>,
+    /// The verdict when publishing to a code host; ignored otherwise.
+    #[serde(default)]
+    pub action: ReviewAction,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub overall_comment: Option<String>,
 }
@@ -210,6 +213,25 @@ pub struct ProjectContext {
     pub title: Option<String>,
     pub is_public: bool,
     pub claude_skill_installed: bool,
+    /// Where Submit publishes the review; `None` prints it for the agent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub submit_target: Option<SubmitTarget>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubmitTarget {
+    pub kind: String,
+    /// Who the review is published as.
+    pub user: String,
+    pub revisions: Vec<SubmitRevision>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubmitRevision {
+    pub commit_idx: usize,
+    /// Display name, e.g. `D123`.
+    pub id: String,
+    pub url: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

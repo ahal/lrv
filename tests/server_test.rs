@@ -30,6 +30,7 @@ fn test_app_state_construction() {
         title: None,
         is_public: false,
         claude_skill_installed: false,
+        submit_target: None,
     };
 
     let (shutdown_tx, _rx) = tokio::sync::mpsc::channel::<()>(1);
@@ -52,6 +53,7 @@ fn test_app_state_construction() {
         is_series: false,
         pull_requests: Default::default(),
         store: None,
+        publish: None,
     };
 }
 
@@ -82,6 +84,7 @@ fn test_create_router() {
         title: None,
         is_public: false,
         claude_skill_installed: false,
+        submit_target: None,
     };
 
     let (shutdown_tx, _rx) = tokio::sync::mpsc::channel::<()>(1);
@@ -103,6 +106,7 @@ fn test_create_router() {
         is_series: false,
         pull_requests: Default::default(),
         store: None,
+        publish: None,
     };
 
     // Should not panic
@@ -135,6 +139,7 @@ async fn test_review_note_api_round_trip() {
         title: None,
         is_public: false,
         claude_skill_installed: false,
+        submit_target: None,
     };
 
     let (shutdown_tx, _rx) = tokio::sync::mpsc::channel::<()>(1);
@@ -156,6 +161,7 @@ async fn test_review_note_api_round_trip() {
         is_series: false,
         pull_requests: Default::default(),
         store: None,
+        publish: None,
     };
 
     let app = lrv::server::create_router(state, false);

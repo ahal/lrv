@@ -63,6 +63,8 @@ pub struct AppState {
     // Durable comment store. `None` when the database could not be opened;
     // reviewing still works, only crash recovery is unavailable.
     pub store: Option<Arc<CommentStore>>,
+    // Publishes the review on Submit instead of printing it. `None` outside `--publish`.
+    pub publish: Option<Arc<crate::phabricator::Publisher>>,
 }
 
 impl AppState {
@@ -1361,9 +1363,30 @@ async fn add_review_note(
 async fn complete_review(
     State(state): State<AppState>,
     Json(payload): Json<ReviewComplete>,
-) -> StatusCode {
+) -> (StatusCode, String) {
     if payload.comments.iter().any(|c| !c.is_valid()) {
-        return StatusCode::BAD_REQUEST;
+        return (StatusCode::BAD_REQUEST, String::new());
+    }
+    // Publish first: if it fails the review stays open, and submitting again resumes.
+    if let Some(publisher) = &state.publish {
+        match publisher
+            .publish(
+                &payload.comments,
+                payload.overall_comment.as_deref(),
+                payload.action,
+            )
+            .await
+        {
+            Ok(uris) => {
+                for uri in uris {
+                    eprintln!("Published review to {uri}");
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Failed to publish review: {e:#}");
+                return (StatusCode::BAD_GATEWAY, format!("{e:#}"));
+            }
+        }
     }
     let mut comments = state.comments.lock().await;
     *comments = payload.comments;
@@ -1381,7 +1404,7 @@ async fn complete_review(
         let _ = tx.send(()).await;
     }
 
-    StatusCode::OK
+    (StatusCode::OK, String::new())
 }
 
 async fn get_config(State(state): State<AppState>) -> Json<UserConfig> {

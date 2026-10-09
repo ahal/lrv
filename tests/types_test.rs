@@ -61,6 +61,7 @@ fn test_project_context() {
         title: None,
         is_public: false,
         claude_skill_installed: false,
+        submit_target: None,
     };
 
     assert_eq!(context.working_directory, "/home/user/project");

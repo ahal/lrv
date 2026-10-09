@@ -44,6 +44,7 @@ Any comment UX change (shortcuts, edit, delete, validation) must go in both.
 - **jj**: `diff.rs` parses `Change ID:` from `jj show --git` for stable draft keys.
 - **Added-file dimming**: `file-added-view` / `stacked-file-added` classes scope green reduction to entirely new files only (not individual added lines). Uses `color-mix()` so it works with any theme.
 - **GitHub PRs**: detection asks `gh` for the open PRs of *every* commit; a commit in several PRs belongs to the lowest number. Each PR's comments are attributed within its own commit range (PR-level notes go on its last commit). `/api/series` returns `prs` and per-commit `pr`; the commit strip groups commits under a `PR #N title` header (`prHeader`; the number links to the PR) per contiguous run, with commits without a PR under "No PR" headers, preserving order. All commits stay visible.
+- **Publish mode** (`--publish`): explicit opt-in, never inferred from `--phab-revision`, because that flag also loads comments for the agent to address. Startup resolves each commit's revision (`resolve_phab_targets`), verifies the token (`user.whoami`) and bails unless every commit's per-file add/delete counts match the revision's latest diff (`check_diff_matches`), since inlines are anchored to that diff. Submit (`complete_review`) builds a per-revision plan (`build_publish_plan`), creates inline drafts (`differential.createinline`) and posts with `differential.createcomment` + `attach_inlines` (`revision.edit` does not publish drafts). Failure returns 502 and keeps the review open; `Publisher` resumes without duplicating drafts. `/api/context` carries `submit_target`. Phabricator quirks: `isNewFile` must be `1`/`0`, and `lineLength` is the number of lines *after* the first.
 - **Series**: commit strip shows per-commit comment counts; mixed-author series shows author names.
 - **jj series content**: fetch touched files at the parent of the bottom commit, then apply each commit's hunks forward; a selected revset need not end at `@`.
 - **Commit-message review**: switching commits preserves the commit-message view; comments there are per-commit, while overall feedback is entered in the submit dialog.
@@ -59,6 +60,7 @@ Any comment UX change (shortcuts, edit, delete, validation) must go in both.
 --github-pr [<N|O/R#N|url>]        fetch a PR's comments with gh; no value = detect PRs of every commit
 --phab-mcp-comments <path>         pipe output of: mcp__moz__get_phabricator_revision
 --phab-revision [<D123>]           fetch via Conduit API (needs PHABRICATOR_API_KEY or ~/.arcrc); no value = detect from trailer
+--publish                          Submit posts the review to each commit's Phabricator revision instead of stdout
 --list-reviews                     list stored review sessions
 --recover [<id>]                   print a stored session's comments
 --bind, --public, --tailscale, --port, --no-open, --format, --title, --dev-log

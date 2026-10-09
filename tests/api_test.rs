@@ -11,6 +11,7 @@ fn test_appstate_has_context_for_file_reading() {
         title: None,
         is_public: false,
         claude_skill_installed: false,
+        submit_target: None,
     };
 
     // This test ensures context is available in AppState
@@ -44,6 +45,7 @@ fn test_appstate_required_fields() {
         title: None,
         is_public: false,
         claude_skill_installed: false,
+        submit_target: None,
     };
 
     let (shutdown_tx, _rx) = tokio::sync::mpsc::channel(1);
@@ -66,6 +68,7 @@ fn test_appstate_required_fields() {
         is_series: false,
         pull_requests: Default::default(),
         store: None,
+        publish: None,
     };
 
     // Verify context is accessible
