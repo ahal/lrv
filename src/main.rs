@@ -1185,6 +1185,7 @@ mod tests {
             date: None,
             source_url: None,
             commit_idx,
+            read_only: false,
         }
     }
 

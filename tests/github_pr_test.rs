@@ -46,4 +46,6 @@ esac
     let review: Vec<_> = notes.iter().filter(|n| n.file == "(commit)").collect();
     let bodies: Vec<_> = review.iter().map(|n| n.body.as_str()).collect();
     assert_eq!(bodies, ["conversation", "summary"], "empty review skipped");
+    assert!(review.iter().all(|n| n.read_only));
+    assert!(!notes[0].read_only, "inline comments stay actionable");
 }

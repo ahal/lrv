@@ -12307,7 +12307,7 @@ var ReviewNoteMethods = class {
 		meta.textContent = [
 			note.author,
 			note.date,
-			`${note.side} line ${commentLineLabel(note)}`
+			note.read_only ? void 0 : `${note.side} line ${commentLineLabel(note)}`
 		].filter(Boolean).join(" - ");
 		if (note.source_url) {
 			const link = el("a", {
@@ -12323,7 +12323,8 @@ var ReviewNoteMethods = class {
 		}
 		const body = el("div", { className: "review-note-body" });
 		appendLinkifiedText(body, note.body);
-		box.append(meta, body, this.buildReviewNoteActions(note));
+		box.append(meta, body);
+		if (!note.read_only) box.appendChild(this.buildReviewNoteActions(note));
 		return box;
 	}
 	buildReviewNoteActions(note) {

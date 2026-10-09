@@ -93,6 +93,10 @@ pub struct ReviewNote {
     pub source_url: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub commit_idx: Option<usize>,
+    /// Overall comments from a code host can't be answered or resolved from lrv, so the UI shows
+    /// them without actions.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub read_only: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -132,6 +136,30 @@ impl Comment {
 }
 
 impl ReviewNote {
+    /// A read-only note about the review as a whole (not tied to a line), shown like a general
+    /// comment on the commit message.
+    pub fn overall(
+        id: Option<String>,
+        body: String,
+        author: Option<String>,
+        date: Option<String>,
+        source_url: Option<String>,
+        commit_idx: Option<usize>,
+    ) -> Self {
+        Self {
+            id,
+            file: "(commit)".to_string(),
+            line: CommentLine::Single(1),
+            side: Side::New,
+            body,
+            author,
+            date,
+            source_url,
+            commit_idx,
+            read_only: true,
+        }
+    }
+
     pub fn is_valid(&self) -> bool {
         !self.file.is_empty() && !self.body.trim().is_empty() && self.line.is_valid()
     }

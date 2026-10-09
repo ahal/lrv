@@ -11,6 +11,7 @@ export type ReviewNote = {
   date?: string;
   source_url?: string;
   commit_idx?: number;
+  read_only?: boolean;
   disposition?: 'open' | 'addressed' | 'ignored';
   instruction?: string | undefined;
 };

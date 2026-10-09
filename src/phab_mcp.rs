@@ -103,19 +103,10 @@ fn parse_header(header: &str, body: String) -> Option<ReviewNote> {
             date,
             source_url: None,
             commit_idx: None,
+            read_only: false,
         })
     } else if is_general {
-        Some(ReviewNote {
-            id: None,
-            file: "(commit)".to_string(),
-            line: CommentLine::Single(1),
-            side: Side::New,
-            body,
-            author,
-            date,
-            source_url: None,
-            commit_idx: None,
-        })
+        Some(ReviewNote::overall(None, body, author, date, None, None))
     } else {
         None
     }

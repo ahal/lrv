@@ -357,6 +357,7 @@ impl PhabricatorClient {
                 date: None,
                 source_url: revision.fields.uri.clone(),
                 commit_idx: None,
+                read_only: false,
             });
         }
     }
@@ -380,17 +381,14 @@ impl PhabricatorClient {
                 .author_phid
                 .as_ref()
                 .or(transaction.author_phid.as_ref());
-            notes.push(ReviewNote {
-                id: Some(comment.id.to_string()),
-                file: "(commit)".to_string(),
-                line: CommentLine::Single(1),
-                side: Side::New,
-                body: body.to_string(),
-                author: author_phid.and_then(|phid| users.get(phid).cloned()),
-                date: None,
-                source_url: revision.fields.uri.clone(),
-                commit_idx: None,
-            });
+            notes.push(ReviewNote::overall(
+                Some(comment.id.to_string()),
+                body.to_string(),
+                author_phid.and_then(|phid| users.get(phid).cloned()),
+                None,
+                revision.fields.uri.clone(),
+                None,
+            ));
         }
     }
 }

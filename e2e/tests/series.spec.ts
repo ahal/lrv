@@ -657,7 +657,10 @@ test.describe('Commit-message notes in a one-commit series', () => {
     const notesPath = path.join(testRepoPath, 'notes.json');
     fs.writeFileSync(
       notesPath,
-      JSON.stringify([{ file: '(commit)', line: 1, side: 'new', body: 'commit-level note' }]),
+      JSON.stringify([
+        { file: '(commit)', line: 1, side: 'new', body: 'commit-level note' },
+        { file: '(commit)', line: 1, side: 'new', body: 'overall note', read_only: true },
+      ]),
     );
     await startSeriesServer(0, 'HEAD~1..HEAD', `--review-notes-file "${notesPath}"`);
   });
@@ -675,8 +678,19 @@ test.describe('Commit-message notes in a one-commit series', () => {
     await openApp(page);
 
     const commitRow = page.locator('.tree-row-summary', { hasText: 'Commit message' });
-    await expect(commitRow.locator('.file-comment-badge')).toHaveText('1');
+    await expect(commitRow.locator('.file-comment-badge')).toHaveText('2');
     await commitRow.click();
     await expect(page.locator('.commit-view')).toContainText('commit-level note');
+  });
+
+  test('read-only notes have no actions', async ({ page }) => {
+    await openApp(page);
+    await page.locator('.tree-row-summary', { hasText: 'Commit message' }).click();
+
+    const actionable = page.locator('.review-note', { hasText: 'commit-level note' });
+    await expect(actionable.getByRole('button', { name: 'Address' })).toBeVisible();
+    const readOnly = page.locator('.review-note', { hasText: 'overall note' });
+    await expect(readOnly).toBeVisible();
+    await expect(readOnly.locator('.review-note-actions')).toHaveCount(0);
   });
 });
