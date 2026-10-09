@@ -63,17 +63,14 @@ fn discussion_notes(
             if body.is_empty() {
                 return None;
             }
-            Some(ReviewNote {
-                id: Some(format!("{kind}-{}", c.id)),
-                file: "(commit)".to_string(),
-                line: CommentLine::Single(1),
-                side: Side::New,
-                body: body.to_string(),
-                author: c.user.map(|u| u.login),
-                date: c.created_at,
-                source_url: c.html_url,
+            Some(ReviewNote::overall(
+                Some(format!("{kind}-{}", c.id)),
+                body.to_string(),
+                c.user.map(|u| u.login),
+                c.created_at,
+                c.html_url,
                 commit_idx,
-            })
+            ))
         })
         .collect();
     // ISO 8601 timestamps sort lexically.
@@ -184,6 +181,7 @@ fn notes_from_comments(comments: Vec<GhComment>, diffs: &[DiffResponse]) -> Vec<
             date: comment.created_at.clone(),
             source_url: comment.html_url.clone(),
             commit_idx,
+            read_only: false,
         });
     }
 
@@ -453,7 +451,7 @@ mod tests {
                 ("issue-1", "later", "(commit)")
             ]
         );
-        assert!(notes.iter().all(|n| n.commit_idx == Some(2)));
+        assert!(notes.iter().all(|n| n.commit_idx == Some(2) && n.read_only));
     }
 
     #[test]

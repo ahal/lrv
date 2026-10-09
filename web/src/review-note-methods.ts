@@ -191,9 +191,11 @@ export class ReviewNoteMethods {
       box.addEventListener(eventName, (event) => event.stopPropagation());
     }
     const meta = el('div', { className: 'review-note-meta' });
-    const pieces = [note.author, note.date, `${note.side} line ${commentLineLabel(note)}`].filter(
-      Boolean,
-    );
+    const pieces = [
+      note.author,
+      note.date,
+      note.read_only ? undefined : `${note.side} line ${commentLineLabel(note)}`,
+    ].filter(Boolean);
     meta.textContent = pieces.join(' - ');
     if (note.source_url) {
       const link = el('a', {
@@ -211,7 +213,10 @@ export class ReviewNoteMethods {
     const body = el('div', { className: 'review-note-body' });
     appendLinkifiedText(body, note.body);
 
-    box.append(meta, body, this.buildReviewNoteActions(note));
+    box.append(meta, body);
+    if (!note.read_only) {
+      box.appendChild(this.buildReviewNoteActions(note));
+    }
     return box;
   }
 
