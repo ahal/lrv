@@ -423,7 +423,7 @@ test.describe('Review Workflow E2E', () => {
 
     // Click on a line number to add a comment
     const lineNumber = page.locator('.modified .line-numbers').first();
-    await lineNumber.click({ position: { x: 10, y: 10 } });
+    await lineNumber.click();
 
     // Comment dialog should appear
     await expect(page.locator('.inline-comment-box')).toBeVisible({ timeout: 2000 });
@@ -460,10 +460,10 @@ test.describe('Review Workflow E2E', () => {
 
     const startLine = page.locator('.modified .line-numbers').nth(1);
     const endLine = page.locator('.modified .line-numbers').nth(3);
-    await startLine.hover({ position: { x: 8, y: 8 } });
+    await startLine.hover();
     await page.mouse.down();
     await expect(page.locator('.inline-comment-box')).toHaveCount(0);
-    await endLine.hover({ position: { x: 8, y: 8 } });
+    await endLine.hover();
     await page.mouse.up();
 
     await expect(page.locator('.inline-comment-box h3')).toContainText('Line 2-4');
@@ -508,7 +508,7 @@ test.describe('Review Workflow E2E', () => {
     await page
       .locator('.modified .line-numbers')
       .nth(2)
-      .click({ position: { x: 10, y: 10 } }); // line 3
+      .click(); // line 3
     await expect(page.locator('.inline-comment-box h3')).toContainText('Line 2-4 - Edit');
 
     await page.locator('.delete-btn').click();
@@ -601,7 +601,7 @@ test.describe('Review Workflow E2E', () => {
 
     // Add a comment by clicking line number
     const lineNumber = page.locator('.modified .line-numbers').first();
-    await lineNumber.click({ position: { x: 10, y: 10 } });
+    await lineNumber.click();
 
     await page.locator('.comment-textarea').fill('Please fix this');
     await page.locator('.save-btn').click();
