@@ -25,6 +25,11 @@ type StackedAnnotation =
 
 const DIFFS_THEME = { dark: 'pierre-dark', light: 'pierre-light' } as const;
 
+function themeTypeFor(themeName: string): 'light' | 'dark' {
+  const base = window.UI_THEME_DEFS?.[themeName]?.base ?? themeName;
+  return base === 'vs' || base === 'hc-light' ? 'light' : 'dark';
+}
+
 type ParsePatchFiles =
   typeof import('../../node_modules/@pierre/diffs/dist/utils/parsePatchFiles.js').parsePatchFiles;
 type ParseDiffFromFile =
@@ -290,6 +295,7 @@ export class StackedViewMethods {
         diffStyle: 'split',
         overflow: this.config.word_wrap ? 'wrap' : 'scroll',
         theme: DIFFS_THEME,
+        themeType: themeTypeFor(this.config.color_scheme),
         lineHoverHighlight: 'both',
         hunkSeparators: 'line-info-basic',
         collapsedContextThreshold: 1,

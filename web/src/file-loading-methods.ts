@@ -242,6 +242,7 @@ export class FileLoadingMethods {
       this.editor = monaco.editor.createDiffEditor(container, {
         theme: theme,
         renderSideBySide,
+        useInlineViewWhenSpaceIsLimited: false,
         readOnly: true,
         originalEditable: false,
         automaticLayout: true,
@@ -253,6 +254,7 @@ export class FileLoadingMethods {
         fontSize: 14,
         fontFamily: mono,
         lineNumbers: 'on',
+        lineNumbersMinChars: 1,
         wordWrap: this.config.word_wrap ? 'on' : 'off',
         renderOverviewRuler: true,
         hideUnchangedRegions: MONACO_HIDE_UNCHANGED,
@@ -344,15 +346,19 @@ export class FileLoadingMethods {
       smoothScrolling: !reduceMotion,
       glyphMargin: true,
       folding: false,
+      lineNumbersMinChars: 1,
       scrollBeyondLastLine: true,
     };
     const me = diffEditor.getModifiedEditor();
     const oe = diffEditor.getOriginalEditor();
     if (me.getModel()) {
-      me.updateOptions(opts);
+      me.updateOptions({ ...opts, lineNumbers: 'on' });
     }
     if (oe.getModel()) {
-      oe.updateOptions(opts);
+      // In inline mode, Monaco reserves the original editor's narrow left rail
+      // for old-side glyphs. Keep that rail for old-side comments, but let the
+      // modified editor provide the only line-number column.
+      oe.updateOptions({ ...opts, lineNumbers: renderSideBySide ? 'on' : 'off' });
     }
     // Record end after the new models are set and painted
     window.Perf.mark('loadFile:paint-wait:start');
@@ -407,7 +413,7 @@ export class FileLoadingMethods {
     const originalEditor = diffEditor.getOriginalEditor();
 
     modifiedEditor.updateOptions({ lineNumbers: 'on' });
-    originalEditor.updateOptions({ lineNumbers: 'on' });
+    originalEditor.updateOptions({ lineNumbers: renderSideBySide ? 'on' : 'off' });
 
     this.setupEditorClickHandlers(file.path, modifiedEditor, originalEditor);
     this.updateDecorations();

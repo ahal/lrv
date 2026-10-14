@@ -10887,6 +10887,7 @@ var FileLoadingMethods = class {
 		if (!this.editor) this.editor = monaco.editor.createDiffEditor(container, {
 			theme,
 			renderSideBySide,
+			useInlineViewWhenSpaceIsLimited: false,
 			readOnly: true,
 			originalEditable: false,
 			automaticLayout: true,
@@ -10898,6 +10899,7 @@ var FileLoadingMethods = class {
 			fontSize: 14,
 			fontFamily: mono,
 			lineNumbers: "on",
+			lineNumbersMinChars: 1,
 			wordWrap: this.config.word_wrap ? "on" : "off",
 			renderOverviewRuler: true,
 			hideUnchangedRegions: MONACO_HIDE_UNCHANGED,
@@ -10962,12 +10964,19 @@ var FileLoadingMethods = class {
 			smoothScrolling: !reduceMotion,
 			glyphMargin: true,
 			folding: false,
+			lineNumbersMinChars: 1,
 			scrollBeyondLastLine: true
 		};
 		const me = diffEditor.getModifiedEditor();
 		const oe = diffEditor.getOriginalEditor();
-		if (me.getModel()) me.updateOptions(opts);
-		if (oe.getModel()) oe.updateOptions(opts);
+		if (me.getModel()) me.updateOptions({
+			...opts,
+			lineNumbers: "on"
+		});
+		if (oe.getModel()) oe.updateOptions({
+			...opts,
+			lineNumbers: renderSideBySide ? "on" : "off"
+		});
 		window.Perf.mark("loadFile:paint-wait:start");
 		requestAnimationFrame(() => requestAnimationFrame(() => {
 			if (!isCurrentLoad()) return;
@@ -11009,7 +11018,7 @@ var FileLoadingMethods = class {
 		const modifiedEditor = diffEditor.getModifiedEditor();
 		const originalEditor = diffEditor.getOriginalEditor();
 		modifiedEditor.updateOptions({ lineNumbers: "on" });
-		originalEditor.updateOptions({ lineNumbers: "on" });
+		originalEditor.updateOptions({ lineNumbers: renderSideBySide ? "on" : "off" });
 		this.setupEditorClickHandlers(file.path, modifiedEditor, originalEditor);
 		this.updateDecorations();
 		this.renderReviewNotes();
@@ -12901,6 +12910,10 @@ const DIFFS_THEME = {
 	dark: "pierre-dark",
 	light: "pierre-light"
 };
+function themeTypeFor(themeName) {
+	const base = window.UI_THEME_DEFS?.[themeName]?.base ?? themeName;
+	return base === "vs" || base === "hc-light" ? "light" : "dark";
+}
 let diffsRuntimePromise = null;
 function loadDiffsRuntime() {
 	diffsRuntimePromise ??= Promise.all([
@@ -13079,6 +13092,7 @@ var StackedViewMethods = class {
 			diffStyle: "split",
 			overflow: this.config.word_wrap ? "wrap" : "scroll",
 			theme: DIFFS_THEME,
+			themeType: themeTypeFor(this.config.color_scheme),
 			lineHoverHighlight: "both",
 			hunkSeparators: "line-info-basic",
 			collapsedContextThreshold: 1,

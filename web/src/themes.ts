@@ -2,6 +2,7 @@ import type { editor } from 'monaco-editor';
 
 type ThemeMap = Record<string, editor.IStandaloneThemeData>;
 export type UIThemeDefinition = {
+  base?: string;
   rules?: Array<{ token?: string; foreground?: string }>;
 };
 export type UIThemeDefinitionMap = Record<string, UIThemeDefinition>;
