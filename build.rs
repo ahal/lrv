@@ -66,7 +66,7 @@ fn run_web_build() {
     let npm = if cfg!(windows) { "npm.cmd" } else { "npm" };
 
     let install = Command::new(npm)
-        .args(["install", "--prefer-offline"])
+        .args(["install", "--prefer-offline", "--no-save"])
         .output();
     match install {
         Ok(o) if o.status.success() => {}
