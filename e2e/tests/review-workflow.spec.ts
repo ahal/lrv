@@ -505,10 +505,7 @@ test.describe('Review Workflow E2E', () => {
     });
     expect(hasRangeDecorations).toBeTruthy();
 
-    await page
-      .locator('.modified .line-numbers')
-      .nth(2)
-      .click(); // line 3
+    await page.locator('.modified .line-numbers').nth(2).click(); // line 3
     await expect(page.locator('.inline-comment-box h3')).toContainText('Line 2-4 - Edit');
 
     await page.locator('.delete-btn').click();
