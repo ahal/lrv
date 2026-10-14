@@ -41,7 +41,6 @@ window.Perf = {
 		performance.clearMeasures();
 	}
 };
-
 //#endregion
 //#region web/src/themes.ts
 const CUSTOM_THEMES = {
@@ -419,7 +418,7 @@ const CUSTOM_THEMES = {
 		}
 	}
 };
-const UI_THEME_ACCENTS_HEX = {
+window.UIThemeAccentsHex = {
 	"firefox-devtools-dark": "#ff7de9",
 	"firefox-devtools-light": "#d92bb4",
 	"github-dark": "#58a6ff",
@@ -432,11 +431,9 @@ const UI_THEME_ACCENTS_HEX = {
 	"hc-light": "#007acc",
 	phabricator: "#136CB2"
 };
-window.UIThemeAccentsHex = UI_THEME_ACCENTS_HEX;
-
 //#endregion
 //#region web/src/dom.ts
-const $$2 = (sel, root = document) => root.querySelector(sel);
+const $$1 = (sel, root = document) => root.querySelector(sel);
 const el = (tag, { className, text, attrs } = {}, children = []) => {
 	const node = document.createElement(tag);
 	if (className) node.className = className;
@@ -459,7 +456,6 @@ const clearEl = (node) => {
 	node.textContent = "";
 	return node;
 };
-
 //#endregion
 //#region web/src/comments.ts
 function commentStartLine(comment) {
@@ -531,7 +527,6 @@ var CommentManager = class {
 		this.listeners.forEach((l) => l());
 	}
 };
-
 //#endregion
 //#region web/src/review-notes.ts
 var ReviewNoteManager = class {
@@ -584,7 +579,6 @@ var ReviewNoteManager = class {
 		return a.file === b.file && a.side === b.side && JSON.stringify(a.line) === JSON.stringify(b.line) && a.body === b.body && a.commit_idx === b.commit_idx;
 	}
 };
-
 //#endregion
 //#region web/src/api.ts
 let fileFetchPending = 0;
@@ -644,7 +638,6 @@ async function fetchJSON(url, options) {
 		}
 	}
 }
-
 //#endregion
 //#region web/src/config.ts
 const DEFAULT_APP_CONFIG = {
@@ -667,7 +660,6 @@ function resolveAppConfig(input) {
 		auto_fetch_comments: input.auto_fetch_comments ?? DEFAULT_APP_CONFIG.auto_fetch_comments
 	};
 }
-
 //#endregion
 //#region web/src/comment-draft-storage.ts
 const DB_NAME = "lrv-comment-drafts";
@@ -821,7 +813,6 @@ function hashString(value) {
 	}
 	return hash.toString(16).padStart(8, "0");
 }
-
 //#endregion
 //#region web/src/ui-signals.ts
 const FIRST_LINE_SELECTOR = ".monaco-editor .view-lines .view-line";
@@ -866,7 +857,6 @@ function markAppReady() {
 		});
 	}
 }
-
 //#endregion
 //#region web/src/linkify.ts
 const BUG_RE = /\b([bB]ug)\s+(\d{6,})\b/g;
@@ -954,7 +944,6 @@ function linkifyText(text) {
 	if (pos < text.length) fragment.appendChild(document.createTextNode(text.slice(pos)));
 	return fragment;
 }
-
 //#endregion
 //#region web/src/file-order.ts
 function naturalTokens(value) {
@@ -1015,7 +1004,6 @@ function compareFilePaths(left, right) {
 function sortDiffFiles(files) {
 	return [...files].sort((left, right) => compareFilePaths(left.path, right.path));
 }
-
 //#endregion
 //#region web/src/diff-utils.ts
 const MONACO_HIDE_UNCHANGED = {
@@ -1042,7 +1030,6 @@ function computeHunkRanges(hunks) {
 	});
 	return { hunkRanges };
 }
-
 //#endregion
 //#region web/src/file-data-methods.ts
 var FileDataMethods = class {
@@ -1104,7 +1091,6 @@ var FileDataMethods = class {
 		}
 	}
 };
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/builtInIcons.js
 const MINIMAL_SVG_SPRITE_SHEET = `<svg data-icon-sprite aria-hidden="true" width="0" height="0">
@@ -1627,7 +1613,7 @@ const COMPLETE_EXTENSION_OVERRIDES = {
 	scss: "sass",
 	tsx: "react"
 };
-const STANDARD_TIER_TOKENS = new Set([
+const STANDARD_TIER_TOKENS = /* @__PURE__ */ new Set([
 	"bash",
 	"c",
 	"cpp",
@@ -1652,7 +1638,7 @@ const STANDARD_TIER_TOKENS = new Set([
 	"typescript",
 	"zip"
 ]);
-const COLORED_SETS = new Set(["complete"]);
+const COLORED_SETS = /* @__PURE__ */ new Set(["complete"]);
 function getBuiltInSpriteSheet(set) {
 	return BUILT_IN_SVG_SPRITE_SHEETS[set === "none" ? "minimal" : set];
 }
@@ -1681,7 +1667,6 @@ function resolveBuiltInFileIconToken(set, fileName, extensionCandidates) {
 	}
 	return "default";
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/constants.js
 const FILE_TREE_TAG_NAME = "file-tree-container";
@@ -1690,16 +1675,9 @@ const FILE_TREE_UNSAFE_CSS_ATTRIBUTE = "data-file-tree-unsafe-css";
 const FILE_TREE_SCROLLBAR_MEASURE_ATTRIBUTE = "data-file-tree-scrollbar-measure";
 const FILE_TREE_SCROLLBAR_GUTTER_STYLE_ATTRIBUTE = "data-file-tree-scrollbar-gutter-measured";
 const FILE_TREE_SCROLLBAR_GUTTER_MEASURED_PROPERTY = "--trees-scrollbar-gutter-measured";
-/**
-* Prefix used for flattened node IDs.
-* Flattened nodes represent collapsed chains of single-child folders.
-* Example: 'f::src/utils/deep' represents the chain src → utils → deep
-*/
-const FLATTENED_PREFIX = "f::";
 const HEADER_SLOT_NAME = "header";
 const CONTEXT_MENU_SLOT_NAME = "context-menu";
 const CONTEXT_MENU_TRIGGER_TYPE = "context-menu-trigger";
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/iconConfig.js
 function hasCustomIconOverrides(icons) {
@@ -1720,7 +1698,6 @@ function normalizeFileTreeIcons(icons) {
 		colored: icons.colored ?? true
 	};
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/model/density.js
 const FILE_TREE_DENSITY_PRESETS = {
@@ -1748,17 +1725,12 @@ function resolveFileTreeDensity(density, explicitItemHeight) {
 		factor: preset.factor
 	};
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/model/virtualization.js
 const FILE_TREE_DEFAULT_ITEM_HEIGHT = FILE_TREE_DENSITY_PRESETS.default.itemHeight;
-const FILE_TREE_DEFAULT_OVERSCAN = 10;
-const FILE_TREE_DEFAULT_VIEWPORT_HEIGHT = 420;
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/style.js
-var style_default = "@layer base, theme, unsafe;\n\n@layer base {\n  :host {\n    /*\n      CSS variables use a fallback stack to ensure user and theme colors slot\n      in with ease. User colors take precedence over theme colors, which take\n      precedence over defaults.\n\n      Fallback order:\n\n      1. --trees-*-override (explicit)\n      2. --trees-theme-* (e.g. Shiki/VS Code tokens)\n      3. defaults\n\n      Theme variable names mirror Shiki/VS Code theme file JSON tokens.\n\n      // Available CSS Color Overrides\n      --trees-fg-override\n      --trees-fg-muted-override\n      --trees-bg-override\n      --trees-bg-muted-override\n      --trees-accent-override\n      --trees-border-color-override\n\n      --trees-focus-ring-color-override\n      --trees-focus-ring-width-override\n      --trees-focus-ring-offset-override\n\n      --trees-search-fg-override\n      --trees-search-font-weight-override\n      --trees-search-bg-override\n\n      --trees-selected-fg-override\n      --trees-selected-bg-override\n      --trees-selected-focused-border-color-override\n\n      // Git Status Color Overrides\n      --trees-status-added-override\n      --trees-status-ignored-override\n      --trees-status-modified-override\n      --trees-status-renamed-override\n      --trees-status-untracked-override\n      --trees-status-deleted-override\n      --trees-git-added-color-override\n      --trees-git-ignored-color-override\n      --trees-git-modified-color-override\n      --trees-git-renamed-color-override\n      --trees-git-untracked-color-override\n      --trees-git-deleted-color-override\n\n      // Built-in File Icon Color Overrides\n      --trees-file-icon-color\n      --trees-file-icon-color-astro\n      --trees-file-icon-color-babel\n      --trees-file-icon-color-bash\n      --trees-file-icon-color-biome\n      --trees-file-icon-color-bootstrap\n      --trees-file-icon-color-browserslist\n      --trees-file-icon-color-bun\n      --trees-file-icon-color-c\n      --trees-file-icon-color-cpp\n      --trees-file-icon-color-claude\n      --trees-file-icon-color-css\n      --trees-file-icon-color-database\n      --trees-file-icon-color-default\n      --trees-file-icon-color-docker\n      --trees-file-icon-color-eslint\n      --trees-file-icon-color-git\n      --trees-file-icon-color-go\n      --trees-file-icon-color-graphql\n      --trees-file-icon-color-html\n      --trees-file-icon-color-image\n      --trees-file-icon-color-javascript\n      --trees-file-icon-color-json\n      --trees-file-icon-color-markdown\n      --trees-file-icon-color-mcp\n      --trees-file-icon-color-npm\n      --trees-file-icon-color-oxc\n      --trees-file-icon-color-postcss\n      --trees-file-icon-color-prettier\n      --trees-file-icon-color-python\n      --trees-file-icon-color-react\n      --trees-file-icon-color-ruby\n      --trees-file-icon-color-rust\n      --trees-file-icon-color-sass\n      --trees-file-icon-color-svg\n      --trees-file-icon-color-svelte\n      --trees-file-icon-color-svgo\n      --trees-file-icon-color-swift\n      --trees-file-icon-color-table\n      --trees-file-icon-color-text\n      --trees-file-icon-color-tailwind\n      --trees-file-icon-color-terraform\n      --trees-file-icon-color-typescript\n      --trees-file-icon-color-vite\n      --trees-file-icon-color-vscode\n      --trees-file-icon-color-vue\n      --trees-file-icon-color-wasm\n      --trees-file-icon-color-webpack\n      --trees-file-icon-color-yml\n      --trees-file-icon-color-zig\n      --trees-file-icon-color-zip\n\n      // Density\n      //\n      // A unitless scale factor for padding, gaps, and indentation. Usually\n      // set via `density` on useFileTree. Individual overrides take precedence.\n      //\n      //   Compact: 0.8\n      //   Default: 1\n      //   Relaxed: 1.2\n      //\n      --trees-density-override\n\n      // Available CSS Layout Overrides\n      --trees-gap-override\n      --trees-border-radius-override\n      --trees-font-family-override\n      --trees-font-size-override\n      --trees-font-weight-regular-override\n      --trees-font-weight-semibold-override\n      --trees-level-gap-override\n      --trees-item-padding-x-override\n      --trees-item-margin-x-override\n      --trees-item-row-gap-override\n      --trees-icon-width-override\n      --trees-icon-nudge-override\n      --trees-scrollbar-gutter-override\n      --trees-padding-inline-override\n    */\n\n    --trees-accent: var(--trees-accent-override, #009fff);\n    --trees-fg: var(\n      --trees-fg-override,\n      var(--trees-theme-sidebar-fg, light-dark(#6c6c71, #adadb1))\n    );\n    --trees-fg-muted: var(\n      --trees-fg-muted-override,\n      var(--trees-theme-sidebar-header-fg, light-dark(#84848a, #84848a))\n    );\n    --trees-bg: var(\n      --trees-bg-override,\n      var(--trees-theme-sidebar-bg, light-dark(#f8f8f8, #141415))\n    );\n    /* var(--trees-theme-list-hover-bg, light-dark(#dfebff59, #19283c59)) */\n    --trees-bg-muted: var(\n      --trees-bg-muted-override,\n      var(\n        --trees-theme-list-hover-bg,\n        light-dark(\n          color-mix(\n            in lab,\n            var(--trees-accent) var(--trees-bg-alpha-light, 8%),\n            var(--trees-bg)\n          ),\n          color-mix(\n            in lab,\n            var(--trees-accent) var(--trees-bg-alpha-dark, 10%),\n            var(--trees-bg)\n          )\n        )\n      )\n    );\n    --trees-input-bg: var(\n      --trees-input-bg-override,\n      light-dark(#f8f8f8, #070707)\n    );\n\n    --trees-added-light: #16a994;\n    --trees-added-dark: #00cab1;\n    --trees-ignored-light: #adadb1;\n    --trees-ignored-dark: #4a4a4e;\n    --trees-modified-light: #1ca1c7;\n    --trees-modified-dark: #08c0ef;\n    --trees-renamed-light: #d5a910;\n    --trees-renamed-dark: #ffd452;\n    --trees-untracked-light: #16a994;\n    --trees-untracked-dark: #00cab1;\n    --trees-deleted-light: #ff2e3f;\n    --trees-deleted-dark: #ff6762;\n\n    --trees-border-color: var(\n      --trees-border-color-override,\n      var(--trees-theme-sidebar-border, light-dark(#eeeeef, #070707))\n    );\n    --trees-indent-guide-bg: var(\n      --trees-indent-guide-bg-override,\n      color-mix(in lab, var(--trees-fg-muted) 25%, transparent)\n    );\n    --trees-density: var(--trees-density-override, 1);\n    --trees-border-radius: var(\n      --trees-border-radius-override,\n      calc(6px * var(--trees-density))\n    );\n\n    --trees-font-family: var(--trees-font-family-override, system-ui);\n    --trees-font-size: var(--trees-font-size-override, 13px);\n    --trees-font-weight-regular: var(--trees-font-weight-regular-override, 400);\n    --trees-font-weight-semibold: var(\n      --trees-font-weight-semibold-override,\n      600\n    );\n\n    --trees-focus-ring-color: var(\n      --trees-focus-ring-color-override,\n      var(--trees-theme-focus-ring, var(--trees-accent))\n    );\n    --trees-focus-ring-width: var(--trees-focus-ring-width-override, 1px);\n    --trees-focus-ring-offset: var(--trees-focus-ring-offset-override, -1px);\n\n    --trees-search-fg: var(\n      --trees-search-fg-override,\n      var(--trees-theme-input-fg, var(--trees-fg))\n    );\n    --trees-search-font-weight: var(--trees-search-font-weight-override, 600);\n    --trees-search-bg: var(\n      --trees-search-bg-override,\n      var(--trees-theme-input-bg, var(--trees-input-bg))\n    );\n\n    --trees-scrollbar-thumb: var(\n      --trees-scrollbar-thumb-override,\n      var(\n        --trees-theme-scrollbar-thumb,\n        color-mix(in lab, var(--trees-fg) 25%, var(--trees-bg))\n      )\n    );\n\n    --trees-selected-fg: var(\n      --trees-selected-fg-override,\n      var(--trees-theme-list-active-selection-fg, var(--trees-fg))\n    );\n    --trees-selected-bg: var(\n      --trees-selected-bg-override,\n      var(\n        --trees-theme-list-active-selection-bg,\n        light-dark(\n          color-mix(in lab, var(--trees-accent) 12%, var(--trees-bg)),\n          color-mix(in lab, var(--trees-accent) 15%, var(--trees-bg))\n        )\n      )\n    );\n    --trees-selected-focused-border-color: var(\n      --trees-selected-focused-border-color-override,\n      var(--trees-theme-focus-ring, var(--trees-accent))\n    );\n\n    /* Git status (e.g. from Shiki theme gitDecoration.*) */\n    --trees-status-added: var(\n      --trees-status-added-override,\n      var(\n        --trees-theme-git-added-fg,\n        light-dark(var(--trees-added-light), var(--trees-added-dark))\n      )\n    );\n    --trees-status-ignored: var(\n      --trees-status-ignored-override,\n      var(\n        --trees-theme-git-ignored-fg,\n        light-dark(var(--trees-ignored-light), var(--trees-ignored-dark))\n      )\n    );\n    --trees-status-modified: var(\n      --trees-status-modified-override,\n      var(\n        --trees-theme-git-modified-fg,\n        light-dark(var(--trees-modified-light), var(--trees-modified-dark))\n      )\n    );\n    --trees-status-renamed: var(\n      --trees-status-renamed-override,\n      var(\n        --trees-theme-git-renamed-fg,\n        light-dark(var(--trees-renamed-light), var(--trees-renamed-dark))\n      )\n    );\n    --trees-status-untracked: var(\n      --trees-status-untracked-override,\n      var(\n        --trees-theme-git-untracked-fg,\n        light-dark(var(--trees-untracked-light), var(--trees-untracked-dark))\n      )\n    );\n    --trees-status-deleted: var(\n      --trees-status-deleted-override,\n      var(\n        --trees-theme-git-deleted-fg,\n        light-dark(var(--trees-deleted-light), var(--trees-deleted-dark))\n      )\n    );\n    --trees-git-modified-color: var(\n      --trees-git-modified-color-override,\n      var(--trees-status-modified)\n    );\n    --trees-git-added-color: var(\n      --trees-git-added-color-override,\n      var(--trees-status-added)\n    );\n    --trees-git-ignored-color: var(\n      --trees-git-ignored-color-override,\n      var(--trees-status-ignored)\n    );\n    --trees-git-deleted-color: var(\n      --trees-git-deleted-color-override,\n      var(--trees-status-deleted)\n    );\n    --trees-git-renamed-color: var(\n      --trees-git-renamed-color-override,\n      var(--trees-status-renamed)\n    );\n    --trees-git-untracked-color: var(\n      --trees-git-untracked-color-override,\n      var(--trees-status-untracked)\n    );\n\n    --trees-icon-gray: light-dark(#84848a, #adadb1);\n    --trees-icon-red: light-dark(#d52c36, #ff6762);\n    --trees-icon-vermilion: light-dark(#ff8c5b, #d5512f);\n    --trees-icon-orange: light-dark(#d47628, #ffa359);\n    --trees-icon-yellow: light-dark(#d5a910, #ffd452);\n    --trees-icon-green: light-dark(#199f43, #5ecc71);\n    --trees-icon-teal: light-dark(#17a5af, #64d1db);\n    --trees-icon-cyan: light-dark(#1ca1c7, #68cdf2);\n    --trees-icon-blue: light-dark(#1a85d4, #69b1ff);\n    --trees-icon-indigo: light-dark(#693acf, #9d6afb);\n    --trees-icon-purple: light-dark(#a631be, #d568ea);\n    --trees-icon-pink: light-dark(#d32a61, #ff678d);\n    --trees-icon-mauve: light-dark(#594c5b, #79697b);\n\n    --trees-file-icon-color-default: var(\n      --trees-file-icon-color,\n      var(--trees-icon-gray)\n    );\n    --trees-file-icon-color-astro: var(\n      --trees-file-icon-color,\n      var(--trees-icon-purple)\n    );\n    --trees-file-icon-color-babel: var(\n      --trees-file-icon-color,\n      var(--trees-icon-yellow)\n    );\n    --trees-file-icon-color-bash: var(\n      --trees-file-icon-color,\n      var(--trees-icon-green)\n    );\n    --trees-file-icon-color-biome: var(\n      --trees-file-icon-color,\n      var(--trees-icon-blue)\n    );\n    --trees-file-icon-color-bootstrap: var(\n      --trees-file-icon-color,\n      var(--trees-icon-indigo)\n    );\n    --trees-file-icon-color-browserslist: var(\n      --trees-file-icon-color,\n      var(--trees-icon-yellow)\n    );\n    --trees-file-icon-color-bun: var(\n      --trees-file-icon-color,\n      var(--trees-icon-mauve)\n    );\n    --trees-file-icon-color-c: var(\n      --trees-file-icon-color,\n      var(--trees-icon-blue)\n    );\n    --trees-file-icon-color-cpp: var(\n      --trees-file-icon-color,\n      var(--trees-icon-blue)\n    );\n    --trees-file-icon-color-claude: var(\n      --trees-file-icon-color,\n      var(--trees-icon-orange)\n    );\n    --trees-file-icon-color-css: var(\n      --trees-file-icon-color,\n      var(--trees-icon-indigo)\n    );\n    --trees-file-icon-color-database: var(\n      --trees-file-icon-color,\n      var(--trees-icon-purple)\n    );\n    --trees-file-icon-color-docker: var(\n      --trees-file-icon-color,\n      var(--trees-icon-blue)\n    );\n    --trees-file-icon-color-eslint: var(\n      --trees-file-icon-color,\n      var(--trees-icon-indigo)\n    );\n    --trees-file-icon-color-git: var(\n      --trees-file-icon-vermilion,\n      var(--trees-icon-vermilion)\n    );\n    --trees-file-icon-color-go: var(\n      --trees-file-icon-color,\n      var(--trees-icon-cyan)\n    );\n    --trees-file-icon-color-graphql: var(\n      --trees-file-icon-color,\n      var(--trees-icon-pink)\n    );\n    --trees-file-icon-color-html: var(\n      --trees-file-icon-color,\n      var(--trees-icon-orange)\n    );\n    --trees-file-icon-color-image: var(\n      --trees-file-icon-color,\n      var(--trees-icon-pink)\n    );\n    --trees-file-icon-color-javascript: var(\n      --trees-file-icon-color,\n      var(--trees-icon-yellow)\n    );\n    --trees-file-icon-color-json: var(\n      --trees-file-icon-color,\n      var(--trees-icon-orange)\n    );\n    --trees-file-icon-color-markdown: var(\n      --trees-file-icon-color,\n      var(--trees-icon-green)\n    );\n    --trees-file-icon-color-mcp: var(\n      --trees-file-icon-color,\n      var(--trees-icon-teal)\n    );\n    --trees-file-icon-color-npm: var(\n      --trees-file-icon-color,\n      var(--trees-icon-red)\n    );\n    --trees-file-icon-color-oxc: var(\n      --trees-file-icon-cyan,\n      var(--trees-icon-cyan)\n    );\n    --trees-file-icon-color-postcss: var(\n      --trees-file-icon-color,\n      var(--trees-icon-red)\n    );\n    --trees-file-icon-color-prettier: var(\n      --trees-file-icon-color,\n      var(--trees-icon-teal)\n    );\n    --trees-file-icon-color-python: var(\n      --trees-file-icon-color,\n      var(--trees-icon-blue)\n    );\n    --trees-file-icon-color-react: var(\n      --trees-file-icon-color,\n      var(--trees-icon-cyan)\n    );\n    --trees-file-icon-color-ruby: var(\n      --trees-file-icon-color,\n      var(--trees-icon-red)\n    );\n    --trees-file-icon-color-rust: var(\n      --trees-file-icon-color,\n      var(--trees-icon-orange)\n    );\n    --trees-file-icon-color-sass: var(\n      --trees-file-icon-color,\n      var(--trees-icon-pink)\n    );\n    --trees-file-icon-color-svg: var(\n      --trees-file-icon-color,\n      var(--trees-icon-orange)\n    );\n    --trees-file-icon-color-svelte: var(\n      --trees-file-icon-color,\n      var(--trees-icon-red)\n    );\n    --trees-file-icon-color-svgo: var(\n      --trees-file-icon-color,\n      var(--trees-icon-green)\n    );\n    --trees-file-icon-color-swift: var(\n      --trees-file-icon-color,\n      var(--trees-icon-orange)\n    );\n    --trees-file-icon-color-table: var(\n      --trees-file-icon-color,\n      var(--trees-icon-teal)\n    );\n    --trees-file-icon-color-text: var(\n      --trees-file-icon-color,\n      var(--trees-icon-gray)\n    );\n    --trees-file-icon-color-tailwind: var(\n      --trees-file-icon-color,\n      var(--trees-icon-cyan)\n    );\n    --trees-file-icon-color-terraform: var(\n      --trees-file-icon-color,\n      var(--trees-icon-indigo)\n    );\n    --trees-file-icon-color-typescript: var(\n      --trees-file-icon-color,\n      var(--trees-icon-blue)\n    );\n    --trees-file-icon-color-vite: var(\n      --trees-file-icon-color,\n      var(--trees-icon-purple)\n    );\n    --trees-file-icon-color-vscode: var(\n      --trees-file-icon-color,\n      var(--trees-icon-blue)\n    );\n    --trees-file-icon-color-vue: var(\n      --trees-file-icon-color,\n      var(--trees-icon-green)\n    );\n    --trees-file-icon-color-wasm: var(\n      --trees-file-icon-color,\n      var(--trees-icon-indigo)\n    );\n    --trees-file-icon-color-webpack: var(\n      --trees-file-icon-color,\n      var(--trees-icon-blue)\n    );\n    --trees-file-icon-color-yml: var(\n      --trees-file-icon-color,\n      var(--trees-icon-red)\n    );\n    --trees-file-icon-color-zig: var(\n      --trees-file-icon-color,\n      var(--trees-icon-orange)\n    );\n    --trees-file-icon-color-zip: var(\n      --trees-file-icon-color,\n      var(--trees-icon-orange)\n    );\n\n    --trees-level-gap: var(\n      --trees-level-gap-override,\n      calc(8px * var(--trees-density))\n    );\n    --trees-item-padding-x: var(\n      --trees-item-padding-x-override,\n      calc(8px * var(--trees-density))\n    );\n    --trees-item-margin-x: var(\n      --trees-item-margin-x-override,\n      calc(2px * var(--trees-density))\n    );\n    --trees-item-row-gap: var(\n      --trees-item-row-gap-override,\n      calc(6px * var(--trees-density))\n    );\n    --trees-icon-width: var(--trees-icon-width-override, 16px);\n    --trees-icon-nudge: var(\n      --trees-icon-nudge-override,\n      calc(1px * var(--trees-density))\n    );\n    --trees-row-height: var(--trees-item-height, 30px);\n    --trees-git-lane-width: var(--trees-git-lane-width-override, 12px);\n    --trees-action-lane-width: var(\n      --trees-action-lane-width-override,\n      calc(var(--trees-icon-width) + 2px)\n    );\n    /* Keep the floating trigger aligned with the row's action lane. Going in\n       from the root's right edge: the scroll container reserves\n       `--trees-padding-inline` of effective inset on each side (its asymmetric\n       padding formula cancels the scrollbar gutter on the right), the row\n       sits inside that inset, and its trailing `--trees-item-padding-x` is the\n       action lane itself. The trigger's own focus-ring margin then trims one\n       pixel back so the button's visible right edge lines up with the lane. */\n    --trees-context-menu-trigger-inline-offset: calc(\n      var(--trees-padding-inline) + var(--trees-item-padding-x) -\n        var(--trees-focus-ring-width)\n    );\n\n    --trees-scrollbar-gutter: var(--trees-scrollbar-gutter-override, 6px);\n    --trees-padding-inline: var(--trees-padding-inline-override, 16px);\n\n    color-scheme: light dark;\n    display: flex;\n    flex-direction: column;\n    font-size: var(--trees-font-size);\n    color: var(--trees-fg);\n    background-color: var(--trees-bg);\n    --truncate-marker-background-color: var(--trees-bg);\n    --truncate-marker-background-overlay-color: transparent;\n    font-family: var(--trees-font-family);\n    font-weight: var(--trees-font-weight-regular);\n  }\n\n  :host([data-file-tree-virtualized='true']) {\n    height: 100%;\n    overflow: hidden;\n  }\n\n  [data-file-tree-virtualized-wrapper='true'] {\n    height: 100%;\n    overflow: hidden;\n    display: flex;\n    flex-direction: column;\n  }\n\n  [data-file-tree-virtualized-root='true'] {\n    height: 100%;\n    display: flex;\n    flex-direction: column;\n    overflow: hidden;\n  }\n\n  [data-file-tree-virtualized-scroll='true'],\n  [data-file-tree-scrollbar-measure='true'] {\n    --trees-scrollbar-thumb-current: transparent;\n    overflow-y: auto;\n    scrollbar-gutter: stable;\n\n    &:hover {\n      --trees-scrollbar-thumb-current: var(--trees-scrollbar-thumb);\n    }\n\n    &::-webkit-scrollbar {\n      width: var(--trees-scrollbar-gutter);\n      height: var(--trees-scrollbar-gutter);\n    }\n\n    &::-webkit-scrollbar-track {\n      background: transparent;\n    }\n\n    &::-webkit-scrollbar-thumb {\n      background-color: var(--trees-scrollbar-thumb-current);\n      border: 1px solid transparent;\n      background-clip: content-box;\n      border-radius: calc(var(--trees-scrollbar-gutter) / 2);\n    }\n\n    &::-webkit-scrollbar-corner {\n      background-color: transparent;\n    }\n  }\n\n  /* These are styles for a temporarily generated element to measure the size\n   * of the scrollbar.  It's intended to be somewhat similar in scrollbar style\n   * scope to the scrollable tree so `--trees-scrollbar-gutter-measured` is an\n   * accurate reflection of the size the scrollbar gutter takes up. */\n  [data-file-tree-scrollbar-measure='true'] {\n    position: absolute;\n    top: 0;\n    left: 0;\n    visibility: hidden;\n    pointer-events: none;\n    width: 100px;\n    height: 100px;\n  }\n\n  @supports (-moz-appearance: none) {\n    [data-file-tree-virtualized-scroll='true'],\n    [data-file-tree-scrollbar-measure='true'] {\n      scrollbar-width: thin;\n      scrollbar-color: var(--trees-scrollbar-thumb-current) transparent;\n    }\n  }\n\n  [data-file-tree-virtualized-scroll='true'] {\n    position: relative;\n    overflow-y: auto;\n    flex: 1 1 0;\n    min-height: 0;\n    padding-inline: max(\n        calc(var(--trees-padding-inline) - var(--trees-item-margin-x)),\n        0px\n      )\n      /* NOTE(amadeus): We can assume that all Webkit based browser gutters\n       * will align to the value of '--trees-scrollbar-gutter', however if not, then\n       * `--trees-scrollbar-gutter-measured` should correct it. Mostly we are\n       * hoping to avoid SSR alignment jumps if possible. In non-SSR'd environments\n       * `--trees-scrollbar-gutter-measured` should always be immediately available.\n       */\n      max(\n        calc(\n          var(--trees-padding-inline) - var(--trees-item-margin-x) -\n            var(\n              --trees-scrollbar-gutter-measured,\n              var(--trees-scrollbar-gutter)\n            )\n        ),\n        0px\n      );\n  }\n\n  @supports (-moz-appearance: none) {\n    [data-file-tree-virtualized-scroll='true'] {\n      padding-inline: max(\n          calc(var(--trees-padding-inline) - var(--trees-item-margin-x)),\n          0px\n        )\n        /* NOTE(amadeus): However on Firefox it can vary a little bit, but most\n         * likely the majority of cases will default to a 0px width scrollbar lets\n         * inherit that first to avoid SSR jumps. In non-SSR'd environments\n         * `--trees-scrollbar-gutter-measured` should always be immediately available.\n         */\n        max(\n          calc(\n            var(--trees-padding-inline) - var(--trees-item-margin-x) -\n              var(--trees-scrollbar-gutter-measured, 0px)\n          ),\n          0px\n        );\n    }\n  }\n\n  [data-file-tree-sticky-overlay='true'] {\n    position: sticky;\n    top: 0;\n    height: 0;\n    z-index: 4;\n    overflow: visible;\n    pointer-events: none;\n  }\n\n  /* The overlay DOM is kept populated even at scrollTop=0 so the browser has\n   * the rendered rows on hand the moment scrolling begins — otherwise the\n   * compositor paints a scrolled frame before React can mount the overlay,\n   * and the topmost sticky folder jumps up by a couple of pixels before it\n   * \"snaps\" into its pinned position. We hide it via CSS whenever the scroll\n   * is at the top and no scroll is in progress, so the preview doesn't leak\n   * through at rest. `data-overlay-reveal` is stamped on the root only when\n   * the user initiates a scroll while already at the top — exactly the case\n   * where we need the pre-mounted overlay to be visible through the first\n   * compositor frame. It is deliberately distinct from the general\n   * `data-is-scrolling` flag so a scroll that ends at the top (e.g. ArrowUp\n   * navigation) re-hides the overlay the instant the scroll lands, rather\n   * than waiting for the hover-suppression timer to elapse. */\n  [data-file-tree-virtualized-root='true'][data-scroll-at-top='true']:not(\n      [data-overlay-reveal]\n    )\n    [data-file-tree-sticky-overlay='true'] {\n    visibility: hidden;\n  }\n\n  [data-file-tree-sticky-overlay-content='true'] {\n    background-color: var(--trees-bg);\n    position: relative;\n    pointer-events: none;\n  }\n\n  [data-file-tree-virtualized-list='true'] {\n    background-color: var(--trees-bg);\n    position: relative;\n    min-height: 100%;\n    width: 100%;\n    overflow-anchor: none;\n\n    &[data-is-scrolling] {\n      pointer-events: none;\n    }\n  }\n\n  [data-file-tree-virtualized-sticky-offset='true'] {\n    contain: layout size;\n  }\n\n  [data-file-tree-virtualized-sticky='true'] {\n    position: sticky;\n    top: 0;\n    width: 100%;\n    display: flex;\n    flex-direction: column;\n    isolation: isolate;\n    /* Promote to its own compositor layer so text inside the window is\n     * rasterized once and GPU-translated during scroll. Without this, the\n     * browser re-paints the window (and its text) at every scroll frame,\n     * which produces visible 1px shake / character tearing. */\n    will-change: transform;\n  }\n\n  [data-file-tree-search-container] {\n    display: flex;\n    padding: 0;\n    padding-inline: var(--trees-padding-inline);\n    margin-bottom: var(--trees-item-row-gap);\n  }\n\n  [data-file-tree-search-input] {\n    --trees-focus-ring-width: 2px;\n    font-family: var(--trees-font-family);\n    font-size: var(--trees-font-size);\n    flex: 1;\n    height: var(--trees-row-height);\n    /* 1px breathing room so the focus-visible outline isn't clipped when the\n     * input sits flush against the top of the scroll container. */\n    margin-block: 1px;\n    padding-inline: var(--trees-item-padding-x);\n    line-height: var(--trees-row-height);\n    color: var(--trees-search-fg);\n    background-color: var(--trees-search-bg);\n    border: 1px solid var(--trees-border-color);\n    border-radius: var(--trees-border-radius);\n    outline: none;\n\n    &::placeholder {\n      color: color-mix(\n        in lab,\n        var(--trees-search-fg) 65%,\n        var(--trees-search-bg)\n      );\n    }\n\n    &:focus-visible,\n    &[data-file-tree-search-input-fake-focus='true'] {\n      outline: var(--trees-focus-ring-width) solid var(--trees-focus-ring-color);\n      outline-offset: var(--trees-focus-ring-offset);\n    }\n  }\n\n  /* The wrapper for the tree items */\n  [role='tree'] {\n    position: relative;\n    display: flex;\n    flex-direction: column;\n    gap: var(--trees-gap-override, 0);\n  }\n\n  /* LIST ITEM */\n  [data-type='item'] {\n    color: inherit;\n    font-family: var(--trees-font-family);\n    font-size: var(--trees-font-size);\n    text-align: start;\n    outline: none;\n    background-color: var(--trees-bg);\n    border: none;\n    position: relative;\n\n    padding: 0 var(--trees-item-padding-x);\n    margin: 0 var(--trees-item-margin-x);\n    cursor: pointer;\n    -webkit-user-select: none;\n            user-select: none;\n    -webkit-touch-callout: none;\n    touch-action: manipulation;\n    display: flex;\n    flex: 0 0 var(--trees-row-height);\n    align-items: center;\n    height: var(--trees-row-height);\n    line-height: var(--trees-row-height);\n    gap: var(--trees-item-row-gap);\n    border-radius: var(--trees-border-radius);\n    /* Row states may be translucent, so markers paint the tree background first\n     * and then the state color on top to avoid compositing the same alpha twice. */\n    --truncate-marker-background-color: var(--trees-bg);\n    --truncate-marker-background-overlay-color: transparent;\n    --truncate-marker-block-inset: 0px;\n\n    &:hover,\n    &[data-item-context-hover='true'] {\n      background-color: var(--trees-bg-muted);\n      --truncate-marker-background-overlay-color: var(--trees-bg-muted);\n    }\n\n    &[data-item-focused='true'],\n    &:focus-visible {\n      z-index: 2;\n\n      /* Flattened segment markers sit high enough to cover the row outline unless\n       * their painted background is inset by the focus ring width. */\n      [data-item-flattened-subitems] {\n        --truncate-marker-block-inset: var(--trees-focus-ring-width);\n      }\n\n      &::before {\n        position: absolute;\n        inset: 0;\n        content: '';\n        display: block;\n        border-radius: var(--trees-border-radius);\n        outline: var(--trees-focus-ring-width) solid\n          var(--trees-focus-ring-color);\n        outline-offset: var(--trees-focus-ring-offset);\n        pointer-events: none;\n      }\n\n      &[data-item-selected='true']::before {\n        outline-color: var(--trees-selected-focused-border-color);\n      }\n    }\n\n    &[data-item-selected='true'] {\n      color: var(--trees-selected-fg);\n      background-color: var(--trees-selected-bg);\n      --truncate-marker-background-overlay-color: var(--trees-selected-bg);\n      z-index: 3;\n\n      [data-item-section='icon'] {\n        color: var(--trees-selected-fg);\n      }\n    }\n\n    &[data-item-search-match='true'] {\n      font-weight: var(--trees-search-font-weight);\n    }\n  }\n\n  [data-type='item'][data-file-tree-sticky-row='true'] {\n    pointer-events: auto;\n  }\n\n  /* Sticky rows opt back into pointer events because the overlay wrapper is\n   * inert. During scroll, put them back under the same hover suppression as\n   * the virtualized list so translucent hover states and menu triggers do not\n   * paint over rows moving beneath the sticky stack. */\n  [data-file-tree-virtualized-root='true'][data-is-scrolling]\n    [data-type='item'][data-file-tree-sticky-row='true'] {\n    pointer-events: none;\n  }\n\n  [data-file-tree-virtualized-root='true'][data-is-scrolling]\n    [data-type='item'][data-file-tree-sticky-row='true']:hover:not(\n      [data-item-selected='true']\n    ),\n  [data-file-tree-virtualized-root='true'][data-is-scrolling]\n    [data-type='item'][data-file-tree-sticky-row='true'][data-item-context-hover='true']:not(\n      [data-item-selected='true']\n    ) {\n    background-color: var(--trees-bg);\n    --truncate-marker-background-overlay-color: transparent;\n  }\n\n  [data-item-selected='true']:has(+ [data-item-selected='true']) {\n    border-bottom-left-radius: 0;\n    border-bottom-right-radius: 0;\n  }\n\n  [data-item-selected='true'] + [data-item-selected='true'] {\n    border-top-left-radius: 0;\n    border-top-right-radius: 0;\n  }\n\n  /* Flattened Directory Parts */\n  [data-item-flattened-subitems] {\n    display: inline-flex;\n    align-items: center;\n    gap: 2px;\n  }\n  [data-item-flattened-subitem]:hover,\n  [data-item-flattened-subitem-drag-target='true'] {\n    text-decoration: underline;\n  }\n\n  /* Icon for each item */\n  [data-item-section='icon'] {\n    flex-shrink: 0;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    color: var(--trees-fg-muted);\n    fill: currentColor;\n    width: var(--trees-icon-width);\n  }\n\n  :where([data-item-section='icon'] > [data-icon-token]) {\n    color: var(--trees-fg-muted);\n  }\n\n  [data-file-tree-colored-icons='true'] {\n    [data-icon-token='astro'] {\n      color: var(--trees-file-icon-color-astro);\n    }\n    [data-icon-token='babel'] {\n      color: var(--trees-file-icon-color-babel);\n    }\n    [data-icon-token='bash'] {\n      color: var(--trees-file-icon-color-bash);\n    }\n    [data-icon-token='biome'] {\n      color: var(--trees-file-icon-color-biome);\n    }\n    [data-icon-token='bootstrap'] {\n      color: var(--trees-file-icon-color-bootstrap);\n    }\n    [data-icon-token='browserslist'] {\n      color: var(--trees-file-icon-color-browserslist);\n    }\n    [data-icon-token='bun'] {\n      color: var(--trees-file-icon-color-bun);\n    }\n    [data-icon-token='c'] {\n      color: var(--trees-file-icon-color-c);\n    }\n    [data-icon-token='cpp'] {\n      color: var(--trees-file-icon-color-cpp);\n    }\n    [data-icon-token='claude'] {\n      color: var(--trees-file-icon-color-claude);\n    }\n    [data-icon-token='css'] {\n      color: var(--trees-file-icon-color-css);\n    }\n    [data-icon-token='database'] {\n      color: var(--trees-file-icon-color-database);\n    }\n    [data-icon-token='default'] {\n      color: var(--trees-file-icon-color-default);\n    }\n    [data-icon-token='docker'] {\n      color: var(--trees-file-icon-color-docker);\n    }\n    [data-icon-token='eslint'] {\n      color: var(--trees-file-icon-color-eslint);\n    }\n    [data-icon-token='git'] {\n      color: var(--trees-file-icon-color-git);\n    }\n    [data-icon-token='go'] {\n      color: var(--trees-file-icon-color-go);\n    }\n    [data-icon-token='graphql'] {\n      color: var(--trees-file-icon-color-graphql);\n    }\n    [data-icon-token='html'] {\n      color: var(--trees-file-icon-color-html);\n    }\n    [data-icon-token='image'] {\n      color: var(--trees-file-icon-color-image);\n    }\n    [data-icon-token='javascript'] {\n      color: var(--trees-file-icon-color-javascript);\n    }\n    [data-icon-token='json'] {\n      color: var(--trees-file-icon-color-json);\n    }\n    [data-icon-token='markdown'] {\n      color: var(--trees-file-icon-color-markdown);\n    }\n    [data-icon-token='mcp'] {\n      color: var(--trees-file-icon-color-mcp);\n    }\n    [data-icon-token='npm'] {\n      color: var(--trees-file-icon-color-npm);\n    }\n    [data-icon-token='oxc'] {\n      color: var(--trees-file-icon-color-oxc);\n    }\n    [data-icon-token='postcss'] {\n      color: var(--trees-file-icon-color-postcss);\n    }\n    [data-icon-token='prettier'] {\n      color: var(--trees-file-icon-color-prettier);\n    }\n    [data-icon-token='python'] {\n      color: var(--trees-file-icon-color-python);\n    }\n    [data-icon-token='react'] {\n      color: var(--trees-file-icon-color-react);\n    }\n    [data-icon-token='ruby'] {\n      color: var(--trees-file-icon-color-ruby);\n    }\n    [data-icon-token='rust'] {\n      color: var(--trees-file-icon-color-rust);\n    }\n    [data-icon-token='sass'] {\n      color: var(--trees-file-icon-color-sass);\n    }\n    [data-icon-token='svg'] {\n      color: var(--trees-file-icon-color-svg);\n    }\n    [data-icon-token='svelte'] {\n      color: var(--trees-file-icon-color-svelte);\n    }\n    [data-icon-token='svgo'] {\n      color: var(--trees-file-icon-color-svgo);\n    }\n    [data-icon-token='swift'] {\n      color: var(--trees-file-icon-color-swift);\n    }\n    [data-icon-token='table'] {\n      color: var(--trees-file-icon-color-table);\n    }\n    [data-icon-token='text'] {\n      color: var(--trees-file-icon-color-text);\n    }\n    [data-icon-token='tailwind'] {\n      color: var(--trees-file-icon-color-tailwind);\n    }\n    [data-icon-token='terraform'] {\n      color: var(--trees-file-icon-color-terraform);\n    }\n    [data-icon-token='typescript'] {\n      color: var(--trees-file-icon-color-typescript);\n    }\n    [data-icon-token='vite'] {\n      color: var(--trees-file-icon-color-vite);\n    }\n    [data-icon-token='vscode'] {\n      color: var(--trees-file-icon-color-vscode);\n    }\n    [data-icon-token='vue'] {\n      color: var(--trees-file-icon-color-vue);\n    }\n    [data-icon-token='wasm'] {\n      color: var(--trees-file-icon-color-wasm);\n    }\n    [data-icon-token='webpack'] {\n      color: var(--trees-file-icon-color-webpack);\n    }\n    [data-icon-token='yml'] {\n      color: var(--trees-file-icon-color-yml);\n    }\n    [data-icon-token='zig'] {\n      color: var(--trees-file-icon-color-zig);\n    }\n    [data-icon-token='zip'] {\n      color: var(--trees-file-icon-color-zip);\n    }\n  }\n\n  /* Chevron rotation and visual alignment */\n  /* Chevron pointing down */\n  [data-icon-name='file-tree-icon-chevron'] {\n    &[data-align-capitals='false'] {\n      transform: translate(0, var(--trees-icon-nudge));\n    }\n    &[data-align-capitals='true'] {\n      transform: translate(0, 0);\n    }\n  }\n\n  [data-item-section='content'] {\n    flex: 0 1 auto;\n    text-align: start;\n    min-width: 0;\n    max-width: 100%;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    /* Breaks middle truncate component to also set this */\n    /* white-space: nowrap; */\n  }\n\n  [data-item-section='decoration'] {\n    flex: 1 1 0;\n    min-width: 0;\n    display: flex;\n    justify-content: flex-end;\n    text-align: end;\n    overflow: hidden;\n    color: var(--trees-fg-muted);\n  }\n\n  [data-item-section='decoration'] > span {\n    min-width: 0;\n    max-width: 100%;\n    display: inline-flex;\n    align-items: center;\n    justify-content: flex-end;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    white-space: nowrap;\n  }\n\n  [data-item-section='git'],\n  [data-item-section='action'] {\n    flex: 0 0 auto;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n  }\n\n  [data-item-section='git'] {\n    width: var(--trees-git-lane-width);\n  }\n\n  [data-item-section='action'] {\n    width: var(--trees-action-lane-width);\n    color: var(--trees-fg-muted);\n    fill: currentColor;\n    pointer-events: none;\n  }\n\n  [data-item-section='git'] > span,\n  [data-item-section='action'] > span {\n    width: 100%;\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n  }\n\n  [data-item-action-affordance='decorative'] {\n    opacity: 0.85;\n  }\n\n  [data-item-rename-input] {\n    appearance: none;\n    width: 100%;\n    min-width: 0;\n    height: calc(var(--trees-row-height) - 4px);\n    font-family: inherit;\n    font-size: inherit;\n    /* line-height: calc(var(--trees-row-height) - 8px); */\n    color: inherit;\n    background-color: transparent;\n    border: 0;\n    padding-inline: 6px;\n    outline: none;\n    box-sizing: border-box;\n  }\n\n  [data-item-section='content']:has([data-item-rename-input])\n    ~ [data-item-section='action'],\n  [data-item-section='content']:has([data-item-rename-input])\n    ~ [data-item-section='decoration'] {\n    display: none;\n  }\n\n  /* Chevron pointing right */\n  [aria-expanded='false'][data-item-type='folder']\n    > [data-item-section='icon']\n    > [data-icon-name='file-tree-icon-chevron'] {\n    &[data-align-capitals='true'] {\n      transform: rotate(-90deg)\n        translate(\n          calc(var(--trees-icon-nudge) / 2),\n          calc(var(--trees-icon-nudge) / 2)\n        );\n    }\n    &[data-align-capitals='false'] {\n      transform: rotate(-90deg)\n        translate(\n          calc(var(--trees-icon-nudge) / 2 * -1),\n          calc(var(--trees-icon-nudge) / 2)\n        );\n    }\n  }\n\n  /* LIST IDENTATION */\n  /* Spacing container */\n  [data-item-section='spacing'] {\n    display: flex;\n    flex-direction: row;\n    align-items: center;\n    justify-content: center;\n    height: var(--trees-row-height);\n    padding-left: calc(calc(var(--trees-icon-width) / 2) - 0.5px);\n\n    &:empty {\n      padding-left: 0;\n    }\n  }\n\n  /* Spacing per level */\n  [data-item-section='spacing-item'] {\n    transform: translateX(-0.25px);\n    display: inline-block;\n    border-left: 1px solid var(--trees-indent-guide-bg);\n    height: 100%;\n    margin-right: calc(var(--trees-level-gap) - 1px);\n    opacity: 0;\n    transition: opacity 150ms ease;\n\n    & + & {\n      margin-left: calc(\n        var(--trees-item-row-gap) + calc(var(--trees-icon-width) / 2) - 0.5px\n      );\n    }\n  }\n\n  :host(:hover) [data-item-section='spacing-item'] {\n    opacity: 0.75;\n  }\n\n  /* Git status indicator */\n\n  /* This is a folder that contains a git change */\n  [data-item-contains-git-change='true'] > [data-item-section='git'] {\n    color: var(--trees-git-modified-color);\n    opacity: 0.5;\n    fill: currentColor;\n  }\n\n  /* These are files that have a git change */\n  [data-item-git-status] {\n    &\n      > :where([data-item-section='icon'])\n      > :where(:not([data-icon-name='file-tree-icon-chevron'])) {\n      color: var(--trees-item-git-status-color);\n    }\n    & > [data-item-section='content'] {\n      color: var(--trees-item-git-status-color);\n    }\n    & > [data-item-section='git'] {\n      color: var(--trees-item-git-status-color);\n      font-weight: var(--trees-font-weight-semibold);\n    }\n  }\n\n  [data-item-git-status='added'] {\n    --trees-item-git-status-color: var(--trees-git-added-color);\n  }\n\n  [data-item-git-status='deleted'] {\n    --trees-item-git-status-color: var(--trees-git-deleted-color);\n  }\n\n  [data-item-git-status='ignored'] {\n    --trees-item-git-status-color: var(--trees-git-ignored-color);\n\n    & > [data-item-section='icon'] {\n      opacity: 0.5;\n    }\n  }\n\n  [data-item-section='git'] [data-icon-name='file-tree-icon-dot'] {\n    /* this is a nudge to align the dot with the likely lowercase text. it's slightly\n    generalizable, but other fonts are gonna need other nudges i assume */\n    transform: translateY(calc(0.65ex - 50%));\n  }\n\n  [data-item-git-status='modified'] {\n    --trees-item-git-status-color: var(--trees-git-modified-color);\n  }\n\n  [data-item-git-status='renamed'] {\n    --trees-item-git-status-color: var(--trees-git-renamed-color);\n  }\n\n  [data-item-git-status='untracked'] {\n    --trees-item-git-status-color: var(--trees-git-untracked-color);\n  }\n\n  /* Drag and drop */\n  [data-item-drag-target='true'] {\n    background-color: var(--trees-selected-bg);\n  }\n\n  [data-item-dragging='true'] {\n    opacity: 0.5;\n  }\n\n  /* Lock icon for locked paths (sibling of content) */\n  [data-item-section='lock'] {\n    flex: 0 0 auto;\n    margin-left: auto;\n    display: flex;\n    align-items: center;\n    color: var(--trees-fg-muted);\n  }\n  [data-item-section='lock'] svg {\n    display: block;\n  }\n\n  [data-type='header-slot'] {\n    display: block;\n    flex: 0 0 auto;\n  }\n\n  [data-type='context-menu-wash'] {\n    position: absolute;\n    inset: 0;\n    z-index: 3;\n    background-color: transparent;\n    touch-action: none;\n  }\n\n  [data-type='context-menu-anchor'] {\n    position: absolute;\n    top: 0;\n    right: var(--trees-context-menu-trigger-inline-offset);\n    z-index: 4;\n    display: none;\n    align-items: center;\n\n    &[data-visible='true'] {\n      display: flex;\n    }\n  }\n\n  /* Hide the floating trigger while the scroll container is actively moving.\n   * The anchor is positioned against the root, not the scroll content, so its\n   * `top` follows the row via a React state update — one frame behind the\n   * compositor. That delay is visible as the trigger hovering over the wrong\n   * row during the first frame of a scroll. The `data-is-scrolling` flag on\n   * the root is flipped synchronously on `wheel`/`touchmove`/`keydown` before\n   * the compositor commits the next paint, so this selector hides the anchor\n   * in the same frame the scroll begins. */\n  [data-file-tree-virtualized-root='true'][data-is-scrolling]\n    [data-type='context-menu-anchor'] {\n    display: none;\n  }\n\n  [data-type='context-menu-anchor'] > slot[name='context-menu'] {\n    display: block;\n    width: 0;\n    min-width: 0;\n    flex: 0 0 0;\n    overflow: visible;\n  }\n\n  /* Single floating context menu trigger */\n  [data-type='context-menu-trigger'] {\n    all: unset;\n    align-items: center;\n    justify-content: center;\n    width: var(--trees-action-lane-width);\n    color: var(--trees-fg-muted);\n    fill: currentColor;\n    cursor: pointer;\n    font-family: var(--trees-font-family);\n    font-size: var(--trees-font-size);\n    border-top-right-radius: var(--trees-border-radius);\n    border-bottom-right-radius: var(--trees-border-radius);\n    margin: var(--trees-focus-ring-width);\n    height: calc(var(--trees-row-height) - var(--trees-focus-ring-width) * 2);\n    border-width: 0;\n    transition: color 120ms ease;\n\n    display: flex;\n  }\n\n  [data-type='context-menu-trigger']:hover,\n  [data-type='context-menu-trigger'][aria-expanded='true'] {\n    color: var(--trees-fg);\n  }\n\n  /** @pierre/truncate css here, manually copy pasted for now */\n  [data-truncate-container] {\n    /* CUSTOM TO TREES, TO SUPPORT THE OUTLINE */\n    margin-top: -1px;\n    margin-bottom: -1px;\n\n    /* Width of the fade from default marker to text */\n    --truncate-internal-marker-fade-width: var(\n      --truncate-marker-fade-width,\n      2px\n    );\n    /* Width of the solid color between the fade from the default marker to the text */\n    --truncate-internal-marker-gap: var(--truncate-marker-gap, 0px);\n    /* Opacity of the marker 'color' property, not of the element itself */\n    --truncate-internal-marker-opacity: var(--truncate-marker-opacity, 50%);\n    /* Opacity of the marker 'color' property specifically for the middle truncate, not opacity of the element itself */\n    --truncate-internal-middle-marker-opacity: var(\n      --truncate-middle-marker-opacity,\n      80%\n    );\n    /* Background color of the default marker */\n    --truncate-internal-marker-background-color: var(\n      --truncate-marker-background-color,\n      light-dark(white, black)\n    );\n    --truncate-internal-marker-background-overlay-color: var(\n      --truncate-marker-background-overlay-color,\n      transparent\n    );\n    --truncate-internal-marker-block-inset: var(\n      --truncate-marker-block-inset,\n      0px\n    );\n    /* Duration of the fade out animation for the marker */\n    --truncate-internal-marker-fade-out-duration: var(\n      --truncate-marker-fade-out-duration,\n      0ms\n    );\n    /* Duration of the fade in animation for the marker */\n    --truncate-internal-marker-fade-in-duration: var(\n      --truncate-marker-fade-in-duration,\n      100ms\n    );\n\n    /* FADE Variant specifics */\n    --truncate-internal-fade-marker-color: var(\n      --truncate-fade-marker-color,\n      #000\n    );\n    --truncate-internal-fade-marker-width: var(\n      --truncate-fade-marker-width,\n      0.2lh\n    );\n\n    /*\n    In some special cases people might be adding spacing in other ways\n    that would benefit from being able to override this, however the container\n    query below can't use this and would need to be redeclared with the overridden\n    value. It's a bad time, but better than nothing.\n    */\n    --truncate-internal-single-line-height: 1lh;\n\n    height: var(--truncate-internal-single-line-height);\n    min-width: 0;\n    overflow: hidden;\n  }\n\n  [data-truncate-marker] {\n    display: flex;\n    position: absolute;\n    height: var(--truncate-internal-single-line-height);\n    padding-block: var(--truncate-internal-marker-block-inset);\n    box-sizing: border-box;\n    align-items: center;\n    background-clip: content-box;\n    z-index: 2;\n    color: color-mix(\n      in srgb,\n      currentColor var(--truncate-internal-marker-opacity),\n      transparent\n    );\n\n    /* Core trick for hiding the marker until overflow occurs */\n    opacity: 0;\n    transition: opacity var(--truncate-internal-marker-fade-out-duration)\n      ease-in-out;\n  }\n\n  @container measure (height > 1lh) {\n    [data-truncate-marker] {\n      opacity: 1;\n      transition: opacity var(--truncate-internal-marker-fade-in-duration)\n        ease-in-out;\n    }\n  }\n\n  [data-truncate-grid] {\n    display: grid;\n    position: relative;\n  }\n\n  [data-truncate-content='visible'] {\n    white-space: nowrap;\n  }\n\n  [data-truncate-content='overflow'] {\n    opacity: 0;\n    pointer-events: none;\n    -webkit-user-select: none;\n            user-select: none;\n    word-break: break-all;\n    margin-top: calc(-1 * var(--truncate-internal-single-line-height));\n  }\n\n  [data-truncate-marker-cell] {\n    container: measure / size;\n    overflow: visible;\n    -webkit-user-select: none;\n            user-select: none;\n    pointer-events: none;\n  }\n\n  [data-truncate-container='truncate'] {\n    & [data-truncate-grid] {\n      grid-template-columns: minmax(0, max-content) 0;\n    }\n    & [data-truncate-marker] {\n      right: 0;\n    }\n    & [data-truncate-fade] {\n      margin-right: calc(-2 * var(--truncate-internal-fade-marker-width));\n    }\n  }\n\n  [data-truncate-container='fruncate'] {\n    & [data-truncate-grid] {\n      grid-template-columns: 0 minmax(0, max-content) auto;\n    }\n    & [data-truncate-content] {\n      direction: rtl;\n    }\n    & [data-truncate-content] > span {\n      unicode-bidi: plaintext;\n    }\n    & [data-truncate-fade] {\n      margin-left: calc(-2 * var(--truncate-internal-fade-marker-width));\n    }\n  }\n\n  [data-truncate-variant='default'] {\n    & [data-truncate-marker] {\n      background-color: var(--truncate-internal-marker-background-color);\n      background-image: linear-gradient(\n        var(--truncate-internal-marker-background-overlay-color),\n        var(--truncate-internal-marker-background-overlay-color)\n      );\n    }\n    & [data-truncate-marker]::after,\n    & [data-truncate-marker]::before {\n      content: '';\n      position: absolute;\n      width: calc(\n        var(--truncate-internal-marker-fade-width) +\n          var(--truncate-internal-marker-gap)\n      );\n      inset-block-start: var(--truncate-internal-marker-block-inset);\n      height: max(\n        0px,\n        calc(\n          var(--truncate-internal-single-line-height) -\n            var(--truncate-internal-marker-block-inset) * 2\n        )\n      );\n      background-color: var(--truncate-internal-marker-background-color);\n      background-image: linear-gradient(\n        var(--truncate-internal-marker-background-overlay-color),\n        var(--truncate-internal-marker-background-overlay-color)\n      );\n      mask-image: linear-gradient(\n        var(--truncate-internal-fade-dir),\n        #000 0%,\n        #000 var(--truncate-internal-marker-gap),\n        transparent 100%\n      );\n    }\n    & [data-truncate-marker]::after {\n      --truncate-internal-fade-dir: to right;\n      right: calc(\n        -1 *\n          (\n            var(--truncate-internal-marker-fade-width) +\n              var(--truncate-internal-marker-gap)\n          )\n      );\n    }\n    & [data-truncate-marker]::before {\n      --truncate-internal-fade-dir: to left;\n      left: calc(\n        -1 *\n          (\n            var(--truncate-internal-marker-fade-width) +\n              var(--truncate-internal-marker-gap)\n          )\n      );\n    }\n  }\n\n  [data-truncate-variant='fade'] {\n    & [data-truncate-marker] {\n      background: transparent;\n    }\n  }\n\n  [data-truncate-fade] {\n    box-shadow:\n      0 0 calc(var(--truncate-internal-fade-marker-width) / 2)\n        var(--truncate-internal-fade-marker-color),\n      0 0 var(--truncate-internal-fade-marker-width)\n        var(--truncate-internal-fade-marker-color);\n    width: calc(var(--truncate-internal-fade-marker-width) * 2);\n    height: calc(\n      var(--truncate-internal-single-line-height) -\n        (var(--truncate-internal-fade-marker-width) * 2)\n    );\n    margin: var(--truncate-internal-fade-marker-width) 0;\n  }\n\n  [data-truncate-group-container='middle'] {\n    & [data-truncate-container] {\n      --truncate-marker-opacity: var(--truncate-internal-middle-marker-opacity);\n    }\n\n    display: flex;\n    min-width: 0;\n\n    & > div {\n      min-width: 0;\n    }\n\n    & > div[data-truncate-segment-priority='1'] {\n      flex: 0 1 max-content;\n    }\n    & > div[data-truncate-segment-priority='2'] {\n      flex: 0 999999 max-content;\n    }\n  }\n}\n";
-
+var style_default = "@layer base {\n  :host {\n    --trees-accent: var(--trees-accent-override, #009fff);\n    --trees-fg: var(--trees-fg-override, var(--trees-theme-sidebar-fg, light-dark(#6c6c71, #adadb1)));\n    --trees-fg-muted: var(--trees-fg-muted-override, var(--trees-theme-sidebar-header-fg, light-dark(#84848a, #84848a)));\n    --trees-bg: var(--trees-bg-override, var(--trees-theme-sidebar-bg, light-dark(#f8f8f8, #141415)));\n    --trees-bg-muted: var(--trees-bg-muted-override, var(--trees-theme-list-hover-bg, light-dark(color-mix(in lab,\n            var(--trees-accent) var(--trees-bg-alpha-light, 8%),\n            var(--trees-bg)), color-mix(in lab,\n            var(--trees-accent) var(--trees-bg-alpha-dark, 10%),\n            var(--trees-bg)))));\n    --trees-input-bg: var(--trees-input-bg-override, light-dark(#f8f8f8, #070707));\n    --trees-added-light: #16a994;\n    --trees-added-dark: #00cab1;\n    --trees-ignored-light: #adadb1;\n    --trees-ignored-dark: #4a4a4e;\n    --trees-modified-light: #1ca1c7;\n    --trees-modified-dark: #08c0ef;\n    --trees-renamed-light: #d5a910;\n    --trees-renamed-dark: #ffd452;\n    --trees-untracked-light: #16a994;\n    --trees-untracked-dark: #00cab1;\n    --trees-deleted-light: #ff2e3f;\n    --trees-deleted-dark: #ff6762;\n    --trees-border-color: var(--trees-border-color-override, var(--trees-theme-sidebar-border, light-dark(#eeeeef, #070707)));\n    --trees-indent-guide-bg: var(--trees-indent-guide-bg-override, color-mix(in lab, var(--trees-fg-muted) 25%, transparent));\n    --trees-density: var(--trees-density-override, 1);\n    --trees-border-radius: var(--trees-border-radius-override, calc(6px * var(--trees-density)));\n    --trees-font-family: var(--trees-font-family-override, system-ui);\n    --trees-font-size: var(--trees-font-size-override, 13px);\n    --trees-font-weight-regular: var(--trees-font-weight-regular-override, 400);\n    --trees-font-weight-semibold: var(--trees-font-weight-semibold-override, 600);\n    --trees-focus-ring-color: var(--trees-focus-ring-color-override, var(--trees-theme-focus-ring, var(--trees-accent)));\n    --trees-focus-ring-width: var(--trees-focus-ring-width-override, 1px);\n    --trees-focus-ring-offset: var(--trees-focus-ring-offset-override, -1px);\n    --trees-search-fg: var(--trees-search-fg-override, var(--trees-theme-input-fg, var(--trees-fg)));\n    --trees-search-font-weight: var(--trees-search-font-weight-override, 600);\n    --trees-search-bg: var(--trees-search-bg-override, var(--trees-theme-input-bg, var(--trees-input-bg)));\n    --trees-scrollbar-thumb: var(--trees-scrollbar-thumb-override, var(--trees-theme-scrollbar-thumb, color-mix(in lab, var(--trees-fg) 25%, var(--trees-bg))));\n    --trees-selected-fg: var(--trees-selected-fg-override, var(--trees-theme-list-active-selection-fg, var(--trees-fg)));\n    --trees-selected-bg: var(--trees-selected-bg-override, var(--trees-theme-list-active-selection-bg, light-dark(color-mix(in lab, var(--trees-accent) 12%, var(--trees-bg)), color-mix(in lab, var(--trees-accent) 15%, var(--trees-bg)))));\n    --trees-selected-focused-border-color: var(--trees-selected-focused-border-color-override, var(--trees-theme-focus-ring, var(--trees-accent)));\n    --trees-status-added: var(--trees-status-added-override, var(--trees-theme-git-added-fg, light-dark(var(--trees-added-light), var(--trees-added-dark))));\n    --trees-status-ignored: var(--trees-status-ignored-override, var(--trees-theme-git-ignored-fg, light-dark(var(--trees-ignored-light), var(--trees-ignored-dark))));\n    --trees-status-modified: var(--trees-status-modified-override, var(--trees-theme-git-modified-fg, light-dark(var(--trees-modified-light), var(--trees-modified-dark))));\n    --trees-status-renamed: var(--trees-status-renamed-override, var(--trees-theme-git-renamed-fg, light-dark(var(--trees-renamed-light), var(--trees-renamed-dark))));\n    --trees-status-untracked: var(--trees-status-untracked-override, var(--trees-theme-git-untracked-fg, light-dark(var(--trees-untracked-light), var(--trees-untracked-dark))));\n    --trees-status-deleted: var(--trees-status-deleted-override, var(--trees-theme-git-deleted-fg, light-dark(var(--trees-deleted-light), var(--trees-deleted-dark))));\n    --trees-git-modified-color: var(--trees-git-modified-color-override, var(--trees-status-modified));\n    --trees-git-added-color: var(--trees-git-added-color-override, var(--trees-status-added));\n    --trees-git-ignored-color: var(--trees-git-ignored-color-override, var(--trees-status-ignored));\n    --trees-git-deleted-color: var(--trees-git-deleted-color-override, var(--trees-status-deleted));\n    --trees-git-renamed-color: var(--trees-git-renamed-color-override, var(--trees-status-renamed));\n    --trees-git-untracked-color: var(--trees-git-untracked-color-override, var(--trees-status-untracked));\n    --trees-icon-gray: light-dark(#84848a, #adadb1);\n    --trees-icon-red: light-dark(#d52c36, #ff6762);\n    --trees-icon-vermilion: light-dark(#ff8c5b, #d5512f);\n    --trees-icon-orange: light-dark(#d47628, #ffa359);\n    --trees-icon-yellow: light-dark(#d5a910, #ffd452);\n    --trees-icon-green: light-dark(#199f43, #5ecc71);\n    --trees-icon-teal: light-dark(#17a5af, #64d1db);\n    --trees-icon-cyan: light-dark(#1ca1c7, #68cdf2);\n    --trees-icon-blue: light-dark(#1a85d4, #69b1ff);\n    --trees-icon-indigo: light-dark(#693acf, #9d6afb);\n    --trees-icon-purple: light-dark(#a631be, #d568ea);\n    --trees-icon-pink: light-dark(#d32a61, #ff678d);\n    --trees-icon-mauve: light-dark(#594c5b, #79697b);\n    --trees-file-icon-color-default: var(--trees-file-icon-color, var(--trees-icon-gray));\n    --trees-file-icon-color-astro: var(--trees-file-icon-color, var(--trees-icon-purple));\n    --trees-file-icon-color-babel: var(--trees-file-icon-color, var(--trees-icon-yellow));\n    --trees-file-icon-color-bash: var(--trees-file-icon-color, var(--trees-icon-green));\n    --trees-file-icon-color-biome: var(--trees-file-icon-color, var(--trees-icon-blue));\n    --trees-file-icon-color-bootstrap: var(--trees-file-icon-color, var(--trees-icon-indigo));\n    --trees-file-icon-color-browserslist: var(--trees-file-icon-color, var(--trees-icon-yellow));\n    --trees-file-icon-color-bun: var(--trees-file-icon-color, var(--trees-icon-mauve));\n    --trees-file-icon-color-c: var(--trees-file-icon-color, var(--trees-icon-blue));\n    --trees-file-icon-color-cpp: var(--trees-file-icon-color, var(--trees-icon-blue));\n    --trees-file-icon-color-claude: var(--trees-file-icon-color, var(--trees-icon-orange));\n    --trees-file-icon-color-css: var(--trees-file-icon-color, var(--trees-icon-indigo));\n    --trees-file-icon-color-database: var(--trees-file-icon-color, var(--trees-icon-purple));\n    --trees-file-icon-color-docker: var(--trees-file-icon-color, var(--trees-icon-blue));\n    --trees-file-icon-color-eslint: var(--trees-file-icon-color, var(--trees-icon-indigo));\n    --trees-file-icon-color-git: var(--trees-file-icon-vermilion, var(--trees-icon-vermilion));\n    --trees-file-icon-color-go: var(--trees-file-icon-color, var(--trees-icon-cyan));\n    --trees-file-icon-color-graphql: var(--trees-file-icon-color, var(--trees-icon-pink));\n    --trees-file-icon-color-html: var(--trees-file-icon-color, var(--trees-icon-orange));\n    --trees-file-icon-color-image: var(--trees-file-icon-color, var(--trees-icon-pink));\n    --trees-file-icon-color-javascript: var(--trees-file-icon-color, var(--trees-icon-yellow));\n    --trees-file-icon-color-json: var(--trees-file-icon-color, var(--trees-icon-orange));\n    --trees-file-icon-color-markdown: var(--trees-file-icon-color, var(--trees-icon-green));\n    --trees-file-icon-color-mcp: var(--trees-file-icon-color, var(--trees-icon-teal));\n    --trees-file-icon-color-npm: var(--trees-file-icon-color, var(--trees-icon-red));\n    --trees-file-icon-color-oxc: var(--trees-file-icon-cyan, var(--trees-icon-cyan));\n    --trees-file-icon-color-postcss: var(--trees-file-icon-color, var(--trees-icon-red));\n    --trees-file-icon-color-prettier: var(--trees-file-icon-color, var(--trees-icon-teal));\n    --trees-file-icon-color-python: var(--trees-file-icon-color, var(--trees-icon-blue));\n    --trees-file-icon-color-react: var(--trees-file-icon-color, var(--trees-icon-cyan));\n    --trees-file-icon-color-ruby: var(--trees-file-icon-color, var(--trees-icon-red));\n    --trees-file-icon-color-rust: var(--trees-file-icon-color, var(--trees-icon-orange));\n    --trees-file-icon-color-sass: var(--trees-file-icon-color, var(--trees-icon-pink));\n    --trees-file-icon-color-svg: var(--trees-file-icon-color, var(--trees-icon-orange));\n    --trees-file-icon-color-svelte: var(--trees-file-icon-color, var(--trees-icon-red));\n    --trees-file-icon-color-svgo: var(--trees-file-icon-color, var(--trees-icon-green));\n    --trees-file-icon-color-swift: var(--trees-file-icon-color, var(--trees-icon-orange));\n    --trees-file-icon-color-table: var(--trees-file-icon-color, var(--trees-icon-teal));\n    --trees-file-icon-color-text: var(--trees-file-icon-color, var(--trees-icon-gray));\n    --trees-file-icon-color-tailwind: var(--trees-file-icon-color, var(--trees-icon-cyan));\n    --trees-file-icon-color-terraform: var(--trees-file-icon-color, var(--trees-icon-indigo));\n    --trees-file-icon-color-typescript: var(--trees-file-icon-color, var(--trees-icon-blue));\n    --trees-file-icon-color-vite: var(--trees-file-icon-color, var(--trees-icon-purple));\n    --trees-file-icon-color-vscode: var(--trees-file-icon-color, var(--trees-icon-blue));\n    --trees-file-icon-color-vue: var(--trees-file-icon-color, var(--trees-icon-green));\n    --trees-file-icon-color-wasm: var(--trees-file-icon-color, var(--trees-icon-indigo));\n    --trees-file-icon-color-webpack: var(--trees-file-icon-color, var(--trees-icon-blue));\n    --trees-file-icon-color-yml: var(--trees-file-icon-color, var(--trees-icon-red));\n    --trees-file-icon-color-zig: var(--trees-file-icon-color, var(--trees-icon-orange));\n    --trees-file-icon-color-zip: var(--trees-file-icon-color, var(--trees-icon-orange));\n    --trees-level-gap: var(--trees-level-gap-override, calc(8px * var(--trees-density)));\n    --trees-item-padding-x: var(--trees-item-padding-x-override, calc(8px * var(--trees-density)));\n    --trees-item-margin-x: var(--trees-item-margin-x-override, calc(2px * var(--trees-density)));\n    --trees-item-row-gap: var(--trees-item-row-gap-override, calc(6px * var(--trees-density)));\n    --trees-icon-width: var(--trees-icon-width-override, 16px);\n    --trees-icon-nudge: var(--trees-icon-nudge-override, calc(1px * var(--trees-density)));\n    --trees-row-height: var(--trees-item-height, 30px);\n    --trees-git-lane-width: var(--trees-git-lane-width-override, 12px);\n    --trees-action-lane-width: var(--trees-action-lane-width-override, calc(var(--trees-icon-width) + 2px));\n    --trees-context-menu-trigger-inline-offset: calc(var(--trees-padding-inline) + var(--trees-item-padding-x) -\n        var(--trees-focus-ring-width));\n    --trees-scrollbar-gutter: var(--trees-scrollbar-gutter-override, 6px);\n    --trees-padding-inline: var(--trees-padding-inline-override, 16px);\n    color-scheme: light dark;\n    font-size: var(--trees-font-size);\n    color: var(--trees-fg);\n    background-color: var(--trees-bg);\n    --truncate-marker-background-color: var(--trees-bg);\n    --truncate-marker-background-overlay-color: transparent;\n    font-family: var(--trees-font-family);\n    font-weight: var(--trees-font-weight-regular);\n    flex-direction: column;\n    display: flex;\n  }\n\n  :host([data-file-tree-virtualized=\"true\"]) {\n    height: 100%;\n    overflow: hidden;\n  }\n\n  [data-file-tree-virtualized-wrapper=\"true\"], [data-file-tree-virtualized-root=\"true\"] {\n    flex-direction: column;\n    height: 100%;\n    display: flex;\n    overflow: hidden;\n  }\n\n  [data-file-tree-virtualized-scroll=\"true\"], [data-file-tree-scrollbar-measure=\"true\"] {\n    --trees-scrollbar-thumb-current: transparent;\n    scrollbar-gutter: stable;\n    overflow-y: auto;\n\n    &:hover {\n      --trees-scrollbar-thumb-current: var(--trees-scrollbar-thumb);\n    }\n\n    &::-webkit-scrollbar {\n      width: var(--trees-scrollbar-gutter);\n      height: var(--trees-scrollbar-gutter);\n    }\n\n    &::-webkit-scrollbar-track {\n      background: none;\n    }\n\n    &::-webkit-scrollbar-thumb {\n      background-color: var(--trees-scrollbar-thumb-current);\n      border-radius: calc(var(--trees-scrollbar-gutter) / 2);\n      background-clip: content-box;\n      border: 1px solid #0000;\n    }\n\n    &::-webkit-scrollbar-corner {\n      background-color: #0000;\n    }\n  }\n\n  [data-file-tree-scrollbar-measure=\"true\"] {\n    visibility: hidden;\n    pointer-events: none;\n    width: 100px;\n    height: 100px;\n    position: absolute;\n    top: 0;\n    left: 0;\n  }\n\n  @supports ((-moz-appearance: none)) {\n    [data-file-tree-virtualized-scroll=\"true\"], [data-file-tree-scrollbar-measure=\"true\"] {\n      scrollbar-width: thin;\n      scrollbar-color: var(--trees-scrollbar-thumb-current) transparent;\n    }\n  }\n\n  [data-file-tree-virtualized-scroll=\"true\"] {\n    min-height: 0;\n    padding-inline: max(calc(var(--trees-padding-inline) - var(--trees-item-margin-x)),\n        0px)\n      /* NOTE(amadeus): We can assume that all Webkit based browser gutters\n       * will align to the value of '--trees-scrollbar-gutter', however if not, then\n       * `--trees-scrollbar-gutter-measured` should correct it. Mostly we are\n       * hoping to avoid SSR alignment jumps if possible. In non-SSR'd environments\n       * `--trees-scrollbar-gutter-measured` should always be immediately available.\n       */\n      max(calc(var(--trees-padding-inline) - var(--trees-item-margin-x) -\n            var(--trees-scrollbar-gutter-measured, var(--trees-scrollbar-gutter))),\n        0px);\n    flex: 1 1 0;\n    position: relative;\n    overflow-y: auto;\n  }\n\n  @supports ((-moz-appearance: none)) {\n    [data-file-tree-virtualized-scroll=\"true\"] {\n      padding-inline: max(calc(var(--trees-padding-inline) - var(--trees-item-margin-x)),\n          0px)\n        /* NOTE(amadeus): However on Firefox it can vary a little bit, but most\n         * likely the majority of cases will default to a 0px width scrollbar lets\n         * inherit that first to avoid SSR jumps. In non-SSR'd environments\n         * `--trees-scrollbar-gutter-measured` should always be immediately available.\n         */\n        max(calc(var(--trees-padding-inline) - var(--trees-item-margin-x) -\n              var(--trees-scrollbar-gutter-measured, 0px)),\n          0px);\n    }\n  }\n\n  [data-file-tree-sticky-overlay=\"true\"] {\n    z-index: 4;\n    pointer-events: none;\n    height: 0;\n    position: sticky;\n    top: 0;\n    overflow: visible;\n  }\n\n  [data-file-tree-virtualized-root=\"true\"][data-scroll-at-top=\"true\"]:not([data-overlay-reveal]) [data-file-tree-sticky-overlay=\"true\"] {\n    visibility: hidden;\n  }\n\n  [data-file-tree-sticky-overlay-content=\"true\"] {\n    background-color: var(--trees-bg);\n    pointer-events: none;\n    position: relative;\n  }\n\n  [data-file-tree-virtualized-list=\"true\"] {\n    background-color: var(--trees-bg);\n    overflow-anchor: none;\n    width: 100%;\n    min-height: 100%;\n    position: relative;\n\n    &[data-is-scrolling] {\n      pointer-events: none;\n    }\n  }\n\n  [data-file-tree-virtualized-sticky-offset=\"true\"] {\n    contain: layout size;\n  }\n\n  [data-file-tree-virtualized-sticky=\"true\"] {\n    isolation: isolate;\n    will-change: transform;\n    flex-direction: column;\n    width: 100%;\n    display: flex;\n    position: sticky;\n    top: 0;\n  }\n\n  [data-file-tree-search-container] {\n    padding: 0;\n    padding-inline: var(--trees-padding-inline);\n    margin-bottom: var(--trees-item-row-gap);\n    display: flex;\n  }\n\n  [data-file-tree-search-input] {\n    --trees-focus-ring-width: 2px;\n    font-family: var(--trees-font-family);\n    font-size: var(--trees-font-size);\n    height: var(--trees-row-height);\n    padding-inline: var(--trees-item-padding-x);\n    line-height: var(--trees-row-height);\n    color: var(--trees-search-fg);\n    background-color: var(--trees-search-bg);\n    border: 1px solid var(--trees-border-color);\n    border-radius: var(--trees-border-radius);\n    outline: none;\n    flex: 1;\n    margin-block: 1px;\n\n    &::placeholder {\n      color: color-mix(in lab,\n        var(--trees-search-fg) 65%,\n        var(--trees-search-bg));\n    }\n\n    &:focus-visible, &[data-file-tree-search-input-fake-focus=\"true\"] {\n      outline: var(--trees-focus-ring-width) solid var(--trees-focus-ring-color);\n      outline-offset: var(--trees-focus-ring-offset);\n    }\n  }\n\n  [role=\"tree\"] {\n    gap: var(--trees-gap-override, 0);\n    flex-direction: column;\n    display: flex;\n    position: relative;\n  }\n\n  [data-type=\"item\"] {\n    color: inherit;\n    font-family: var(--trees-font-family);\n    font-size: var(--trees-font-size);\n    text-align: start;\n    background-color: var(--trees-bg);\n    padding: 0 var(--trees-item-padding-x);\n    margin: 0 var(--trees-item-margin-x);\n    cursor: pointer;\n    user-select: none;\n    -webkit-touch-callout: none;\n    touch-action: manipulation;\n    flex: 0 0 var(--trees-row-height);\n    height: var(--trees-row-height);\n    line-height: var(--trees-row-height);\n    align-items: center;\n    gap: var(--trees-item-row-gap);\n    border-radius: var(--trees-border-radius);\n    --truncate-marker-background-color: var(--trees-bg);\n    --truncate-marker-background-overlay-color: transparent;\n    --truncate-marker-block-inset: 0px;\n    border: none;\n    outline: none;\n    display: flex;\n    position: relative;\n\n    &:hover, &[data-item-context-hover=\"true\"] {\n      background-color: var(--trees-bg-muted);\n      --truncate-marker-background-overlay-color: var(--trees-bg-muted);\n    }\n\n    &[data-item-focused=\"true\"], &:focus-visible {\n      z-index: 2;\n\n      & [data-item-flattened-subitems] {\n        --truncate-marker-block-inset: var(--trees-focus-ring-width);\n      }\n\n      &:before {\n        content: \"\";\n        border-radius: var(--trees-border-radius);\n        outline: var(--trees-focus-ring-width) solid\n          var(--trees-focus-ring-color);\n        outline-offset: var(--trees-focus-ring-offset);\n        pointer-events: none;\n        display: block;\n        position: absolute;\n        inset: 0;\n      }\n\n      &[data-item-selected=\"true\"]:before {\n        outline-color: var(--trees-selected-focused-border-color);\n      }\n    }\n\n    &[data-item-selected=\"true\"] {\n      color: var(--trees-selected-fg);\n      background-color: var(--trees-selected-bg);\n      --truncate-marker-background-overlay-color: var(--trees-selected-bg);\n      z-index: 3;\n\n      & [data-item-section=\"icon\"] {\n        color: var(--trees-selected-fg);\n      }\n    }\n\n    &[data-item-search-match=\"true\"] {\n      font-weight: var(--trees-search-font-weight);\n    }\n  }\n\n  [data-type=\"item\"][data-file-tree-sticky-row=\"true\"] {\n    pointer-events: auto;\n  }\n\n  [data-file-tree-virtualized-root=\"true\"][data-is-scrolling] [data-type=\"item\"][data-file-tree-sticky-row=\"true\"] {\n    pointer-events: none;\n  }\n\n  [data-file-tree-virtualized-root=\"true\"][data-is-scrolling] [data-type=\"item\"][data-file-tree-sticky-row=\"true\"]:hover:not([data-item-selected=\"true\"]), [data-file-tree-virtualized-root=\"true\"][data-is-scrolling] [data-type=\"item\"][data-file-tree-sticky-row=\"true\"][data-item-context-hover=\"true\"]:not([data-item-selected=\"true\"]) {\n    background-color: var(--trees-bg);\n    --truncate-marker-background-overlay-color: transparent;\n  }\n\n  [data-item-selected=\"true\"]:has( + [data-item-selected=\"true\"]) {\n    border-bottom-right-radius: 0;\n    border-bottom-left-radius: 0;\n  }\n\n  [data-item-selected=\"true\"] + [data-item-selected=\"true\"] {\n    border-top-left-radius: 0;\n    border-top-right-radius: 0;\n  }\n\n  [data-item-flattened-subitems] {\n    align-items: center;\n    gap: 2px;\n    display: inline-flex;\n  }\n\n  [data-item-flattened-subitem]:hover, [data-item-flattened-subitem-drag-target=\"true\"] {\n    text-decoration: underline;\n  }\n\n  [data-item-section=\"icon\"] {\n    color: var(--trees-fg-muted);\n    fill: currentColor;\n    width: var(--trees-icon-width);\n    flex-shrink: 0;\n    justify-content: center;\n    align-items: center;\n    display: flex;\n  }\n\n  :where([data-item-section=\"icon\"] > [data-icon-token]) {\n    color: var(--trees-fg-muted);\n  }\n\n  [data-file-tree-colored-icons=\"true\"] {\n    & [data-icon-token=\"astro\"] {\n      color: var(--trees-file-icon-color-astro);\n    }\n\n    & [data-icon-token=\"babel\"] {\n      color: var(--trees-file-icon-color-babel);\n    }\n\n    & [data-icon-token=\"bash\"] {\n      color: var(--trees-file-icon-color-bash);\n    }\n\n    & [data-icon-token=\"biome\"] {\n      color: var(--trees-file-icon-color-biome);\n    }\n\n    & [data-icon-token=\"bootstrap\"] {\n      color: var(--trees-file-icon-color-bootstrap);\n    }\n\n    & [data-icon-token=\"browserslist\"] {\n      color: var(--trees-file-icon-color-browserslist);\n    }\n\n    & [data-icon-token=\"bun\"] {\n      color: var(--trees-file-icon-color-bun);\n    }\n\n    & [data-icon-token=\"c\"] {\n      color: var(--trees-file-icon-color-c);\n    }\n\n    & [data-icon-token=\"cpp\"] {\n      color: var(--trees-file-icon-color-cpp);\n    }\n\n    & [data-icon-token=\"claude\"] {\n      color: var(--trees-file-icon-color-claude);\n    }\n\n    & [data-icon-token=\"css\"] {\n      color: var(--trees-file-icon-color-css);\n    }\n\n    & [data-icon-token=\"database\"] {\n      color: var(--trees-file-icon-color-database);\n    }\n\n    & [data-icon-token=\"default\"] {\n      color: var(--trees-file-icon-color-default);\n    }\n\n    & [data-icon-token=\"docker\"] {\n      color: var(--trees-file-icon-color-docker);\n    }\n\n    & [data-icon-token=\"eslint\"] {\n      color: var(--trees-file-icon-color-eslint);\n    }\n\n    & [data-icon-token=\"git\"] {\n      color: var(--trees-file-icon-color-git);\n    }\n\n    & [data-icon-token=\"go\"] {\n      color: var(--trees-file-icon-color-go);\n    }\n\n    & [data-icon-token=\"graphql\"] {\n      color: var(--trees-file-icon-color-graphql);\n    }\n\n    & [data-icon-token=\"html\"] {\n      color: var(--trees-file-icon-color-html);\n    }\n\n    & [data-icon-token=\"image\"] {\n      color: var(--trees-file-icon-color-image);\n    }\n\n    & [data-icon-token=\"javascript\"] {\n      color: var(--trees-file-icon-color-javascript);\n    }\n\n    & [data-icon-token=\"json\"] {\n      color: var(--trees-file-icon-color-json);\n    }\n\n    & [data-icon-token=\"markdown\"] {\n      color: var(--trees-file-icon-color-markdown);\n    }\n\n    & [data-icon-token=\"mcp\"] {\n      color: var(--trees-file-icon-color-mcp);\n    }\n\n    & [data-icon-token=\"npm\"] {\n      color: var(--trees-file-icon-color-npm);\n    }\n\n    & [data-icon-token=\"oxc\"] {\n      color: var(--trees-file-icon-color-oxc);\n    }\n\n    & [data-icon-token=\"postcss\"] {\n      color: var(--trees-file-icon-color-postcss);\n    }\n\n    & [data-icon-token=\"prettier\"] {\n      color: var(--trees-file-icon-color-prettier);\n    }\n\n    & [data-icon-token=\"python\"] {\n      color: var(--trees-file-icon-color-python);\n    }\n\n    & [data-icon-token=\"react\"] {\n      color: var(--trees-file-icon-color-react);\n    }\n\n    & [data-icon-token=\"ruby\"] {\n      color: var(--trees-file-icon-color-ruby);\n    }\n\n    & [data-icon-token=\"rust\"] {\n      color: var(--trees-file-icon-color-rust);\n    }\n\n    & [data-icon-token=\"sass\"] {\n      color: var(--trees-file-icon-color-sass);\n    }\n\n    & [data-icon-token=\"svg\"] {\n      color: var(--trees-file-icon-color-svg);\n    }\n\n    & [data-icon-token=\"svelte\"] {\n      color: var(--trees-file-icon-color-svelte);\n    }\n\n    & [data-icon-token=\"svgo\"] {\n      color: var(--trees-file-icon-color-svgo);\n    }\n\n    & [data-icon-token=\"swift\"] {\n      color: var(--trees-file-icon-color-swift);\n    }\n\n    & [data-icon-token=\"table\"] {\n      color: var(--trees-file-icon-color-table);\n    }\n\n    & [data-icon-token=\"text\"] {\n      color: var(--trees-file-icon-color-text);\n    }\n\n    & [data-icon-token=\"tailwind\"] {\n      color: var(--trees-file-icon-color-tailwind);\n    }\n\n    & [data-icon-token=\"terraform\"] {\n      color: var(--trees-file-icon-color-terraform);\n    }\n\n    & [data-icon-token=\"typescript\"] {\n      color: var(--trees-file-icon-color-typescript);\n    }\n\n    & [data-icon-token=\"vite\"] {\n      color: var(--trees-file-icon-color-vite);\n    }\n\n    & [data-icon-token=\"vscode\"] {\n      color: var(--trees-file-icon-color-vscode);\n    }\n\n    & [data-icon-token=\"vue\"] {\n      color: var(--trees-file-icon-color-vue);\n    }\n\n    & [data-icon-token=\"wasm\"] {\n      color: var(--trees-file-icon-color-wasm);\n    }\n\n    & [data-icon-token=\"webpack\"] {\n      color: var(--trees-file-icon-color-webpack);\n    }\n\n    & [data-icon-token=\"yml\"] {\n      color: var(--trees-file-icon-color-yml);\n    }\n\n    & [data-icon-token=\"zig\"] {\n      color: var(--trees-file-icon-color-zig);\n    }\n\n    & [data-icon-token=\"zip\"] {\n      color: var(--trees-file-icon-color-zip);\n    }\n  }\n\n  [data-icon-name=\"file-tree-icon-chevron\"] {\n    &[data-align-capitals=\"false\"] {\n      transform: translate(0, var(--trees-icon-nudge));\n    }\n\n    &[data-align-capitals=\"true\"] {\n      transform: translate(0);\n    }\n  }\n\n  [data-item-section=\"content\"] {\n    text-align: start;\n    text-overflow: ellipsis;\n    flex: 0 auto;\n    min-width: 0;\n    max-width: 100%;\n    overflow: hidden;\n  }\n\n  [data-item-section=\"decoration\"] {\n    text-align: end;\n    min-width: 0;\n    color: var(--trees-fg-muted);\n    flex: 1 1 0;\n    justify-content: flex-end;\n    display: flex;\n    overflow: hidden;\n  }\n\n  [data-item-section=\"decoration\"] > span {\n    text-overflow: ellipsis;\n    white-space: nowrap;\n    justify-content: flex-end;\n    align-items: center;\n    min-width: 0;\n    max-width: 100%;\n    display: inline-flex;\n    overflow: hidden;\n  }\n\n  [data-item-section=\"git\"], [data-item-section=\"action\"] {\n    flex: none;\n    justify-content: center;\n    align-items: center;\n    display: flex;\n  }\n\n  [data-item-section=\"git\"] {\n    width: var(--trees-git-lane-width);\n  }\n\n  [data-item-section=\"action\"] {\n    width: var(--trees-action-lane-width);\n    color: var(--trees-fg-muted);\n    fill: currentColor;\n    pointer-events: none;\n  }\n\n  [data-item-section=\"git\"] > span, [data-item-section=\"action\"] > span {\n    justify-content: center;\n    align-items: center;\n    width: 100%;\n    display: inline-flex;\n  }\n\n  [data-item-action-affordance=\"decorative\"] {\n    opacity: .85;\n  }\n\n  [data-item-rename-input] {\n    appearance: none;\n    width: 100%;\n    min-width: 0;\n    height: calc(var(--trees-row-height) - 4px);\n    font-family: inherit;\n    font-size: inherit;\n    color: inherit;\n    box-sizing: border-box;\n    background-color: #0000;\n    border: 0;\n    outline: none;\n    padding-inline: 6px;\n  }\n\n  [data-item-section=\"content\"]:has([data-item-rename-input]) ~ [data-item-section=\"action\"], [data-item-section=\"content\"]:has([data-item-rename-input]) ~ [data-item-section=\"decoration\"] {\n    display: none;\n  }\n\n  [aria-expanded=\"false\"][data-item-type=\"folder\"] > [data-item-section=\"icon\"] > [data-icon-name=\"file-tree-icon-chevron\"] {\n    &[data-align-capitals=\"true\"] {\n      transform: rotate(-90deg)\n        translate(calc(var(--trees-icon-nudge) / 2),\n          calc(var(--trees-icon-nudge) / 2));\n    }\n\n    &[data-align-capitals=\"false\"] {\n      transform: rotate(-90deg)\n        translate(calc(var(--trees-icon-nudge) / 2 * -1),\n          calc(var(--trees-icon-nudge) / 2));\n    }\n  }\n\n  [data-item-section=\"spacing\"] {\n    height: var(--trees-row-height);\n    padding-left: calc(calc(var(--trees-icon-width) / 2) - .5px);\n    flex-direction: row;\n    justify-content: center;\n    align-items: center;\n    display: flex;\n\n    &:empty {\n      padding-left: 0;\n    }\n  }\n\n  [data-item-section=\"spacing-item\"] {\n    border-left: 1px solid var(--trees-indent-guide-bg);\n    height: 100%;\n    margin-right: calc(var(--trees-level-gap) - 1px);\n    opacity: 0;\n    transition: opacity .15s;\n    display: inline-block;\n    transform: translateX(-.25px);\n\n    & + & {\n      margin-left: calc(var(--trees-item-row-gap) + calc(var(--trees-icon-width) / 2) - .5px);\n    }\n  }\n\n  :host(:hover) [data-item-section=\"spacing-item\"] {\n    opacity: .75;\n  }\n\n  [data-item-contains-git-change=\"true\"] > [data-item-section=\"git\"] {\n    color: var(--trees-git-modified-color);\n    opacity: .5;\n    fill: currentColor;\n  }\n\n  [data-item-git-status] {\n    & > :where([data-item-section=\"icon\"]) > :where(:not([data-icon-name=\"file-tree-icon-chevron\"])), & > [data-item-section=\"content\"] {\n      color: var(--trees-item-git-status-color);\n    }\n\n    & > [data-item-section=\"git\"] {\n      color: var(--trees-item-git-status-color);\n      font-weight: var(--trees-font-weight-semibold);\n    }\n  }\n\n  [data-item-git-status=\"added\"] {\n    --trees-item-git-status-color: var(--trees-git-added-color);\n  }\n\n  [data-item-git-status=\"deleted\"] {\n    --trees-item-git-status-color: var(--trees-git-deleted-color);\n  }\n\n  [data-item-git-status=\"ignored\"] {\n    --trees-item-git-status-color: var(--trees-git-ignored-color);\n\n    & > [data-item-section=\"icon\"] {\n      opacity: .5;\n    }\n  }\n\n  [data-item-section=\"git\"] [data-icon-name=\"file-tree-icon-dot\"] {\n    transform: translateY(calc(.65ex - 50%));\n  }\n\n  [data-item-git-status=\"modified\"] {\n    --trees-item-git-status-color: var(--trees-git-modified-color);\n  }\n\n  [data-item-git-status=\"renamed\"] {\n    --trees-item-git-status-color: var(--trees-git-renamed-color);\n  }\n\n  [data-item-git-status=\"untracked\"] {\n    --trees-item-git-status-color: var(--trees-git-untracked-color);\n  }\n\n  [data-item-drag-target=\"true\"] {\n    background-color: var(--trees-selected-bg);\n  }\n\n  [data-item-dragging=\"true\"] {\n    opacity: .5;\n  }\n\n  [data-item-section=\"lock\"] {\n    color: var(--trees-fg-muted);\n    flex: none;\n    align-items: center;\n    margin-left: auto;\n    display: flex;\n  }\n\n  [data-item-section=\"lock\"] svg {\n    display: block;\n  }\n\n  [data-type=\"header-slot\"] {\n    flex: none;\n    display: block;\n  }\n\n  [data-type=\"context-menu-wash\"] {\n    z-index: 3;\n    touch-action: none;\n    background-color: #0000;\n    position: absolute;\n    inset: 0;\n  }\n\n  [data-type=\"context-menu-anchor\"] {\n    top: 0;\n    right: var(--trees-context-menu-trigger-inline-offset);\n    z-index: 4;\n    align-items: center;\n    display: none;\n    position: absolute;\n\n    &[data-visible=\"true\"] {\n      display: flex;\n    }\n  }\n\n  [data-file-tree-virtualized-root=\"true\"][data-is-scrolling] [data-type=\"context-menu-anchor\"] {\n    display: none;\n  }\n\n  [data-type=\"context-menu-anchor\"] > slot[name=\"context-menu\"] {\n    flex: 0 0 0;\n    width: 0;\n    min-width: 0;\n    display: block;\n    overflow: visible;\n  }\n\n  [data-type=\"context-menu-trigger\"] {\n    all: unset;\n    width: var(--trees-action-lane-width);\n    color: var(--trees-fg-muted);\n    fill: currentColor;\n    cursor: pointer;\n    font-family: var(--trees-font-family);\n    font-size: var(--trees-font-size);\n    border-top-right-radius: var(--trees-border-radius);\n    border-bottom-right-radius: var(--trees-border-radius);\n    margin: var(--trees-focus-ring-width);\n    height: calc(var(--trees-row-height) - var(--trees-focus-ring-width) * 2);\n    border-width: 0;\n    justify-content: center;\n    align-items: center;\n    transition: color .12s;\n    display: flex;\n  }\n\n  [data-type=\"context-menu-trigger\"]:hover, [data-type=\"context-menu-trigger\"][aria-expanded=\"true\"] {\n    color: var(--trees-fg);\n  }\n\n  [data-truncate-container] {\n    --truncate-internal-marker-fade-width: var(--truncate-marker-fade-width, 2px);\n    --truncate-internal-marker-gap: var(--truncate-marker-gap, 0px);\n    --truncate-internal-marker-opacity: var(--truncate-marker-opacity, 50%);\n    --truncate-internal-middle-marker-opacity: var(--truncate-middle-marker-opacity, 80%);\n    --truncate-internal-marker-background-color: var(--truncate-marker-background-color, light-dark(#fff, #000));\n    --truncate-internal-marker-background-overlay-color: var(--truncate-marker-background-overlay-color, transparent);\n    --truncate-internal-marker-block-inset: var(--truncate-marker-block-inset, 0px);\n    --truncate-internal-marker-fade-out-duration: var(--truncate-marker-fade-out-duration, 0s);\n    --truncate-internal-marker-fade-in-duration: var(--truncate-marker-fade-in-duration, .1s);\n    --truncate-internal-fade-marker-color: var(--truncate-fade-marker-color, #000);\n    --truncate-internal-fade-marker-width: var(--truncate-fade-marker-width, .2lh);\n    --truncate-internal-single-line-height: 1lh;\n    height: var(--truncate-internal-single-line-height);\n    min-width: 0;\n    margin-top: -1px;\n    margin-bottom: -1px;\n    overflow: hidden;\n  }\n\n  [data-truncate-marker] {\n    height: var(--truncate-internal-single-line-height);\n    padding-block: var(--truncate-internal-marker-block-inset);\n    box-sizing: border-box;\n    z-index: 2;\n    color: color-mix(in srgb,\n      currentColor var(--truncate-internal-marker-opacity),\n      transparent);\n    opacity: 0;\n    transition: opacity var(--truncate-internal-marker-fade-out-duration)\n      ease-in-out;\n    background-clip: content-box;\n    align-items: center;\n    display: flex;\n    position: absolute;\n  }\n\n  @container measure (height > 1lh) {\n    [data-truncate-marker] {\n      opacity: 1;\n      transition: opacity var(--truncate-internal-marker-fade-in-duration)\n        ease-in-out;\n    }\n  }\n\n  [data-truncate-grid] {\n    display: grid;\n    position: relative;\n  }\n\n  [data-truncate-content=\"visible\"] {\n    white-space: nowrap;\n  }\n\n  [data-truncate-content=\"overflow\"] {\n    opacity: 0;\n    pointer-events: none;\n    user-select: none;\n    word-break: break-all;\n    margin-top: calc(-1 * var(--truncate-internal-single-line-height));\n  }\n\n  [data-truncate-marker-cell] {\n    user-select: none;\n    pointer-events: none;\n    overflow: visible;\n    container: measure / size;\n  }\n\n  [data-truncate-container=\"truncate\"] {\n    & [data-truncate-grid] {\n      grid-template-columns: minmax(0, max-content) 0;\n    }\n\n    & [data-truncate-marker] {\n      right: 0;\n    }\n\n    & [data-truncate-fade] {\n      margin-right: calc(-2 * var(--truncate-internal-fade-marker-width));\n    }\n  }\n\n  [data-truncate-container=\"fruncate\"] {\n    & [data-truncate-grid] {\n      grid-template-columns: 0 minmax(0, max-content) auto;\n    }\n\n    & [data-truncate-content] {\n      direction: rtl;\n    }\n\n    & [data-truncate-content] > span {\n      unicode-bidi: plaintext;\n    }\n\n    & [data-truncate-fade] {\n      margin-left: calc(-2 * var(--truncate-internal-fade-marker-width));\n    }\n  }\n\n  [data-truncate-variant=\"default\"] {\n    & [data-truncate-marker] {\n      background-color: var(--truncate-internal-marker-background-color);\n      background-image: linear-gradient(var(--truncate-internal-marker-background-overlay-color),\n        var(--truncate-internal-marker-background-overlay-color));\n    }\n\n    & [data-truncate-marker]:after, & [data-truncate-marker]:before {\n      content: \"\";\n      width: calc(var(--truncate-internal-marker-fade-width) +\n          var(--truncate-internal-marker-gap));\n      height: max(0px,\n        calc(var(--truncate-internal-single-line-height) -\n            var(--truncate-internal-marker-block-inset) * 2));\n      background-color: var(--truncate-internal-marker-background-color);\n      background-image: linear-gradient(var(--truncate-internal-marker-background-overlay-color),\n        var(--truncate-internal-marker-background-overlay-color));\n      -webkit-mask-image: linear-gradient(var(--truncate-internal-fade-dir),\n        #000 0%,\n        #000 var(--truncate-internal-marker-gap),\n        transparent 100%);\n      mask-image: linear-gradient(var(--truncate-internal-fade-dir),\n        #000 0%,\n        #000 var(--truncate-internal-marker-gap),\n        transparent 100%);\n      position: absolute;\n      inset-block-start: var(--truncate-internal-marker-block-inset);\n    }\n\n    & [data-truncate-marker]:after {\n      --truncate-internal-fade-dir: to right;\n      right: calc(-1 *\n          (\n            var(--truncate-internal-marker-fade-width) +\n              var(--truncate-internal-marker-gap)\n          ));\n    }\n\n    & [data-truncate-marker]:before {\n      --truncate-internal-fade-dir: to left;\n      left: calc(-1 *\n          (\n            var(--truncate-internal-marker-fade-width) +\n              var(--truncate-internal-marker-gap)\n          ));\n    }\n  }\n\n  [data-truncate-variant=\"fade\"] {\n    & [data-truncate-marker] {\n      background: none;\n    }\n  }\n\n  [data-truncate-fade] {\n    box-shadow: 0 0 calc(var(--truncate-internal-fade-marker-width) / 2)\n        var(--truncate-internal-fade-marker-color),\n      0 0 var(--truncate-internal-fade-marker-width)\n        var(--truncate-internal-fade-marker-color);\n    width: calc(var(--truncate-internal-fade-marker-width) * 2);\n    height: calc(var(--truncate-internal-single-line-height) -\n        (var(--truncate-internal-fade-marker-width) * 2));\n    margin: var(--truncate-internal-fade-marker-width) 0;\n  }\n\n  [data-truncate-group-container=\"middle\"] {\n    & [data-truncate-container] {\n      --truncate-marker-opacity: var(--truncate-internal-middle-marker-opacity);\n    }\n\n    min-width: 0;\n    display: flex;\n\n    & > div {\n      min-width: 0;\n    }\n\n    & > div[data-truncate-segment-priority=\"1\"] {\n      flex: 0 1 max-content;\n    }\n\n    & > div[data-truncate-segment-priority=\"2\"] {\n      flex: 0 999999 max-content;\n    }\n  }\n}\n\n@layer theme, unsafe;\n";
 //#endregion
 //#region node_modules/@pierre/trees/dist/utils/cssWrappers.js
 const LAYER_ORDER = `@layer base, unsafe;`;
@@ -1774,7 +1746,6 @@ function wrapUnsafeCSS(unsafeCSS) {
   ${unsafeCSS}
 }`;
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/utils/scrollbarGutter.js
 const measuredGutterCache = /* @__PURE__ */ new WeakMap();
@@ -1805,7 +1776,6 @@ function ensureMeasuredScrollbarGutter(host, shadowRoot) {
 	}
 	styleEl.textContent = `:host { ${FILE_TREE_SCROLLBAR_GUTTER_MEASURED_PROPERTY}: ${measuredScrollbarGutter}px; }`;
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/components/web-components.js
 let sheet;
@@ -1825,7 +1795,7 @@ function ensureFileTreeStyles(shadowRoot) {
 			return;
 		}
 	}
-	if (shadowRoot.querySelector(`style[${FILE_TREE_STYLE_ATTRIBUTE}]`) == null) {
+	if (shadowRoot.querySelector(`style[data-file-tree-style]`) == null) {
 		const styleEl = document.createElement("style");
 		styleEl.setAttribute(FILE_TREE_STYLE_ATTRIBUTE, "");
 		styleEl.textContent = wrapCoreCSS(style_default);
@@ -1844,7 +1814,7 @@ function adoptDeclarativeShadowDom(host, shadowRoot) {
 	shadowRoot.appendChild(template.content.cloneNode(true));
 	if (template.hasAttribute("shadowrootmode")) template.remove();
 }
-if (typeof HTMLElement !== "undefined" && customElements.get(FILE_TREE_TAG_NAME) == null) {
+if (typeof HTMLElement !== "undefined" && customElements.get("file-tree-container") == null) {
 	class FileTreeContainer extends HTMLElement {
 		constructor() {
 			super();
@@ -1860,14 +1830,11 @@ if (typeof HTMLElement !== "undefined" && customElements.get(FILE_TREE_TAG_NAME)
 		prepareFileTreeShadowRoot(el, el.shadowRoot ?? el.attachShadow({ mode: "open" }));
 	}
 }
-const FileTreeContainerLoaded = true;
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/path-store/src/child-index.js
 const PATH_STORE_CHILD_INDEX_CHUNK_SHIFT = 5;
-const PATH_STORE_CHILD_INDEX_CHUNK_SIZE = 1 << PATH_STORE_CHILD_INDEX_CHUNK_SHIFT;
-const PATH_STORE_CHILD_INDEX_CHUNK_THRESHOLD = PATH_STORE_CHILD_INDEX_CHUNK_SIZE * 4;
-const PATH_STORE_CHILD_INDEX_CHUNK_THRESHOLD_EXTERNAL = PATH_STORE_CHILD_INDEX_CHUNK_THRESHOLD;
+const PATH_STORE_CHILD_INDEX_CHUNK_SIZE = 32;
+const PATH_STORE_CHILD_INDEX_CHUNK_THRESHOLD = 128;
 function createDirectoryChildIndex() {
 	return {
 		childIdByNameId: /* @__PURE__ */ new Map(),
@@ -1944,17 +1911,17 @@ function applyChildAggregateDelta(index, childId, subtreeNodeDelta, visibleSubtr
 function selectChildIndexByVisibleIndex(nodes, index, visibleIndex) {
 	const chunkSums = index.childVisibleChunkSums;
 	if (chunkSums != null) {
-		let remainingIndex$1 = visibleIndex;
+		let remainingIndex = visibleIndex;
 		let childIndex = 0;
 		for (const chunkVisibleCount of chunkSums) {
-			if (remainingIndex$1 < chunkVisibleCount) {
-				const selected = selectChildIndexWithinChunk(nodes, index, childIndex, remainingIndex$1);
+			if (remainingIndex < chunkVisibleCount) {
+				const selected = selectChildIndexWithinChunk(nodes, index, childIndex, remainingIndex);
 				return {
 					...selected,
 					childVisibleIndex: visibleIndex - selected.localVisibleIndex
 				};
 			}
-			remainingIndex$1 -= chunkVisibleCount;
+			remainingIndex -= chunkVisibleCount;
 			childIndex += PATH_STORE_CHILD_INDEX_CHUNK_SIZE;
 		}
 		throw new Error(`Visible child index ${String(visibleIndex)} is out of range`);
@@ -2024,19 +1991,13 @@ function selectChildIndexWithinChunk(nodes, index, chunkStartIndex, visibleIndex
 	}
 	throw new Error(`Visible child index ${String(visibleIndex)} is out of range`);
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/path-store/src/internal-types.js
-const PATH_STORE_NODE_KIND_FILE = 0;
-const PATH_STORE_NODE_KIND_DIRECTORY = 1;
-const PATH_STORE_NODE_FLAG_EXPLICIT = 1;
-const PATH_STORE_NODE_FLAG_ROOT = 2;
-const PATH_STORE_NODE_FLAG_REMOVED = 4;
-const PATH_STORE_NODE_FLAGS_MASK = PATH_STORE_NODE_FLAG_ROOT | 5;
+const PATH_STORE_NODE_FLAGS_MASK = 7;
 const PATH_STORE_NODE_KIND_SHIFT = 3;
-const PATH_STORE_NODE_KIND_MASK = 1 << PATH_STORE_NODE_KIND_SHIFT;
+const PATH_STORE_NODE_KIND_MASK = 8;
 const PATH_STORE_NODE_DEPTH_SHIFT = 4;
-function createNodeDepthAndFlags(depth, flags, kind = PATH_STORE_NODE_KIND_FILE) {
+function createNodeDepthAndFlags(depth, flags, kind = 0) {
 	return depth << PATH_STORE_NODE_DEPTH_SHIFT | kind << PATH_STORE_NODE_KIND_SHIFT | flags;
 }
 function getNodeDepth(node) {
@@ -2060,7 +2021,6 @@ function addNodeFlag(node, flag) {
 function setNodeDepth(node, depth) {
 	node.depthAndFlags = createNodeDepthAndFlags(depth, getNodeFlags(node), getNodeKind(node));
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/path-store/src/internal/benchmarkInstrumentation.js
 const BENCHMARK_INSTRUMENTATION = Symbol("benchmarkInstrumentation");
@@ -2088,7 +2048,6 @@ function setBenchmarkCounter(instrumentation, name, value) {
 	if (!Number.isFinite(value) || instrumentation == null) return;
 	instrumentation.setCounter(name, value);
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/path-store/src/sort.js
 function isDigitCode(characterCode) {
@@ -2154,8 +2113,8 @@ function compareSegmentValues(left, right) {
 	return compareSegmentValuesWithSortKeyLookup(left, right, createSegmentSortKey);
 }
 function getKindAtDepth(entry, depth) {
-	if (!(depth === entry.segments.length - 1)) return PATH_STORE_NODE_KIND_DIRECTORY;
-	return entry.isDirectory ? PATH_STORE_NODE_KIND_DIRECTORY : PATH_STORE_NODE_KIND_FILE;
+	if (!(depth === entry.segments.length - 1)) return 1;
+	return entry.isDirectory ? 1 : 0;
 }
 function comparePreparedEntries(left, right) {
 	const sharedDepth = Math.min(left.segments.length, right.segments.length);
@@ -2164,7 +2123,7 @@ function comparePreparedEntries(left, right) {
 		const rightSegment = right.segments[depth];
 		if (leftSegment === rightSegment) continue;
 		const leftKind = getKindAtDepth(left, depth);
-		if (leftKind !== getKindAtDepth(right, depth)) return leftKind === PATH_STORE_NODE_KIND_DIRECTORY ? -1 : 1;
+		if (leftKind !== getKindAtDepth(right, depth)) return leftKind === 1 ? -1 : 1;
 		return compareSegmentValues(leftSegment, rightSegment);
 	}
 	if (left.segments.length !== right.segments.length) return left.segments.length < right.segments.length ? -1 : 1;
@@ -2188,7 +2147,7 @@ function comparePreparedPathsWithCachedSortKeys(left, right, cache) {
 		const rightSegment = right.segments[depth];
 		if (leftSegment === rightSegment) continue;
 		const leftKind = getKindAtDepth(left, depth);
-		if (leftKind !== getKindAtDepth(right, depth)) return leftKind === PATH_STORE_NODE_KIND_DIRECTORY ? -1 : 1;
+		if (leftKind !== getKindAtDepth(right, depth)) return leftKind === 1 ? -1 : 1;
 		return compareSegmentValuesWithSortKeyLookup(leftSegment, rightSegment, getCachedSortKey);
 	}
 	if (left.segments.length !== right.segments.length) return left.segments.length < right.segments.length ? -1 : 1;
@@ -2203,7 +2162,6 @@ function getSegmentSortKey(segmentTable, segmentId) {
 	segmentTable.sortKeyById[segmentId] = nextKey;
 	return nextKey;
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/path-store/src/options.js
 function resolvePathStoreOptions(options = {}) {
@@ -2212,7 +2170,6 @@ function resolvePathStoreOptions(options = {}) {
 		sort: options.sort ?? "default"
 	};
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/path-store/src/path.js
 function splitCanonicalPath(inputPath) {
@@ -2251,17 +2208,15 @@ function parseLookupPath(inputPath) {
 		segments
 	};
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/path-store/src/segments.js
-const ROOT_SEGMENT_VALUE = "";
 function createSegmentTable() {
 	const idByValue = /* @__PURE__ */ new Map();
-	idByValue.set(ROOT_SEGMENT_VALUE, 0);
+	idByValue.set("", 0);
 	return {
 		idByValue,
-		valueById: [ROOT_SEGMENT_VALUE],
-		sortKeyById: [createSegmentSortKey(ROOT_SEGMENT_VALUE)]
+		valueById: [""],
+		sortKeyById: [createSegmentSortKey("")]
 	};
 }
 function internSegment(segmentTable, value) {
@@ -2277,7 +2232,6 @@ function getSegmentValue(segmentTable, segmentId) {
 	if (value === void 0) throw new Error(`Unknown segment ID: ${String(segmentId)}`);
 	return value;
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/path-store/src/builder.js
 const PREPARED_INPUT_KIND = Symbol("pathStorePreparedInputKind");
@@ -2300,7 +2254,7 @@ function compareWithSortOption(left, right, sort) {
 }
 function createRootNode() {
 	return {
-		depthAndFlags: createNodeDepthAndFlags(0, PATH_STORE_NODE_FLAG_EXPLICIT | PATH_STORE_NODE_FLAG_ROOT, PATH_STORE_NODE_KIND_DIRECTORY),
+		depthAndFlags: createNodeDepthAndFlags(0, 3, 1),
 		nameId: 0,
 		parentId: 0,
 		subtreeNodeCount: 1,
@@ -2475,7 +2429,7 @@ var PathStoreBuilder = class {
 					}
 					const nodeId = nodes.length;
 					nodes.push({
-						depthAndFlags: createNodeDepthAndFlags(currentDepth, 0, PATH_STORE_NODE_KIND_DIRECTORY),
+						depthAndFlags: createNodeDepthAndFlags(currentDepth, 0, 1),
 						nameId: dirNameId,
 						parentId,
 						subtreeNodeCount: 1,
@@ -2501,7 +2455,7 @@ var PathStoreBuilder = class {
 						}
 						const nodeId = nodes.length;
 						nodes.push({
-							depthAndFlags: createNodeDepthAndFlags(currentDepth, 0, PATH_STORE_NODE_KIND_DIRECTORY),
+							depthAndFlags: createNodeDepthAndFlags(currentDepth, 0, 1),
 							nameId: trailNameId,
 							parentId,
 							subtreeNodeCount: 1,
@@ -2509,6 +2463,7 @@ var PathStoreBuilder = class {
 						});
 						stackTop++;
 						dirStack[stackTop] = nodeId;
+						segmentStart = endIndex + 1;
 					}
 					const directoryId = dirStack[stackTop];
 					if (directoryId === void 0) throw new Error(`Unable to resolve directory node for "${path}"`);
@@ -2578,8 +2533,8 @@ var PathStoreBuilder = class {
 			let segmentStart = unsharedSegmentStart;
 			let slashPos = path.indexOf("/", segmentStart);
 			while (slashPos >= 0) {
-				const parentId$1 = dirStack[stackTop];
-				if (parentId$1 === void 0) throw new Error("Directory stack underflow while building the path store");
+				const parentId = dirStack[stackTop];
+				if (parentId === void 0) throw new Error("Directory stack underflow while building the path store");
 				currentDepth++;
 				const dirSeg = path.slice(segmentStart, slashPos);
 				let dirNameId = idByValue.get(dirSeg);
@@ -2590,9 +2545,9 @@ var PathStoreBuilder = class {
 				}
 				const nodeId = nodes.length;
 				nodes.push({
-					depthAndFlags: createNodeDepthAndFlags(currentDepth, 0, PATH_STORE_NODE_KIND_DIRECTORY),
+					depthAndFlags: createNodeDepthAndFlags(currentDepth, 0, 1),
 					nameId: dirNameId,
-					parentId: parentId$1,
+					parentId,
 					subtreeNodeCount: 1,
 					visibleSubtreeCount: 1
 				});
@@ -2665,9 +2620,9 @@ var PathStoreBuilder = class {
 		const sharedDirectoryDepth = Math.min(sharedPrefixLength, currentDirectoryDepth, previousDirectoryDepth);
 		this.directoryStack.length = sharedDirectoryDepth + 1;
 		for (let segmentIndex = sharedDirectoryDepth; segmentIndex < currentDirectoryDepth; segmentIndex++) {
-			const parentId$1 = this.directoryStack[this.directoryStack.length - 1];
-			if (parentId$1 === void 0) throw new Error("Directory stack underflow while building the path store");
-			const childId = validateOrder ? this.getOrCreateDirectoryChild(parentId$1, preparedPath.segments[segmentIndex]) : this.createDirectoryChild(parentId$1, preparedPath.segments[segmentIndex]);
+			const parentId = this.directoryStack[this.directoryStack.length - 1];
+			if (parentId === void 0) throw new Error("Directory stack underflow while building the path store");
+			const childId = validateOrder ? this.getOrCreateDirectoryChild(parentId, preparedPath.segments[segmentIndex]) : this.createDirectoryChild(parentId, preparedPath.segments[segmentIndex]);
 			this.directoryStack.push(childId);
 		}
 		if (preparedPath.isDirectory) {
@@ -2741,7 +2696,7 @@ var PathStoreBuilder = class {
 		if (parentNode === void 0) throw new Error(`Unknown parent node ID: ${String(parentId)}`);
 		const nodeId = this.nodes.length;
 		this.nodes.push({
-			depthAndFlags: createNodeDepthAndFlags(getNodeDepth(parentNode) + 1, 0, PATH_STORE_NODE_KIND_DIRECTORY),
+			depthAndFlags: createNodeDepthAndFlags(getNodeDepth(parentNode) + 1, 0, 1),
 			nameId,
 			parentId,
 			subtreeNodeCount: 1,
@@ -2759,7 +2714,7 @@ var PathStoreBuilder = class {
 		if (parentNode === void 0) throw new Error(`Unknown parent node ID: ${String(parentId)}`);
 		const nodeId = this.nodes.length;
 		this.nodes.push({
-			depthAndFlags: createNodeDepthAndFlags(getNodeDepth(parentNode) + 1, 0, PATH_STORE_NODE_KIND_DIRECTORY),
+			depthAndFlags: createNodeDepthAndFlags(getNodeDepth(parentNode) + 1, 0, 1),
 			nameId,
 			parentId,
 			subtreeNodeCount: 1,
@@ -2774,8 +2729,8 @@ var PathStoreBuilder = class {
 		const directoryNode = this.nodes[directoryId];
 		if (directoryNode === void 0) throw new Error(`Unknown directory node ID: ${String(directoryId)}`);
 		if (!isDirectoryNode(directoryNode)) throw new Error(`Path is not a directory: "${path}"`);
-		if (hasNodeFlag(directoryNode, PATH_STORE_NODE_FLAG_EXPLICIT)) throw new Error(`Duplicate path: "${path}"`);
-		addNodeFlag(directoryNode, PATH_STORE_NODE_FLAG_EXPLICIT);
+		if (hasNodeFlag(directoryNode, 1)) throw new Error(`Duplicate path: "${path}"`);
+		addNodeFlag(directoryNode, 1);
 	}
 	getDirectoryIndex(directoryId) {
 		const existingIndex = this.directories.get(directoryId);
@@ -2847,7 +2802,6 @@ var PathStoreBuilder = class {
 		return subtreeNodeCount;
 	}
 };
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/path-store/src/state.js
 function createPathStoreState(snapshot, initialExpansion = "closed", instrumentation = null) {
@@ -2863,7 +2817,7 @@ function createPathStoreState(snapshot, initialExpansion = "closed", instrumenta
 		expandedDirectoryIds: /* @__PURE__ */ new Set(),
 		instrumentation,
 		listeners: /* @__PURE__ */ new Map(),
-		pathCacheByNodeId: new Map([[snapshot.rootId, {
+		pathCacheByNodeId: /* @__PURE__ */ new Map([[snapshot.rootId, {
 			path: "",
 			version: 0
 		}]]),
@@ -2885,7 +2839,7 @@ function resolveInitialExpansion(initialExpansion) {
 	return initialExpansion;
 }
 function isDirectoryExpandedByDefault(state, node) {
-	if (hasNodeFlag(node, PATH_STORE_NODE_FLAG_ROOT)) return true;
+	if (hasNodeFlag(node, 2)) return true;
 	if (state.defaultExpansion === "open") return true;
 	if (state.defaultExpansion === "closed") return false;
 	return getNodeDepth(node) <= state.defaultExpansion;
@@ -2977,14 +2931,13 @@ function failDirectoryLoad(state, nodeId, attemptId, errorMessage) {
 function clearDirectoryLoadInfo(state, nodeId) {
 	state.directoryLoadInfoById.delete(nodeId);
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/path-store/src/events.js
 function subscribe(state, type, handler) {
 	const rawHandler = handler;
 	const existingListeners = state.listeners.get(type);
 	if (existingListeners != null) existingListeners.add(rawHandler);
-	else state.listeners.set(type, new Set([rawHandler]));
+	else state.listeners.set(type, /* @__PURE__ */ new Set([rawHandler]));
 	return () => {
 		const listeners = state.listeners.get(type);
 		if (listeners == null) return;
@@ -3179,9 +3132,9 @@ function finishTransaction(state, frame, emit, visibleCountDelta = null) {
 	if (!emit) return;
 	const parentFrame = state.transactionStack[state.transactionStack.length - 1] ?? null;
 	if (parentFrame != null) {
-		const instrumentation$1 = state.instrumentation;
-		if (instrumentation$1 == null) mergeBatchFrameIntoParent(parentFrame, frame);
-		else withBenchmarkPhase(instrumentation$1, "store.events.batch.merge", () => mergeBatchFrameIntoParent(parentFrame, frame));
+		const instrumentation = state.instrumentation;
+		if (instrumentation == null) mergeBatchFrameIntoParent(parentFrame, frame);
+		else withBenchmarkPhase(instrumentation, "store.events.batch.merge", () => mergeBatchFrameIntoParent(parentFrame, frame));
 		return;
 	}
 	const batchEvent = createBatchEvent(frame, visibleCountDelta);
@@ -3230,13 +3183,12 @@ function emitEventNow(state, event) {
 function getCurrentVisibleCount(state) {
 	return state.snapshot.nodes[state.snapshot.rootId]?.visibleSubtreeCount ?? 0;
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/path-store/src/flatten.js
 function getFlattenedChildDirectoryId(state, directoryNodeId) {
 	if (state.snapshot.options.flattenEmptyDirectories !== true) return null;
 	const directoryNode = state.snapshot.nodes[directoryNodeId];
-	if (directoryNode == null || !isDirectoryNode(directoryNode) || hasNodeFlag(directoryNode, PATH_STORE_NODE_FLAG_ROOT)) return null;
+	if (directoryNode == null || !isDirectoryNode(directoryNode) || hasNodeFlag(directoryNode, 2)) return null;
 	const directoryIndex = state.snapshot.directories.get(directoryNodeId);
 	if (directoryIndex == null || directoryIndex.childIds.length !== 1) return null;
 	const childId = directoryIndex.childIds[0];
@@ -3263,7 +3215,6 @@ function collectFlattenedDirectoryChainIds(state, directoryNodeId) {
 		currentDirectoryId = nextDirectoryId;
 	}
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/path-store/src/canonical.js
 function listPaths(state, path) {
@@ -3280,8 +3231,8 @@ function addPath(state, path) {
 	let addedNodeId = directoryId;
 	if (preparedPath.isDirectory) {
 		const directoryNode = requireNode(state, directoryId);
-		if (hasNodeFlag(directoryNode, PATH_STORE_NODE_FLAG_EXPLICIT)) throw new Error(`Path already exists: "${path}"`);
-		addNodeFlag(directoryNode, PATH_STORE_NODE_FLAG_EXPLICIT);
+		if (hasNodeFlag(directoryNode, 1)) throw new Error(`Path already exists: "${path}"`);
+		addNodeFlag(directoryNode, 1);
 		state.pathCacheByNodeId.set(directoryId, {
 			path,
 			version: state.pathCacheVersion
@@ -3304,7 +3255,7 @@ function removePath(state, path, options) {
 	const nodeId = findNodeId(state, path);
 	if (nodeId == null) throw new Error(`Path does not exist: "${path}"`);
 	const node = requireNode(state, nodeId);
-	if (hasNodeFlag(node, PATH_STORE_NODE_FLAG_ROOT)) throw new Error("The root node cannot be removed");
+	if (hasNodeFlag(node, 2)) throw new Error("The root node cannot be removed");
 	if (isDirectoryNode(node) && getDirectoryIndex(state, nodeId).childIds.length > 0 && options.recursive !== true) throw new Error(`Cannot remove a non-empty directory without recursive: "${path}"`);
 	const parentId = node.parentId;
 	const previousProjectionSignature = getCollapsedProjectionSignature(state, parentId);
@@ -3325,7 +3276,7 @@ function movePath(state, fromPath, toPath, options) {
 	const sourceNodeId = findNodeId(state, fromPath);
 	if (sourceNodeId == null) throw new Error(`Source path does not exist: "${fromPath}"`);
 	const sourceNode = requireNode(state, sourceNodeId);
-	if (hasNodeFlag(sourceNode, PATH_STORE_NODE_FLAG_ROOT)) throw new Error("The root node cannot be moved");
+	if (hasNodeFlag(sourceNode, 2)) throw new Error("The root node cannot be moved");
 	const collision = options.collision ?? "error";
 	const moveTarget = resolveMoveTarget(state, sourceNodeId, toPath);
 	const previousSourceProjectionSignature = getCollapsedProjectionSignature(state, sourceNode.parentId);
@@ -3353,7 +3304,7 @@ function movePath(state, fromPath, toPath, options) {
 	const nextSourceProjectionSignature = getCollapsedProjectionSignature(state, previousParentId);
 	const nextTargetProjectionSignature = getCollapsedProjectionSignature(state, moveTarget.parentId);
 	return createMoveEvent({
-		affectedAncestorIds: [...new Set([...collectAncestorIds(state, previousParentId), ...collectAncestorIds(state, moveTarget.parentId)])],
+		affectedAncestorIds: [.../* @__PURE__ */ new Set([...collectAncestorIds(state, previousParentId), ...collectAncestorIds(state, moveTarget.parentId)])],
 		affectedNodeIds: [sourceNodeId],
 		from: fromPath,
 		projectionChanged: didAnyProjectionChange([previousSourceProjectionSignature, previousTargetProjectionSignature], [nextSourceProjectionSignature, nextTargetProjectionSignature]),
@@ -3375,7 +3326,7 @@ function materializeNodePath(state, nodeId) {
 	const node = requireNode(state, nodeId);
 	const cachedPath = getCachedNodePath(state, nodeId);
 	if (cachedPath != null) return cachedPath;
-	if (hasNodeFlag(node, PATH_STORE_NODE_FLAG_ROOT)) return setCachedNodePath(state, nodeId, "");
+	if (hasNodeFlag(node, 2)) return setCachedNodePath(state, nodeId, "");
 	const parentPath = materializeNodePath(state, node.parentId);
 	const nodeName = getSegmentValue(state.snapshot.segmentTable, node.nameId);
 	const path = parentPath.length === 0 ? nodeName : `${parentPath}${nodeName}`;
@@ -3448,14 +3399,14 @@ function getDirectoryIndex(state, directoryId) {
 }
 function requireNode(state, nodeId) {
 	const node = state.snapshot.nodes[nodeId];
-	if (node === void 0 || hasNodeFlag(node, PATH_STORE_NODE_FLAG_REMOVED)) throw new Error(`Unknown node ID: ${String(nodeId)}`);
+	if (node === void 0 || hasNodeFlag(node, 4)) throw new Error(`Unknown node ID: ${String(nodeId)}`);
 	return node;
 }
 function collectCanonicalEntries(state, nodeId) {
 	const rootNode = state.snapshot.nodes[nodeId];
-	if (rootNode === void 0 || hasNodeFlag(rootNode, PATH_STORE_NODE_FLAG_REMOVED)) return [];
+	if (rootNode === void 0 || hasNodeFlag(rootNode, 4)) return [];
 	if (!isDirectoryNode(rootNode)) return [materializeNodePath(state, nodeId)];
-	if (getDirectoryIndex(state, nodeId).childIds.length === 0) return hasNodeFlag(rootNode, PATH_STORE_NODE_FLAG_EXPLICIT) && !hasNodeFlag(rootNode, PATH_STORE_NODE_FLAG_ROOT) ? [materializeNodePath(state, nodeId)] : [];
+	if (getDirectoryIndex(state, nodeId).childIds.length === 0) return hasNodeFlag(rootNode, 1) && !hasNodeFlag(rootNode, 2) ? [materializeNodePath(state, nodeId)] : [];
 	const entries = [];
 	const stack = [{
 		childIndex: 0,
@@ -3465,7 +3416,7 @@ function collectCanonicalEntries(state, nodeId) {
 		const frame = stack[stack.length - 1];
 		if (frame == null) break;
 		const currentNode = state.snapshot.nodes[frame.nodeId];
-		if (currentNode === void 0 || hasNodeFlag(currentNode, PATH_STORE_NODE_FLAG_REMOVED)) {
+		if (currentNode === void 0 || hasNodeFlag(currentNode, 4)) {
 			stack.pop();
 			continue;
 		}
@@ -3476,7 +3427,7 @@ function collectCanonicalEntries(state, nodeId) {
 		}
 		const currentIndex = getDirectoryIndex(state, frame.nodeId);
 		if (currentIndex.childIds.length === 0) {
-			if (hasNodeFlag(currentNode, PATH_STORE_NODE_FLAG_EXPLICIT) && !hasNodeFlag(currentNode, PATH_STORE_NODE_FLAG_ROOT)) entries.push(materializeNodePath(state, frame.nodeId));
+			if (hasNodeFlag(currentNode, 1) && !hasNodeFlag(currentNode, 2)) entries.push(materializeNodePath(state, frame.nodeId));
 			stack.pop();
 			continue;
 		}
@@ -3517,7 +3468,7 @@ function createDirectoryNode(state, parentId, nameId) {
 	const parentNode = requireNode(state, parentId);
 	const nodeId = state.snapshot.nodes.length;
 	state.snapshot.nodes.push({
-		depthAndFlags: createNodeDepthAndFlags(getNodeDepth(parentNode) + 1, 0, PATH_STORE_NODE_KIND_DIRECTORY),
+		depthAndFlags: createNodeDepthAndFlags(getNodeDepth(parentNode) + 1, 0, 1),
 		nameId,
 		parentId,
 		subtreeNodeCount: 1,
@@ -3672,7 +3623,7 @@ function removeSubtree(state, nodeId) {
 		const node = requireNode(state, frame.nodeId);
 		if (frame.visitedChildren || !isDirectoryNode(node)) {
 			if (isDirectoryNode(node)) state.snapshot.directories.delete(frame.nodeId);
-			addNodeFlag(node, PATH_STORE_NODE_FLAG_REMOVED);
+			addNodeFlag(node, 4);
 			state.pathCacheByNodeId.delete(frame.nodeId);
 			if (state.collapsedDirectoryIds.delete(frame.nodeId)) state.hasCollapsedDirectoryOverrides = state.collapsedDirectoryIds.size > 0;
 			state.expandedDirectoryIds.delete(frame.nodeId);
@@ -3700,9 +3651,9 @@ function promoteEmptyAncestorsToExplicit(state, startDirectoryId) {
 	let currentDirectoryId = startDirectoryId;
 	while (currentDirectoryId != null) {
 		const currentNode = requireNode(state, currentDirectoryId);
-		if (!isDirectoryNode(currentNode) || hasNodeFlag(currentNode, PATH_STORE_NODE_FLAG_ROOT)) return;
+		if (!isDirectoryNode(currentNode) || hasNodeFlag(currentNode, 2)) return;
 		if (getDirectoryIndex(state, currentDirectoryId).childIds.length > 0) return;
-		addNodeFlag(currentNode, PATH_STORE_NODE_FLAG_EXPLICIT);
+		addNodeFlag(currentNode, 1);
 		currentDirectoryId = currentNode.parentId === currentDirectoryId ? null : currentNode.parentId;
 	}
 }
@@ -3746,7 +3697,7 @@ function findNearestCollapsedAncestor(state, startDirectoryId) {
 	let currentDirectoryId = startDirectoryId;
 	while (currentDirectoryId != null) {
 		const currentNode = requireNode(state, currentDirectoryId);
-		if (!isDirectoryNode(currentNode) || hasNodeFlag(currentNode, PATH_STORE_NODE_FLAG_ROOT)) return null;
+		if (!isDirectoryNode(currentNode) || hasNodeFlag(currentNode, 2)) return null;
 		if (!isDirectoryExpanded(state, currentDirectoryId, currentNode)) return currentDirectoryId;
 		currentDirectoryId = currentNode.parentId;
 	}
@@ -3807,7 +3758,7 @@ function recomputeNodeCountsNow(state, nodeId, currentNode, rebuildChildAggregat
 	const subtreeNodeCount = 1 + currentIndex.totalChildSubtreeNodeCount;
 	const visibleChildCount = currentIndex.totalChildVisibleSubtreeCount;
 	currentNode.subtreeNodeCount = subtreeNodeCount;
-	if (hasNodeFlag(currentNode, PATH_STORE_NODE_FLAG_ROOT)) {
+	if (hasNodeFlag(currentNode, 2)) {
 		currentNode.visibleSubtreeCount = visibleChildCount;
 		return;
 	}
@@ -3817,15 +3768,14 @@ function buildPathPreview(state, parentId, basename) {
 	const parentPath = materializeNodePath(state, parentId);
 	return parentPath.length === 0 ? basename : `${parentPath}${basename}`;
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/path-store/src/cleanup.js
 function isLiveNode(node) {
-	return node != null && !hasNodeFlag(node, PATH_STORE_NODE_FLAG_REMOVED);
+	return node != null && !hasNodeFlag(node, 4);
 }
 function isLiveDirectoryNode(state, nodeId) {
 	const node = state.snapshot.nodes[nodeId];
-	if (!isLiveNode(node) || !isDirectoryNode(node) || hasNodeFlag(node, PATH_STORE_NODE_FLAG_ROOT)) return null;
+	if (!isLiveNode(node) || !isDirectoryNode(node) || hasNodeFlag(node, 2)) return null;
 	return node;
 }
 function countCachedPathEntries(state) {
@@ -3937,7 +3887,7 @@ function rebuildSegmentTablePreservingNodeIds(state) {
 	const nextSegmentTable = createSegmentTable();
 	for (const node of state.snapshot.nodes) {
 		if (!isLiveNode(node)) continue;
-		if (hasNodeFlag(node, PATH_STORE_NODE_FLAG_ROOT)) {
+		if (hasNodeFlag(node, 2)) {
 			node.nameId = 0;
 			continue;
 		}
@@ -3994,7 +3944,7 @@ function runAggressiveCleanup(state) {
 	});
 	state.snapshot = rebuiltSnapshot;
 	state.activeNodeCount = rebuiltSnapshot.nodes.length - 1;
-	state.pathCacheByNodeId = new Map([[rebuiltSnapshot.rootId, {
+	state.pathCacheByNodeId = /* @__PURE__ */ new Map([[rebuiltSnapshot.rootId, {
 		path: "",
 		version: 0
 	}]]);
@@ -4014,7 +3964,6 @@ function cleanupPathStoreState(state, mode) {
 	const after = createCleanupMetricSnapshot(state);
 	return createCleanupResult(mode, mode === "stable", before, after);
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/path-store/src/projection.js
 const INITIAL_PROJECTION_DEPTH_CAPACITY = 64;
@@ -4120,14 +4069,14 @@ function getVisibleSlice(state, start, end) {
 	const normalizedEnd = Math.max(normalizedStart, Math.min(end, totalVisibleCount - 1));
 	if (instrumentation == null) {
 		if (normalizedStart === 0) return collectVisibleRowsDFS(state, normalizedEnd + 1);
-		const rows$1 = [];
-		let currentCursor$1 = selectVisibleRow(state, normalizedStart);
-		for (let visibleIndex = normalizedStart; visibleIndex <= normalizedEnd && currentCursor$1 != null; visibleIndex++) {
-			const row = materializeVisibleRow(state, currentCursor$1);
-			rows$1.push(row);
-			currentCursor$1 = getNextVisibleRowCursor(state, currentCursor$1);
+		const rows = [];
+		let currentCursor = selectVisibleRow(state, normalizedStart);
+		for (let visibleIndex = normalizedStart; visibleIndex <= normalizedEnd && currentCursor != null; visibleIndex++) {
+			const row = materializeVisibleRow(state, currentCursor);
+			rows.push(row);
+			currentCursor = getNextVisibleRowCursor(state, currentCursor);
 		}
-		return rows$1;
+		return rows;
 	}
 	const rows = [];
 	let flattenedRowCount = 0;
@@ -4494,7 +4443,86 @@ function getVisibleRowLoadState(state, cursor) {
 	if (hasUnloaded) return "unloaded";
 	return "loaded";
 }
-
+//#endregion
+//#region node_modules/@pierre/trees/dist/path-store/src/soa-node-store.js
+const KIND_MASK = 8;
+function buildSoaNodeStore(snapshot) {
+	const { nodes, directories, rootId, options } = snapshot;
+	const nodeCount = nodes.length;
+	const parentId = new Int32Array(nodeCount);
+	const nameId = new Int32Array(nodeCount);
+	const depthAndFlags = new Int32Array(nodeCount);
+	const subtreeNodeCount = new Int32Array(nodeCount);
+	const visibleSubtreeCount = new Int32Array(nodeCount);
+	const childStart = new Int32Array(nodeCount);
+	const childCount = new Int32Array(nodeCount);
+	for (let id = 0; id < nodeCount; id += 1) {
+		const node = nodes[id];
+		if (node == null) continue;
+		parentId[id] = node.parentId;
+		nameId[id] = node.nameId;
+		depthAndFlags[id] = node.depthAndFlags;
+		subtreeNodeCount[id] = node.subtreeNodeCount;
+		visibleSubtreeCount[id] = node.visibleSubtreeCount;
+	}
+	let totalChildren = 0;
+	for (const index of directories.values()) totalChildren += index.childIds.length;
+	const childIdsFlat = new Int32Array(totalChildren);
+	let cursor = 0;
+	for (const [dirId, index] of directories) {
+		const ids = index.childIds;
+		childStart[dirId] = cursor;
+		childCount[dirId] = ids.length;
+		for (let i = 0; i < ids.length; i += 1) {
+			childIdsFlat[cursor] = ids[i];
+			cursor += 1;
+		}
+	}
+	return {
+		nodeCount,
+		rootId,
+		flattenEmptyDirectories: options.flattenEmptyDirectories === true,
+		parentId,
+		nameId,
+		depthAndFlags,
+		subtreeNodeCount,
+		visibleSubtreeCount,
+		childStart,
+		childCount,
+		childIdsFlat
+	};
+}
+function sweepOpenVisibleCountsSoa(store) {
+	const { nodeCount, rootId, flattenEmptyDirectories, depthAndFlags, subtreeNodeCount, visibleSubtreeCount, childStart, childCount, childIdsFlat } = store;
+	for (let id = nodeCount - 1; id >= 1; id -= 1) {
+		if ((depthAndFlags[id] & KIND_MASK) === 0) continue;
+		const base = childStart[id];
+		const count = childCount[id];
+		let totalChildSubtreeNodeCount = 0;
+		let totalChildVisibleSubtreeCount = 0;
+		for (let ci = 0; ci < count; ci += 1) {
+			const childId = childIdsFlat[base + ci];
+			totalChildSubtreeNodeCount += subtreeNodeCount[childId];
+			totalChildVisibleSubtreeCount += visibleSubtreeCount[childId];
+		}
+		subtreeNodeCount[id] = 1 + totalChildSubtreeNodeCount;
+		let newVisibleSubtreeCount;
+		if (flattenEmptyDirectories && count === 1) newVisibleSubtreeCount = (depthAndFlags[childIdsFlat[base]] & KIND_MASK) !== 0 ? totalChildVisibleSubtreeCount : 1 + totalChildVisibleSubtreeCount;
+		else newVisibleSubtreeCount = 1 + totalChildVisibleSubtreeCount;
+		visibleSubtreeCount[id] = newVisibleSubtreeCount;
+	}
+	const rootBase = childStart[rootId];
+	const rootCount = childCount[rootId];
+	let rootTotalChildSubtreeNodeCount = 0;
+	let rootTotalChildVisibleSubtreeCount = 0;
+	for (let ci = 0; ci < rootCount; ci += 1) {
+		const childId = childIdsFlat[rootBase + ci];
+		rootTotalChildSubtreeNodeCount += subtreeNodeCount[childId];
+		rootTotalChildVisibleSubtreeCount += visibleSubtreeCount[childId];
+	}
+	subtreeNodeCount[rootId] = 1 + rootTotalChildSubtreeNodeCount;
+	visibleSubtreeCount[rootId] = rootTotalChildVisibleSubtreeCount;
+}
 //#endregion
 //#region node_modules/@pierre/trees/dist/path-store/src/store.js
 function initializeOpenVisibleCounts(state) {
@@ -4518,7 +4546,7 @@ function initializeOpenVisibleCounts(state) {
 		}
 		currentIndex.totalChildSubtreeNodeCount = totalChildSubtreeNodeCount;
 		currentIndex.totalChildVisibleSubtreeCount = totalChildVisibleSubtreeCount;
-		if (childCount >= PATH_STORE_CHILD_INDEX_CHUNK_THRESHOLD_EXTERNAL) rebuildVisibleChildChunks(nodes, currentIndex);
+		if (childCount >= 128) rebuildVisibleChildChunks(nodes, currentIndex);
 		currentNode.subtreeNodeCount = 1 + totalChildSubtreeNodeCount;
 		let newVisibleSubtreeCount;
 		if (flattenEmptyDirectories && childCount === 1) {
@@ -4548,6 +4576,35 @@ function initializeOpenVisibleCounts(state) {
 	rootNode.subtreeNodeCount = 1 + rootTotalChildSubtreeNodeCount;
 	rootNode.visibleSubtreeCount = rootTotalChildVisibleSubtreeCount;
 }
+function initializeOpenVisibleCountsViaSoa(state) {
+	const { directories, nodes, rootId } = state.snapshot;
+	const soa = buildSoaNodeStore(state.snapshot);
+	sweepOpenVisibleCountsSoa(soa);
+	const subtreeNodeCount = soa.subtreeNodeCount;
+	const visibleSubtreeCount = soa.visibleSubtreeCount;
+	for (let id = 0; id < nodes.length; id += 1) {
+		const node = nodes[id];
+		if (node == null) continue;
+		node.subtreeNodeCount = subtreeNodeCount[id];
+		node.visibleSubtreeCount = visibleSubtreeCount[id];
+	}
+	for (const [dirId, currentIndex] of directories) {
+		const childIds = currentIndex.childIds;
+		const childCount = childIds.length;
+		let totalChildSubtreeNodeCount = 0;
+		let totalChildVisibleSubtreeCount = 0;
+		for (let ci = 0; ci < childCount; ci++) {
+			const childId = childIds[ci];
+			if (childId == null) continue;
+			const childNode = nodes[childId];
+			totalChildSubtreeNodeCount += childNode.subtreeNodeCount;
+			totalChildVisibleSubtreeCount += childNode.visibleSubtreeCount;
+		}
+		currentIndex.totalChildSubtreeNodeCount = totalChildSubtreeNodeCount;
+		currentIndex.totalChildVisibleSubtreeCount = totalChildVisibleSubtreeCount;
+		if (dirId === rootId || childCount >= 128) rebuildVisibleChildChunks(nodes, currentIndex);
+	}
+}
 function canInitializeOpenVisibleCounts(options) {
 	return options.initialExpansion === "open" && (options.initialExpandedPaths == null || options.initialExpandedPaths.length === 0);
 }
@@ -4570,7 +4627,8 @@ var PathStore = class PathStore {
 		this.#state = withBenchmarkPhase(instrumentation, "store.state.create", () => createPathStoreState(snapshot, useExplicitOpenExpansionFastPath ? "open" : options.initialExpansion ?? "closed", instrumentation));
 		if (useExplicitOpenExpansionFastPath) this.#state.collapseNewDirectoriesByDefault = true;
 		const expandedDirectoryCount = useExplicitOpenExpansionFastPath ? this.#state.snapshot.directories.size - 1 : withBenchmarkPhase(instrumentation, "store.state.initializeExpandedPaths", () => this.initializeExpandedPaths(options.initialExpandedPaths));
-		if (useExplicitOpenExpansionFastPath || canInitializeOpenVisibleCounts(options) || (options.initialExpansion ?? "closed") === "closed" && expandedDirectoryCount === this.#state.snapshot.directories.size - 1 || (options.initialExpandedPaths?.length ?? 0) > 0 && withBenchmarkPhase(instrumentation, "store.state.checkAllDirectoriesExpanded", () => this.hasAllDirectoriesExpanded())) withBenchmarkPhase(instrumentation, "store.state.initializeOpenVisibleCounts", () => initializeOpenVisibleCounts(this.#state));
+		if (useExplicitOpenExpansionFastPath || canInitializeOpenVisibleCounts(options) || (options.initialExpansion ?? "closed") === "closed" && expandedDirectoryCount === this.#state.snapshot.directories.size - 1 || (options.initialExpandedPaths?.length ?? 0) > 0 && withBenchmarkPhase(instrumentation, "store.state.checkAllDirectoriesExpanded", () => this.hasAllDirectoriesExpanded())) if (options.useSoaCountSweep === true) withBenchmarkPhase(instrumentation, "store.state.initializeOpenVisibleCountsViaSoa", () => initializeOpenVisibleCountsViaSoa(this.#state));
+		else withBenchmarkPhase(instrumentation, "store.state.initializeOpenVisibleCounts", () => initializeOpenVisibleCounts(this.#state));
 		else withBenchmarkPhase(instrumentation, "store.state.recomputeCounts", () => recomputeCountsRecursive(this.#state, this.#state.snapshot.rootId));
 	}
 	static preparePaths(paths, options = {}) {
@@ -4617,9 +4675,7 @@ var PathStore = class PathStore {
 				case "remove":
 					this.remove(operation.path, { recursive: operation.recursive });
 					break;
-				case "move":
-					this.move(operation.from, operation.to, { collision: operation.collision });
-					break;
+				case "move": this.move(operation.from, operation.to, { collision: operation.collision });
 			}
 		});
 	}
@@ -4877,8 +4933,8 @@ var PathStore = class PathStore {
 				let nextNodeId;
 				const targetSegmentSortKey = targetSegmentSortKeyCache.get(segment) ?? createSegmentSortKey(segment);
 				targetSegmentSortKeyCache.set(segment, targetSegmentSortKey);
-				const searchForSegment = (startIndex, endIndex$1) => {
-					for (nextChildOffset = startIndex; nextChildOffset < endIndex$1; nextChildOffset += 1) {
+				const searchForSegment = (startIndex, endIndex) => {
+					for (nextChildOffset = startIndex; nextChildOffset < endIndex; nextChildOffset += 1) {
 						const candidateNodeId = childIds[nextChildOffset];
 						const candidateNode = nodes[candidateNodeId];
 						const candidateSegment = segmentValues[candidateNode.nameId];
@@ -4978,16 +5034,12 @@ function assertOperationTargetsDirectory(directoryPath, operation) {
 		case "remove":
 			if (!operation.path.startsWith(directoryPath) || operation.path === directoryPath) throw new Error(`Child patch operation must stay within ${directoryPath}: "${operation.path}"`);
 			break;
-		case "move":
-			if (!operation.from.startsWith(directoryPath) || !operation.to.startsWith(directoryPath) || operation.from === directoryPath || operation.to === directoryPath) throw new Error(`Child patch move must stay within ${directoryPath}: "${operation.from}" -> "${operation.to}"`);
-			break;
+		case "move": if (!operation.from.startsWith(directoryPath) || !operation.to.startsWith(directoryPath) || operation.from === directoryPath || operation.to === directoryPath) throw new Error(`Child patch move must stay within ${directoryPath}: "${operation.from}" -> "${operation.to}"`);
 	}
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/utils/getSelectionPath.js
-const getSelectionPath = (path) => path.startsWith(FLATTENED_PREFIX) ? path.slice(FLATTENED_PREFIX.length) : path;
-
+const getSelectionPath = (path) => path.startsWith("f::") ? path.slice(3) : path;
 //#endregion
 //#region node_modules/@pierre/trees/dist/utils/renameFileTreePaths.js
 function splitPath(path) {
@@ -5023,11 +5075,11 @@ function renameFileTreePaths({ files, path, isFolder, nextBasename }) {
 	const nextFiles = new Array(files.length);
 	const seenPaths = /* @__PURE__ */ new Set();
 	if (!isFolder) {
-		const destinationPrefix$1 = `${destinationPath}/`;
+		const destinationPrefix = `${destinationPath}/`;
 		let renamed = false;
 		for (let index = 0; index < files.length; index++) {
 			const file = files[index];
-			if (file !== sourcePath && file.startsWith(destinationPrefix$1)) return { error: `"${destinationPath}" already exists.` };
+			if (file !== sourcePath && file.startsWith(destinationPrefix)) return { error: `"${destinationPath}" already exists.` };
 			const nextFile = file === sourcePath ? destinationPath : file;
 			if (seenPaths.has(nextFile)) return { error: `"${destinationPath}" already exists.` };
 			seenPaths.add(nextFile);
@@ -5063,7 +5115,6 @@ function renameFileTreePaths({ files, path, isFolder, nextBasename }) {
 		isFolder
 	};
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/model/dragAndDrop.js
 function isCanonicalDirectoryPath$1(path) {
@@ -5149,7 +5200,6 @@ function buildDropOperations(draggedPaths, target) {
 		}
 	};
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/model/inputResolution.js
 function haveMatchingPaths(currentPaths, preparedPaths) {
@@ -5178,7 +5228,6 @@ function resolveFileTreeInput(options, context, sort) {
 		preparedInput
 	};
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/model/mutationEvents.js
 function isPathMutationEvent(event) {
@@ -5263,7 +5312,6 @@ function toTreesMutationEvent(event) {
 		default: return null;
 	}
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/model/pathHelpers.js
 function arePathSetsEqual(currentPaths, nextPaths) {
@@ -5288,7 +5336,6 @@ function isCanonicalDirectoryPath(path) {
 	return path.endsWith("/");
 }
 const toLowerCaseSearchPath = (path) => path.toLowerCase();
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/model/renameHelpers.js
 function getRenameLeafName(path) {
@@ -5302,7 +5349,6 @@ function toRenameHelperPath(path) {
 function toCanonicalRenamePath(path, isFolder) {
 	return isFolder && !path.endsWith("/") ? `${path}/` : path;
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/model/searchHelpers.js
 const normalizeSearchQuery = (value) => {
@@ -5310,7 +5356,6 @@ const normalizeSearchQuery = (value) => {
 	if (trimmedValue.length === 0) return "";
 	return (trimmedValue.includes("\\") ? trimmedValue.replaceAll("\\", "/") : trimmedValue).toLowerCase();
 };
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/model/FileTreeController.js
 const FILE_TREE_RENAME_VIEW = Symbol("FILE_TREE_RENAME_VIEW");
@@ -5362,7 +5407,29 @@ function createVisibleProjection(projection, focusedPathCandidate, resolveVisibl
 * Owns the live PathStore instance and exposes a path-first boundary without
 * leaking internal store IDs.
 */
-var FileTreeController = class {
+var FileTreeController = class FileTreeController {
+	static {
+		Object.defineProperty(FileTreeController.prototype, FILE_TREE_RENAME_VIEW, {
+			configurable: true,
+			value() {
+				return {
+					cancel: () => {
+						this.#cancelRenaming();
+					},
+					commit: () => {
+						this.#completeRenaming();
+					},
+					getPath: () => this.#renamingPath,
+					getValue: () => this.#renamingValue,
+					isActive: () => this.#renamingPath != null,
+					setValue: (value) => {
+						this.#setRenamingValue(value);
+					}
+				};
+			},
+			writable: true
+		});
+	}
 	#baseOptions;
 	#listeners = /* @__PURE__ */ new Set();
 	#mutationListeners = /* @__PURE__ */ new Map();
@@ -5384,8 +5451,8 @@ var FileTreeController = class {
 	#onRenameError;
 	#onSearchChange;
 	#projectionPaths = [];
-	#projectionPosInSetByIndex = new Int32Array(0);
-	#projectionSetSizeByIndex = new Int32Array(0);
+	#projectionPosInSetByIndex = /* @__PURE__ */ new Int32Array(0);
+	#projectionSetSizeByIndex = /* @__PURE__ */ new Int32Array(0);
 	#renameCanRename = void 0;
 	#renameEnabled = false;
 	#renamingPath = null;
@@ -5689,8 +5756,8 @@ var FileTreeController = class {
 		const anchorIndex = anchorPath == null ? -1 : this.#getVisibleIndexByPath(anchorPath);
 		const targetIndex = this.#getVisibleIndexByPath(resolvedPath);
 		if (anchorIndex === -1 || targetIndex === -1) {
-			const nextSelectedPaths$1 = unionSelection ? [...this.#selectedPaths, resolvedPath] : [resolvedPath];
-			this.#applySelection(nextSelectedPaths$1, resolvedPath);
+			const nextSelectedPaths = unionSelection ? [...this.#selectedPaths, resolvedPath] : [resolvedPath];
+			this.#applySelection(nextSelectedPaths, resolvedPath);
 			return;
 		}
 		const [startIndex, endIndex] = anchorIndex <= targetIndex ? [anchorIndex, targetIndex] : [targetIndex, anchorIndex];
@@ -5889,22 +5956,6 @@ var FileTreeController = class {
 		this.#emit();
 		return true;
 	}
-	[FILE_TREE_RENAME_VIEW]() {
-		return {
-			cancel: () => {
-				this.#cancelRenaming();
-			},
-			commit: () => {
-				this.#completeRenaming();
-			},
-			getPath: () => this.#renamingPath,
-			getValue: () => this.#renamingValue,
-			isActive: () => this.#renamingPath != null,
-			setValue: (value) => {
-				this.#setRenamingValue(value);
-			}
-		};
-	}
 	#cancelRenaming() {
 		if (this.#renamingPath == null) return;
 		const renamingPath = this.#renamingPath;
@@ -5962,11 +6013,10 @@ var FileTreeController = class {
 		this.#renamingValue = value;
 		this.#emit();
 	}
-	/**
-	* Rebuilds the controller around a new full path set. This is intentionally a
-	* coarse whole-tree reset path rather than a localized mutation fast path.
-	*/
-	resetPaths(paths, options = {}) {
+	resetPaths(pathsOrOptions, maybeOptions = {}) {
+		const usingPreparedOnlyOverload = !Array.isArray(pathsOrOptions);
+		const paths = usingPreparedOnlyOverload ? void 0 : pathsOrOptions;
+		const options = usingPreparedOnlyOverload ? pathsOrOptions : maybeOptions;
 		const previousPathCount = this.#store.list().length;
 		const previousVisibleCount = this.#visibleCount;
 		const resolvedInput = resolveFileTreeInput({
@@ -6466,7 +6516,6 @@ var FileTreeController = class {
 		this.#expandDirectory(path);
 	}
 };
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/utils/getGitStatusSignature.js
 /**
@@ -6478,7 +6527,6 @@ const getGitStatusSignature = (entries) => {
 	for (const entry of entries) signature += `\0${entry.path}\0${entry.status}`;
 	return signature;
 };
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/utils/normalizeInputPath.js
 /**
@@ -6505,14 +6553,20 @@ function normalizeInputPath(inputPath) {
 		path: normalizedPath
 	};
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/model/gitStatus.js
 function getAncestorDirectoryPaths(path) {
 	const normalizedPath = path.endsWith("/") ? path.slice(0, -1) : path;
 	if (normalizedPath.length === 0) return [];
-	const segments = normalizedPath.split("/");
-	return segments.slice(0, -1).map((_, index) => `${segments.slice(0, index + 1).join("/")}/`);
+	const ancestors = [];
+	let searchIndex = 0;
+	for (;;) {
+		const slashIndex = normalizedPath.indexOf("/", searchIndex);
+		if (slashIndex === -1) break;
+		ancestors.push(normalizedPath.slice(0, slashIndex + 1));
+		searchIndex = slashIndex + 1;
+	}
+	return ancestors;
 }
 function getCanonicalGitStatusPath(path, isDirectory) {
 	return isDirectory ? `${path}/` : path;
@@ -6524,23 +6578,121 @@ function resolveFileTreeGitStatusState(entries, previous = null) {
 	const statusByPath = /* @__PURE__ */ new Map();
 	const directoriesWithChanges = /* @__PURE__ */ new Set();
 	const ignoredDirectoryPaths = /* @__PURE__ */ new Set();
+	const changeCountByDirectoryPath = /* @__PURE__ */ new Map();
 	for (const entry of entries ?? []) {
-		const normalizedPath = normalizeInputPath(entry.path);
-		if (normalizedPath == null) continue;
-		const canonicalPath = getCanonicalGitStatusPath(normalizedPath.path, normalizedPath.isDirectory);
-		statusByPath.set(canonicalPath, entry.status);
-		if (entry.status === "ignored" && normalizedPath.isDirectory) ignoredDirectoryPaths.add(canonicalPath);
-		else if (normalizedPath.isDirectory) ignoredDirectoryPaths.delete(canonicalPath);
-		for (const ancestorPath of getAncestorDirectoryPaths(normalizedPath.path)) directoriesWithChanges.add(ancestorPath);
+		const resolved = resolveGitStatusEntry(entry);
+		if (resolved == null) continue;
+		setGitStatusPath({
+			canonicalPath: resolved.canonicalPath,
+			changeCountByDirectoryPath,
+			directoriesWithChanges,
+			ignoredDirectoryPaths,
+			isDirectory: resolved.isDirectory,
+			status: entry.status,
+			statusByPath
+		});
 	}
+	if (statusByPath.size === 0) return null;
 	return {
+		changeCountByDirectoryPath,
 		directoriesWithChanges,
 		ignoredDirectoryPaths,
 		signature,
 		statusByPath
 	};
 }
-
+function applyFileTreeGitStatusPatch(previous, patch) {
+	const removeEntries = patch?.remove ?? [];
+	const setEntries = patch?.set ?? [];
+	if (removeEntries.length === 0 && setEntries.length === 0) return previous;
+	const statusByPath = new Map(previous?.statusByPath);
+	const directoriesWithChanges = new Set(previous?.directoriesWithChanges);
+	const ignoredDirectoryPaths = new Set(previous?.ignoredDirectoryPaths);
+	const changeCountByDirectoryPath = new Map(previous?.changeCountByDirectoryPath);
+	let changed = false;
+	for (const path of removeEntries) {
+		const resolved = resolveGitStatusPath(path);
+		if (resolved == null) continue;
+		changed = removeGitStatusPath({
+			canonicalPath: resolved.canonicalPath,
+			changeCountByDirectoryPath,
+			directoriesWithChanges,
+			ignoredDirectoryPaths,
+			statusByPath
+		}) || changed;
+	}
+	for (const entry of setEntries) {
+		const resolved = resolveGitStatusEntry(entry);
+		if (resolved == null) continue;
+		changed = setGitStatusPath({
+			canonicalPath: resolved.canonicalPath,
+			changeCountByDirectoryPath,
+			directoriesWithChanges,
+			ignoredDirectoryPaths,
+			isDirectory: resolved.isDirectory,
+			status: entry.status,
+			statusByPath
+		}) || changed;
+	}
+	if (!changed) return previous;
+	if (statusByPath.size === 0) return null;
+	return {
+		changeCountByDirectoryPath,
+		directoriesWithChanges,
+		ignoredDirectoryPaths,
+		signature: getGitStatusStateSignature(statusByPath),
+		statusByPath
+	};
+}
+function resolveGitStatusEntry(entry) {
+	return resolveGitStatusPath(entry.path);
+}
+function resolveGitStatusPath(path) {
+	const normalizedPath = normalizeInputPath(path);
+	if (normalizedPath == null) return;
+	return {
+		canonicalPath: getCanonicalGitStatusPath(normalizedPath.path, normalizedPath.isDirectory),
+		isDirectory: normalizedPath.isDirectory
+	};
+}
+function removeGitStatusPath({ canonicalPath, changeCountByDirectoryPath, directoriesWithChanges, ignoredDirectoryPaths, statusByPath }) {
+	const previousStatus = statusByPath.get(canonicalPath);
+	if (previousStatus == null) return false;
+	statusByPath.delete(canonicalPath);
+	if (previousStatus === "ignored" && canonicalPath.endsWith("/")) ignoredDirectoryPaths.delete(canonicalPath);
+	decrementAncestorChangeCounts(changeCountByDirectoryPath, directoriesWithChanges, canonicalPath);
+	return true;
+}
+function setGitStatusPath({ canonicalPath, changeCountByDirectoryPath, directoriesWithChanges, ignoredDirectoryPaths, isDirectory, status, statusByPath }) {
+	const previousStatus = statusByPath.get(canonicalPath);
+	if (previousStatus === status) return false;
+	if (previousStatus == null) incrementAncestorChangeCounts(changeCountByDirectoryPath, directoriesWithChanges, canonicalPath);
+	statusByPath.set(canonicalPath, status);
+	if (status === "ignored" && isDirectory) ignoredDirectoryPaths.add(canonicalPath);
+	else if (isDirectory) ignoredDirectoryPaths.delete(canonicalPath);
+	return true;
+}
+function incrementAncestorChangeCounts(changeCountByDirectoryPath, directoriesWithChanges, path) {
+	for (const ancestorPath of getAncestorDirectoryPaths(path)) {
+		changeCountByDirectoryPath.set(ancestorPath, (changeCountByDirectoryPath.get(ancestorPath) ?? 0) + 1);
+		directoriesWithChanges.add(ancestorPath);
+	}
+}
+function decrementAncestorChangeCounts(changeCountByDirectoryPath, directoriesWithChanges, path) {
+	for (const ancestorPath of getAncestorDirectoryPaths(path)) {
+		const nextCount = (changeCountByDirectoryPath.get(ancestorPath) ?? 0) - 1;
+		if (nextCount > 0) changeCountByDirectoryPath.set(ancestorPath, nextCount);
+		else {
+			changeCountByDirectoryPath.delete(ancestorPath);
+			directoriesWithChanges.delete(ancestorPath);
+		}
+	}
+}
+function getGitStatusStateSignature(statusByPath) {
+	let signature = `${statusByPath.size}`;
+	for (const [path, status] of statusByPath) signature += `\0${path}\0${status}`;
+	return signature;
+}
 //#endregion
 //#region node_modules/@pierre/trees/dist/render/iconResolver.js
 const normalizeIconRuleKey = (value) => value.trim().toLowerCase();
@@ -6584,11 +6736,17 @@ function createFileTreeIconResolver(icons) {
 				if (extensionEntry != null) return remapEntryToIcon(extensionEntry, name);
 			}
 			const builtInToken = resolveBuiltInFileIconToken(normalizedIcons.set, fileName, extensionCandidates);
-			if (builtInToken != null && normalizedIcons.set !== "none") return {
-				name: getBuiltInFileIconName(builtInToken),
-				remappedFrom: name,
-				token: builtInToken
-			};
+			if (builtInToken != null && normalizedIcons.set !== "none") {
+				if (builtInToken === "default") {
+					const remappedEntry = iconRemap?.[name];
+					if (remappedEntry != null) return remapEntryToIcon(remappedEntry, name);
+				}
+				return {
+					name: getBuiltInFileIconName(builtInToken),
+					remappedFrom: name,
+					token: builtInToken
+				};
+			}
 		}
 		const remappedEntry = iconRemap?.[name];
 		if (remappedEntry == null) return { name };
@@ -6596,19 +6754,32 @@ function createFileTreeIconResolver(icons) {
 	};
 	return { resolveIcon };
 }
-
 //#endregion
 //#region node_modules/preact/dist/preact.mjs
-var n, l$2, u$3, t$1, i$2, r$2, f$3, e$1, o$3, c$2, s$2, a$2, h$2 = {}, p$2 = [], v$2 = Array.isArray, y$2 = p$2.slice, w$2 = Object.assign;
-function d$2(n) {
+var n;
+var l$1;
+var t$1;
+var i$1;
+var r$1;
+var f$2;
+var e$1;
+var o$2;
+var c$1;
+var s$1;
+var h$1 = {};
+var p$1 = [];
+var v$1 = Array.isArray;
+var y$1 = p$1.slice;
+var w$1 = Object.assign;
+function d$1(n) {
 	n && n.parentNode && n.remove();
 }
-function _$2(n, l, u) {
+function _$1(n, l, u) {
 	var t, i, r, f = {};
 	for (r in l) "key" == r ? t = l[r] : "ref" == r && "function" != typeof n ? i = l[r] : f[r] = l[r];
-	return arguments.length > 2 && (f.children = arguments.length > 3 ? y$2.call(arguments, 2) : u), g$2(n, f, t, i, null);
+	return arguments.length > 2 && (f.children = arguments.length > 3 ? y$1.call(arguments, 2) : u), g$1(n, f, t, i, null);
 }
-function g$2(u, t, i, r, f) {
+function g$1(u, t, i, r, f) {
 	var e = {
 		type: u,
 		props: t,
@@ -6620,64 +6791,64 @@ function g$2(u, t, i, r, f) {
 		__e: null,
 		__c: null,
 		constructor: void 0,
-		__v: null == f ? ++l$2 : f,
+		__v: null == f ? ++l$1 : f,
 		__i: -1,
 		__u: 0
 	};
 	return null == f && null != n.vnode && n.vnode(e), e;
 }
-function k$2(n) {
+function k$1(n) {
 	return n.children;
 }
-function m$2(n, l) {
+function m$1(n, l) {
 	this.props = n, this.context = l, this.__g = 0;
 }
-function M$1(n, l) {
-	if (null == l) return n.__ ? M$1(n.__, n.__i + 1) : null;
+function M(n, l) {
+	if (null == l) return n.__ ? M(n.__, n.__i + 1) : null;
 	for (var u; l < n.__k.length; l++) if (null != (u = n.__k[l]) && null != u.__e) return u.__e;
-	return "function" == typeof n.type ? M$1(n) : null;
+	return "function" == typeof n.type ? M(n) : null;
 }
-function S$1(n) {
+function S(n) {
 	var l, u;
 	if (null != (n = n.__) && null != n.__c) {
 		for (n.__e = null, l = 0; l < n.__k.length; l++) if (null != (u = n.__k[l]) && null != u.__e) {
 			n.__e = u.__e;
 			break;
 		}
-		return S$1(n);
+		return S(n);
 	}
 }
-function $$1(l) {
-	(8 & l.__g || !(l.__g |= 8) || !t$1.push(l) || r$2++) && i$2 == n.debounceRendering || ((i$2 = n.debounceRendering) || queueMicrotask)(x$1);
+function $(l) {
+	(8 & l.__g || !(l.__g |= 8) || !t$1.push(l) || r$1++) && i$1 == n.debounceRendering || ((i$1 = n.debounceRendering) || queueMicrotask)(x);
 }
-function x$1() {
-	for (var l, u, i, e, o, c, s, a, h = 1; t$1.length;) t$1.length > h && t$1.sort(f$3), l = t$1.shift(), h = t$1.length, 8 & l.__g && (i = void 0, o = (e = (u = l).__v).__e, c = [], s = [], (a = u.__P) && ((i = w$2({}, e)).__v = e.__v + 1, n.vnode && n.vnode(i), q$2(a, i, e, u.__n, a.namespaceURI, 32 & e.__u ? [o] : null, c, null == o ? M$1(e) : o, !!(32 & e.__u), s, a.ownerDocument), i.__v = e.__v, i.__.__k[i.__i] = i, P$1(c, i, s), i.__e != o && S$1(i)));
-	r$2 = 0;
+function x() {
+	for (var l, u, i, e, o, c, s, a, h = 1; t$1.length;) t$1.length > h && t$1.sort(f$2), l = t$1.shift(), h = t$1.length, 8 & l.__g && (i = void 0, o = (e = (u = l).__v).__e, c = [], s = [], (a = u.__P) && ((i = w$1({}, e)).__v = e.__v + 1, n.vnode && n.vnode(i), q$1(a, i, e, u.__n, a.namespaceURI, 32 & e.__u ? [o] : null, c, null == o ? M(e) : o, !!(32 & e.__u), s, a.ownerDocument), i.__v = e.__v, i.__.__k[i.__i] = i, P(c, i, s), i.__e != o && S(i)));
+	r$1 = 0;
 }
-function C$2(n, l, u, t, i, r, f, e, o, c, s, a) {
-	var v, y, w, d, _, g, b, k = t && t.__k || p$2, m = l.length;
-	for (o = j$1(u, l, k, o, m), v = 0; v < m; v++) null != (w = u.__k[v]) && (y = -1 == w.__i ? h$2 : k[w.__i] || h$2, w.__i = v, g = q$2(n, w, y, i, r, f, e, o, c, s, a), d = w.__e, w.ref && y.ref != w.ref && (y.ref && B$2(y.ref, null, w), s.push(w.ref, w.__c || d, w)), null == _ && null != d && (_ = d), (b = !!(4 & w.__u)) || y.__k === w.__k ? o = A$2(w, o, n, b) : "function" == typeof w.type && void 0 !== g ? o = g : d && (o = d.nextSibling), w.__u &= -7);
+function C$1(n, l, u, t, i, r, f, e, o, c, s, a) {
+	var v, y, w, d, _, g, b, k = t && t.__k || p$1, m = l.length;
+	for (o = j(u, l, k, o, m), v = 0; v < m; v++) null != (w = u.__k[v]) && (y = -1 == w.__i ? h$1 : k[w.__i] || h$1, w.__i = v, g = q$1(n, w, y, i, r, f, e, o, c, s, a), d = w.__e, w.ref && y.ref != w.ref && (y.ref && B$1(y.ref, null, w), s.push(w.ref, w.__c || d, w)), null == _ && null != d && (_ = d), (b = !!(4 & w.__u)) || y.__k === w.__k ? o = A$1(w, o, n, b) : "function" == typeof w.type && void 0 !== g ? o = g : d && (o = d.nextSibling), w.__u &= -7);
 	return u.__e = _, o;
 }
-function j$1(n, l, u, t, i) {
+function j(n, l, u, t, i) {
 	var r, f, e, o, c, s = u.length, a = s, h = 0;
-	for (n.__k = new Array(i), r = 0; r < i; r++) null != (f = l[r]) && "boolean" != typeof f && "function" != typeof f ? (o = r + h, (f = n.__k[r] = "string" == typeof f || "number" == typeof f || "bigint" == typeof f || f.constructor == String ? g$2(null, f, null, null, null) : v$2(f) ? g$2(k$2, { children: f }, null, null, null) : null == f.constructor && f.__b > 0 ? g$2(f.type, f.props, f.key, f.ref ? f.ref : null, f.__v) : f).__ = n, f.__b = n.__b + 1, e = null, -1 != (c = f.__i = I$1(f, u, o, a)) && (a--, (e = u[c]) && (e.__u |= 2)), null == e || null == e.__v ? (-1 == c && (i > s ? h-- : i < s && h++), "function" != typeof f.type && (f.__u |= 4)) : c != o && (c == o - 1 ? h-- : c == o + 1 ? h++ : (c > o ? h-- : h++, f.__u |= 4))) : n.__k[r] = null;
-	if (a) for (r = 0; r < s; r++) null != (e = u[r]) && 0 == (2 & e.__u) && (e.__e == t && (t = M$1(e)), D$2(e, e));
+	for (n.__k = new Array(i), r = 0; r < i; r++) null != (f = l[r]) && "boolean" != typeof f && "function" != typeof f ? (o = r + h, (f = n.__k[r] = "string" == typeof f || "number" == typeof f || "bigint" == typeof f || f.constructor == String ? g$1(null, f, null, null, null) : v$1(f) ? g$1(k$1, { children: f }, null, null, null) : null == f.constructor && f.__b > 0 ? g$1(f.type, f.props, f.key, f.ref ? f.ref : null, f.__v) : f).__ = n, f.__b = n.__b + 1, e = null, -1 != (c = f.__i = I(f, u, o, a)) && (a--, (e = u[c]) && (e.__u |= 2)), null == e || null == e.__v ? (-1 == c && (i > s ? h-- : i < s && h++), "function" != typeof f.type && (f.__u |= 4)) : c != o && (c == o - 1 ? h-- : c == o + 1 ? h++ : (c > o ? h-- : h++, f.__u |= 4))) : n.__k[r] = null;
+	if (a) for (r = 0; r < s; r++) null != (e = u[r]) && 0 == (2 & e.__u) && (e.__e == t && (t = M(e)), D$1(e, e));
 	return t;
 }
-function A$2(n, l, u, t) {
+function A$1(n, l, u, t) {
 	var i, r;
 	if ("function" == typeof n.type) {
-		for (i = n.__k, r = 0; i && r < i.length; r++) i[r] && (i[r].__ = n, l = A$2(i[r], l, u, t));
+		for (i = n.__k, r = 0; i && r < i.length; r++) i[r] && (i[r].__ = n, l = A$1(i[r], l, u, t));
 		return l;
 	}
-	n.__e != l && (t && (l && n.type && !l.parentNode && (l = M$1(n)), u.insertBefore(n.__e, l || null)), l = n.__e);
+	n.__e != l && (t && (l && n.type && !l.parentNode && (l = M(n)), u.insertBefore(n.__e, l || null)), l = n.__e);
 	do
 		l = l && l.nextSibling;
 	while (null != l && 8 == l.nodeType);
 	return l;
 }
-function I$1(n, l, u, t) {
+function I(n, l, u, t) {
 	var i, r, f, e = n.key, o = n.type, c = l[u], s = null != c && 0 == (2 & c.__u);
 	if (null === c && null == n.key || s && e == c.key && o == c.type) return u;
 	if (t > (s ? 1 : 0)) {
@@ -6685,17 +6856,17 @@ function I$1(n, l, u, t) {
 	}
 	return -1;
 }
-function L$1(n, l, u) {
+function L(n, l, u) {
 	"-" == l[0] ? n.setProperty(l, null == u ? "" : u) : n[l] = null == u ? "" : u;
 }
-function O$1(n, l, u, t, i) {
+function O(n, l, u, t, i) {
 	var r;
 	n: if ("style" == l) if ("string" == typeof u) n.style.cssText = u;
 	else {
-		if ("string" == typeof t && (n.style.cssText = t = ""), t) for (l in t) u && l in u || L$1(n.style, l, "");
-		if (u) for (l in u) t && u[l] == t[l] || L$1(n.style, l, u[l]);
+		if ("string" == typeof t && (n.style.cssText = t = ""), t) for (l in t) u && l in u || L(n.style, l, "");
+		if (u) for (l in u) t && u[l] == t[l] || L(n.style, l, u[l]);
 	}
-	else if ("o" == l[0] && "n" == l[1]) r = l != (l = l.replace(e$1, "$1")), (l = l.slice(2))[0].toLowerCase() != l[0] && (l = l.toLowerCase()), n.__l || (n.__l = {}), n.__l[l + r] = u, u ? t ? u.l = t.l : (u.l = o$3, n.addEventListener(l, r ? s$2 : c$2, r)) : n.removeEventListener(l, r ? s$2 : c$2, r);
+	else if ("o" == l[0] && "n" == l[1]) r = l != (l = l.replace(e$1, "$1")), (l = l.slice(2))[0].toLowerCase() != l[0] && (l = l.toLowerCase()), n.__l || (n.__l = {}), n.__l[l + r] = u, u ? t ? u.l = t.l : (u.l = o$2, n.addEventListener(l, r ? s$1 : c$1, r)) : n.removeEventListener(l, r ? s$1 : c$1, r);
 	else {
 		if ("http://www.w3.org/2000/svg" == i) l = l.replace(/xlink(H|:h)/, "h").replace(/sName$/, "s");
 		else if ("width" != l && "height" != l && "href" != l && "list" != l && "form" != l && "tabIndex" != l && "download" != l && "rowSpan" != l && "colSpan" != l && "role" != l && "popover" != l && l in n) try {
@@ -6705,22 +6876,22 @@ function O$1(n, l, u, t, i) {
 		"function" == typeof u || (null == u || !1 === u && "-" != l[4] ? n.removeAttribute(l) : n.setAttribute(l, "popover" == l && 1 == u ? "" : u));
 	}
 }
-function T$1(l) {
+function T(l) {
 	return function(u) {
 		if (this.__l) {
 			var t = this.__l[u.type + l];
-			if (null == u.u) u.u = o$3++;
+			if (null == u.u) u.u = o$2++;
 			else if (u.u < t.l) return;
 			return t(n.event ? n.event(u) : u);
 		}
 	};
 }
-function q$2(l, u, t, i, r, f, e, o, c, s, a) {
+function q$1(l, u, t, i, r, f, e, o, c, s, a) {
 	var h, p, y, _, g, b, M, S, $, x, j, A, H, I, L, O, T, q, P, B, D, F = u.type;
 	if (null != u.constructor) return null;
 	128 & t.__u && (c = !!(32 & t.__u), t.__c.__z && (o = u.__e = t.__e = (f = t.__c.__z)[0], t.__c.__z = null)), (h = n.__b) && h(u);
 	n: if ("function" == typeof F) try {
-		if (S = u.props, $ = "prototype" in F && F.prototype.render, x = (h = F.contextType) && i[h.__c], j = h ? x ? x.props.value : h.__ : i, t.__c ? 2 & (p = u.__c = t.__c).__g && (p.__g |= 1, M = !0) : ($ ? u.__c = p = new F(S, j) : (u.__c = p = new m$2(S, j), p.constructor = F, p.render = E$1), x && x.sub(p), p.props = S, p.state || (p.state = {}), p.context = j, p.__n = i, y = !0, p.__g |= 8, p.__h = [], p._sb = []), $ && null == p.__s && (p.__s = p.state), $ && null != F.getDerivedStateFromProps && (p.__s == p.state && (p.__s = w$2({}, p.__s)), w$2(p.__s, F.getDerivedStateFromProps(S, p.__s))), _ = p.props, g = p.state, p.__v = u, y) $ && null == F.getDerivedStateFromProps && null != p.componentWillMount && p.componentWillMount(), $ && null != p.componentDidMount && p.__h.push(p.componentDidMount);
+		if (S = u.props, $ = "prototype" in F && F.prototype.render, x = (h = F.contextType) && i[h.__c], j = h ? x ? x.props.value : h.__ : i, t.__c ? 2 & (p = u.__c = t.__c).__g && (p.__g |= 1, M = !0) : ($ ? u.__c = p = new F(S, j) : (u.__c = p = new m$1(S, j), p.constructor = F, p.render = E), x && x.sub(p), p.props = S, p.state || (p.state = {}), p.context = j, p.__n = i, y = !0, p.__g |= 8, p.__h = [], p._sb = []), $ && null == p.__s && (p.__s = p.state), $ && null != F.getDerivedStateFromProps && (p.__s == p.state && (p.__s = w$1({}, p.__s)), w$1(p.__s, F.getDerivedStateFromProps(S, p.__s))), _ = p.props, g = p.state, p.__v = u, y) $ && null == F.getDerivedStateFromProps && null != p.componentWillMount && p.componentWillMount(), $ && null != p.componentDidMount && p.__h.push(p.componentDidMount);
 		else {
 			if ($ && null == F.getDerivedStateFromProps && S !== _ && null != p.componentWillReceiveProps && p.componentWillReceiveProps(S, j), !(4 & p.__g) && null != p.shouldComponentUpdate && !1 === p.shouldComponentUpdate(S, p.__s, j) || u.__v == t.__v) {
 				for (u.__v != t.__v && (p.props = S, p.state = p.__s, p.__g &= -9), u.__e = t.__e, u.__k = t.__k, u.__k.some(function(n) {
@@ -6739,7 +6910,7 @@ function q$2(l, u, t, i, r, f, e, o, c, s, a) {
 		} else do
 			p.__g &= -9, H && H(u), h = p.render(p.props, p.state, p.context), p.state = p.__s;
 		while (8 & p.__g && ++I < 25);
-		p.state = p.__s, null != p.getChildContext && (i = w$2({}, i, p.getChildContext())), $ && !y && null != p.getSnapshotBeforeUpdate && (b = p.getSnapshotBeforeUpdate(_, g)), O = h, null != h && h.type === k$2 && null == h.key && (O = V$1(h.props.children)), o = C$2(l, v$2(O) ? O : [O], u, t, i, r, f, e, o, c, s, a), u.__u &= -161, p.__h.length && e.push(p), M && (p.__g &= -4);
+		p.state = p.__s, null != p.getChildContext && (i = w$1({}, i, p.getChildContext())), $ && !y && null != p.getSnapshotBeforeUpdate && (b = p.getSnapshotBeforeUpdate(_, g)), O = h, null != h && h.type === k$1 && null == h.key && (O = V(h.props.children)), o = C$1(l, v$1(O) ? O : [O], u, t, i, r, f, e, o, c, s, a), u.__u &= -161, p.__h.length && e.push(p), M && (p.__g &= -4);
 	} catch (l) {
 		if (u.__v = null, c || null != f) if (l.then) {
 			for (T = 0, q = !1, u.__u |= c ? 160 : 128, u.__c.__z = [], P = 0; P < f.length; P++) null == (B = f[P]) || q || (8 == B.nodeType && "$s" == B.data ? (T > 0 && u.__c.__z.push(B), T++, f[P] = null) : 8 == B.nodeType && "/$s" == B.data ? (--T > 0 && u.__c.__z.push(B), q = 0 === T, o = f[P], f[P] = null) : T > 0 && (u.__c.__z.push(B), f[P] = null));
@@ -6749,20 +6920,20 @@ function q$2(l, u, t, i, r, f, e, o, c, s, a) {
 			}
 			u.__e = o;
 		} else {
-			for (D = f.length; D--;) d$2(f[D]);
-			N$1(u);
+			for (D = f.length; D--;) d$1(f[D]);
+			N(u);
 		}
-		else u.__e = t.__e, u.__k = t.__k, l.then || N$1(u);
+		else u.__e = t.__e, u.__k = t.__k, l.then || N(u);
 		n.__e(l, u, t);
 	}
-	else o = u.__e = z$2(t.__e, u, t, i, r, f, e, c, s, a);
+	else o = u.__e = z$1(t.__e, u, t, i, r, f, e, c, s, a);
 	return (h = n.diffed) && h(u), 128 & u.__u ? void 0 : o;
 }
-function N$1(n) {
-	n && n.__c && (n.__c.__g |= 4), n && n.__k && n.__k.forEach(N$1);
+function N(n) {
+	n && n.__c && (n.__c.__g |= 4), n && n.__k && n.__k.forEach(N);
 }
-function P$1(l, u, t) {
-	for (var i = 0; i < t.length; i++) B$2(t[i], t[++i], t[++i]);
+function P(l, u, t) {
+	for (var i = 0; i < t.length; i++) B$1(t[i], t[++i], t[++i]);
 	n.__c && n.__c(u, l), l.some(function(u) {
 		try {
 			l = u.__h, u.__h = [], l.some(function(n) {
@@ -6773,10 +6944,10 @@ function P$1(l, u, t) {
 		}
 	});
 }
-function V$1(n) {
-	return "object" != typeof n || null == n || n.__b && n.__b > 0 ? n : v$2(n) ? n.map(V$1) : w$2({}, n);
+function V(n) {
+	return "object" != typeof n || null == n || n.__b && n.__b > 0 ? n : v$1(n) ? n.map(V) : w$1({}, n);
 }
-function z$2(l, u, t, i, r, f, e, o, c, s) {
+function z$1(l, u, t, i, r, f, e, o, c, s) {
 	var a, p, w, _, g, b, k, m, S = t.props, $ = u.props, x = u.type;
 	if ("svg" == x ? r = "http://www.w3.org/2000/svg" : "math" == x ? r = "http://www.w3.org/1998/Math/MathML" : r || (r = "http://www.w3.org/1999/xhtml"), null != f) {
 		for (a = 0; a < f.length; a++) if ((g = f[a]) && "setAttribute" in g == !!x && (x ? g.localName == x : 3 == g.nodeType)) {
@@ -6790,21 +6961,21 @@ function z$2(l, u, t, i, r, f, e, o, c, s) {
 	}
 	if (null == x) S === $ || o && l.data == $ || (l.data = $);
 	else {
-		if (f = f && y$2.call(l.childNodes), S = t.props || h$2, !o && null != f) for (S = {}, a = 0; a < l.attributes.length; a++) S[(g = l.attributes[a]).name] = g.value;
+		if (f = f && y$1.call(l.childNodes), S = t.props || h$1, !o && null != f) for (S = {}, a = 0; a < l.attributes.length; a++) S[(g = l.attributes[a]).name] = g.value;
 		for (a in S) if (g = S[a], "children" == a);
 		else if ("dangerouslySetInnerHTML" == a) w = g;
 		else if (!(a in $)) {
 			if ("value" == a && "defaultValue" in $ || "checked" == a && "defaultChecked" in $) continue;
-			O$1(l, a, null, g, r);
+			O(l, a, null, g, r);
 		}
-		for (a in m = 1 & t.__u, $) g = $[a], "children" == a ? _ = g : "dangerouslySetInnerHTML" == a ? p = g : "value" == a ? b = g : "checked" == a ? k = g : o && "function" != typeof g || S[a] === g && !m || O$1(l, a, g, S[a], r);
+		for (a in m = 1 & t.__u, $) g = $[a], "children" == a ? _ = g : "dangerouslySetInnerHTML" == a ? p = g : "value" == a ? b = g : "checked" == a ? k = g : o && "function" != typeof g || S[a] === g && !m || O(l, a, g, S[a], r);
 		if (p) o || w && (p.__html == w.__html || p.__html == l.innerHTML) || (l.innerHTML = p.__html), u.__k = [];
-		else if (w && (l.innerHTML = ""), C$2("template" == x ? l.content : l, v$2(_) ? _ : [_], u, t, i, "foreignObject" == x ? "http://www.w3.org/1999/xhtml" : r, f, e, f ? f[0] : t.__k && M$1(t, 0), o, c, s), null != f) for (a = f.length; a--;) d$2(f[a]);
-		o || (a = "value", "progress" == x && null == b ? l.removeAttribute("value") : null == b || b === l[a] && ("progress" !== x || b) || O$1(l, a, b, S[a], r), a = "checked", null != k && k != l[a] && O$1(l, a, k, S[a], r));
+		else if (w && (l.innerHTML = ""), C$1("template" == x ? l.content : l, v$1(_) ? _ : [_], u, t, i, "foreignObject" == x ? "http://www.w3.org/1999/xhtml" : r, f, e, f ? f[0] : t.__k && M(t, 0), o, c, s), null != f) for (a = f.length; a--;) d$1(f[a]);
+		o || (a = "value", "progress" == x && null == b ? l.removeAttribute("value") : null == b || b === l[a] && ("progress" !== x || b) || O(l, a, b, S[a], r), a = "checked", null != k && k != l[a] && O(l, a, k, S[a], r));
 	}
 	return l;
 }
-function B$2(l, u, t) {
+function B$1(l, u, t) {
 	try {
 		if ("function" == typeof l) {
 			var i = "function" == typeof l.__u;
@@ -6814,9 +6985,9 @@ function B$2(l, u, t) {
 		n.__e(l, t);
 	}
 }
-function D$2(l, u, t) {
+function D$1(l, u, t) {
 	var i, r;
-	if (n.unmount && n.unmount(l), (i = l.ref) && (i.current && i.current != l.__e || B$2(i, null, u)), null != (i = l.__c)) {
+	if (n.unmount && n.unmount(l), (i = l.ref) && (i.current && i.current != l.__e || B$1(i, null, u)), null != (i = l.__c)) {
 		if (i.componentWillUnmount) try {
 			i.componentWillUnmount();
 		} catch (l) {
@@ -6824,18 +6995,18 @@ function D$2(l, u, t) {
 		}
 		i.__P = null;
 	}
-	if (i = l.__k) for (r = 0; r < i.length; r++) i[r] && D$2(i[r], u, t || "function" != typeof l.type);
-	t || d$2(l.__e), l.__e && l.__e.__l && (l.__e.__l = null), l.__e = l.__c = l.__ = null;
+	if (i = l.__k) for (r = 0; r < i.length; r++) i[r] && D$1(i[r], u, t || "function" != typeof l.type);
+	t || d$1(l.__e), l.__e && l.__e.__l && (l.__e.__l = null), l.__e = l.__c = l.__ = null;
 }
-function E$1(n, l, u) {
+function E(n, l, u) {
 	return this.constructor(n, u);
 }
-function F$2(l, u) {
+function F$1(l, u) {
 	var t, i, r, f;
-	u == document && (u = document.documentElement), n.__ && n.__(l, u), i = (t = !!(l && 32 & l.__u)) ? null : u.__k, l = u.__k = _$2(k$2, null, [l]), r = [], f = [], q$2(u, l, i || h$2, h$2, u.namespaceURI, i ? null : u.firstChild ? y$2.call(u.childNodes) : null, r, i ? i.__e : u.firstChild, t, f, u.ownerDocument), P$1(r, l, f);
+	u == document && (u = document.documentElement), n.__ && n.__(l, u), i = (t = !!(l && 32 & l.__u)) ? null : u.__k, l = u.__k = _$1(k$1, null, [l]), r = [], f = [], q$1(u, l, i || h$1, h$1, u.namespaceURI, i ? null : u.firstChild ? y$1.call(u.childNodes) : null, r, i ? i.__e : u.firstChild, t, f, u.ownerDocument), P(r, l, f);
 }
-function G$1(n, l) {
-	n.__u |= 32, F$2(n, l);
+function G(n, l) {
+	n.__u |= 32, F$1(n, l);
 }
 n = { __e: function(n, l, u, t) {
 	for (var i, f, e; l = l.__;) if ((i = l.__c) && !(1 & i.__g)) {
@@ -6846,22 +7017,20 @@ n = { __e: function(n, l, u, t) {
 			n = l;
 		}
 	}
-	throw r$2 = 0, n;
-} }, l$2 = 0, u$3 = function(n) {
-	return null != n && null == n.constructor;
-}, m$2.prototype.setState = function(n, l) {
-	var u = null != this.__s && this.__s != this.state ? this.__s : this.__s = w$2({}, this.state);
-	"function" == typeof n && (n = n(w$2({}, u), this.props)), n && w$2(u, n), null != n && this.__v && (l && this._sb.push(l), $$1(this));
-}, m$2.prototype.forceUpdate = function(n) {
-	this.__v && (this.__g |= 4, n && this.__h.push(n), $$1(this));
-}, m$2.prototype.render = k$2, t$1 = [], r$2 = 0, f$3 = function(n, l) {
+	throw r$1 = 0, n;
+} }, l$1 = 0, m$1.prototype.setState = function(n, l) {
+	var u = null != this.__s && this.__s != this.state ? this.__s : this.__s = w$1({}, this.state);
+	"function" == typeof n && (n = n(w$1({}, u), this.props)), n && w$1(u, n), null != n && this.__v && (l && this._sb.push(l), $(this));
+}, m$1.prototype.forceUpdate = function(n) {
+	this.__v && (this.__g |= 4, n && this.__h.push(n), $(this));
+}, m$1.prototype.render = k$1, t$1 = [], r$1 = 0, f$2 = function(n, l) {
 	return n.__v.__b - l.__v.__b;
-}, e$1 = /(PointerCapture)$|Capture$/i, o$3 = 0, c$2 = T$1(!1), s$2 = T$1(!0), a$2 = 0;
-
+}, e$1 = /(PointerCapture)$|Capture$/i, o$2 = 0, c$1 = T(!1), s$1 = T(!0);
 //#endregion
 //#region node_modules/preact/jsx-runtime/dist/jsxRuntime.mjs
-var o$2 = 0, f$2 = Array.isArray;
-function u$2(t, e, n$3, f, u, i) {
+var o$1 = 0;
+Array.isArray;
+function u$1(t, e, n$3, f, u, i) {
 	e || (e = {});
 	var a, c, l = e;
 	if ("ref" in l && "function" != typeof t) for (c in l = {}, e) "ref" == c ? a = e[c] : l[c] = e[c];
@@ -6876,7 +7045,7 @@ function u$2(t, e, n$3, f, u, i) {
 		__e: null,
 		__c: null,
 		constructor: void 0,
-		__v: --o$2,
+		__v: --o$1,
 		__i: -1,
 		__u: 0,
 		__source: u,
@@ -6884,7 +7053,6 @@ function u$2(t, e, n$3, f, u, i) {
 	};
 	return n.vnode && n.vnode(p), p;
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/components/Icon.js
 const DEFAULT_WIDTH = 16;
@@ -6900,34 +7068,45 @@ function Icon({ name, remappedFrom, token, width: propWidth, height: propHeight,
 	const width = propWidth ?? iconWidth;
 	const height = propHeight ?? iconHeight;
 	const viewBox = propViewBox ?? overrideViewBox ?? `0 0 ${iconWidth} ${iconHeight}`;
-	const a11yProps = label != null ? {
-		"aria-label": label,
-		role: "img"
-	} : { "aria-hidden": true };
-	return /* @__PURE__ */ u$2("svg", {
+	return /* @__PURE__ */ u$1("svg", {
 		"data-icon-name": remappedFrom ?? name,
 		"data-icon-token": token,
 		"data-align-capitals": alignCapitals,
-		...a11yProps,
+		...label != null ? {
+			"aria-label": label,
+			role: "img"
+		} : { "aria-hidden": true },
 		viewBox,
 		width,
 		height,
-		children: /* @__PURE__ */ u$2("use", { href })
+		children: /* @__PURE__ */ u$1("use", { href })
 	});
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/components/OverflowText.js
+const isWhitespace = (char) => char !== void 0 && /\s/.test(char);
+const avoidWhitespaceBoundary = (contents, centerIndex) => {
+	const isOnBoundary = (index) => isWhitespace(contents[index - 1]) || isWhitespace(contents[index]);
+	if (!isOnBoundary(centerIndex)) return centerIndex;
+	for (let offset = 1; offset < contents.length; offset++) {
+		const before = centerIndex - offset;
+		if (before > 0 && !isOnBoundary(before)) return before;
+		const after = centerIndex + offset;
+		if (after < contents.length && !isOnBoundary(after)) return after;
+	}
+	return centerIndex;
+};
+const centerSplitIndex = (contents) => avoidWhitespaceBoundary(contents, Math.ceil(contents.length / 2));
 const splitCenter = (contents) => {
 	if (contents.length < 2) return [contents, ""];
-	const splitIndex = Math.ceil(contents.length / 2);
+	const splitIndex = centerSplitIndex(contents);
 	return [contents.slice(0, splitIndex), contents.slice(splitIndex)];
 };
 const splitExtension = (contents) => {
 	if (contents.length < 4) return [contents, ""];
 	const extensionIndex = contents.lastIndexOf(".") + 1;
 	const isTooLong = contents.length - extensionIndex > 10;
-	const splitIndex = extensionIndex >= 1 && !isTooLong ? extensionIndex : Math.ceil(contents.length / 2);
+	const splitIndex = extensionIndex >= 1 && !isTooLong ? extensionIndex : centerSplitIndex(contents);
 	return [contents.slice(0, splitIndex), contents.slice(splitIndex)];
 };
 const splitLeafPath = (contents) => {
@@ -6962,45 +7141,44 @@ const splitFirst = (contents, { splitOffset } = {}) => {
 };
 function OverflowMarker({ children, marker, variant = "default" }) {
 	"use no memo";
-	const isFadeVariant = variant === "fade";
-	return /* @__PURE__ */ u$2("div", {
+	return /* @__PURE__ */ u$1("div", {
 		"aria-hidden": true,
 		"data-truncate-marker-cell": true,
-		children: /* @__PURE__ */ u$2("div", {
+		children: /* @__PURE__ */ u$1("div", {
 			"data-truncate-marker": true,
-			children: typeof marker === "function" ? marker({ children }) : isFadeVariant ? /* @__PURE__ */ u$2("span", { "data-truncate-fade": true }) : marker
+			children: typeof marker === "function" ? marker({ children }) : variant === "fade" ? /* @__PURE__ */ u$1("span", { "data-truncate-fade": true }) : marker
 		})
 	});
 }
 function OverflowContent(options) {
 	"use no memo";
 	const { mode, children } = options;
-	return /* @__PURE__ */ u$2("div", { children: [/* @__PURE__ */ u$2("div", {
+	return /* @__PURE__ */ u$1("div", { children: [/* @__PURE__ */ u$1("div", {
 		"data-truncate-content": "visible",
-		children: mode === "fruncate" ? /* @__PURE__ */ u$2("span", { children }) : children
-	}), /* @__PURE__ */ u$2("div", {
+		children: mode === "fruncate" ? /* @__PURE__ */ u$1("span", { children }) : children
+	}), /* @__PURE__ */ u$1("div", {
 		"data-truncate-content": "overflow",
 		"aria-hidden": true,
-		children: mode === "fruncate" ? /* @__PURE__ */ u$2("span", { children }) : children
+		children: mode === "fruncate" ? /* @__PURE__ */ u$1("span", { children }) : children
 	})] });
 }
 function OverflowText({ children, mode = "truncate", marker = "…", variant = "default", ...props }) {
 	"use no memo";
-	const contentNode = /* @__PURE__ */ u$2(OverflowContent, {
+	const contentNode = /* @__PURE__ */ u$1(OverflowContent, {
 		mode,
 		children
 	}, "content");
-	const markerNode = /* @__PURE__ */ u$2(OverflowMarker, {
+	const markerNode = /* @__PURE__ */ u$1(OverflowMarker, {
 		marker,
 		mode,
 		variant
 	}, "marker");
-	const fillNode = /* @__PURE__ */ u$2("div", { "data-truncate-fill": true }, "fill");
-	return /* @__PURE__ */ u$2("div", {
+	const fillNode = /* @__PURE__ */ u$1("div", { "data-truncate-fill": true }, "fill");
+	return /* @__PURE__ */ u$1("div", {
 		"data-truncate-container": mode,
 		"data-truncate-variant": variant,
 		...props,
-		children: /* @__PURE__ */ u$2("div", {
+		children: /* @__PURE__ */ u$1("div", {
 			"data-truncate-grid": true,
 			children: mode === "truncate" ? [contentNode, markerNode] : [
 				markerNode,
@@ -7012,7 +7190,7 @@ function OverflowText({ children, mode = "truncate", marker = "…", variant = "
 }
 function Truncate({ children, ...props }) {
 	"use no memo";
-	return /* @__PURE__ */ u$2(OverflowText, {
+	return /* @__PURE__ */ u$1(OverflowText, {
 		mode: "truncate",
 		...props,
 		children
@@ -7020,7 +7198,7 @@ function Truncate({ children, ...props }) {
 }
 function Fruncate({ children, ...props }) {
 	"use no memo";
-	return /* @__PURE__ */ u$2(OverflowText, {
+	return /* @__PURE__ */ u$1(OverflowText, {
 		mode: "fruncate",
 		...props,
 		children
@@ -7035,11 +7213,11 @@ function MiddleTruncate({ children, contents, priority = "end", split = "center"
 			console.error("MiddleTruncate: contents must be an array of two items");
 			return null;
 		}
-		firstSegment = /* @__PURE__ */ u$2(Truncate, {
+		firstSegment = /* @__PURE__ */ u$1(Truncate, {
 			...props,
 			children: contents[0]
 		});
-		secondSegment = /* @__PURE__ */ u$2(Fruncate, {
+		secondSegment = /* @__PURE__ */ u$1(Fruncate, {
 			...props,
 			children: contents[1]
 		});
@@ -7048,17 +7226,17 @@ function MiddleTruncate({ children, contents, priority = "end", split = "center"
 			console.error("MiddleTruncate: children must be a string");
 			return null;
 		}
-		if (children.length === 0) return /* @__PURE__ */ u$2("div", {
+		if (children.length === 0) return /* @__PURE__ */ u$1("div", {
 			className,
 			style
 		});
-		if (children.length < minimumLength) if (priority === "end") return /* @__PURE__ */ u$2(Fruncate, {
+		if (children.length < minimumLength) if (priority === "end") return /* @__PURE__ */ u$1(Fruncate, {
 			...props,
 			className,
 			style,
 			children
 		});
-		else return /* @__PURE__ */ u$2(Truncate, {
+		else return /* @__PURE__ */ u$1(Truncate, {
 			...props,
 			className,
 			style,
@@ -7094,31 +7272,30 @@ function MiddleTruncate({ children, contents, priority = "end", split = "center"
 		const secondPropOverrides = {};
 		if (firstCanBeSimple) firstPropOverrides.marker = "";
 		if (secondCanBeSimple) secondPropOverrides.marker = "";
-		firstSegment = /* @__PURE__ */ u$2(Truncate, {
+		firstSegment = /* @__PURE__ */ u$1(Truncate, {
 			...props,
 			...firstPropOverrides,
 			children: firstHalfMessage
 		});
-		secondSegment = /* @__PURE__ */ u$2(Fruncate, {
+		secondSegment = /* @__PURE__ */ u$1(Fruncate, {
 			...props,
 			...secondPropOverrides,
 			children: secondHalfMessage
 		});
 	}
-	return /* @__PURE__ */ u$2("div", {
+	return /* @__PURE__ */ u$1("div", {
 		"data-truncate-group-container": "middle",
 		className,
 		style,
-		children: [/* @__PURE__ */ u$2("div", {
+		children: [/* @__PURE__ */ u$1("div", {
 			"data-truncate-segment-priority": priority === "start" || priority === "equal" ? "1" : "2",
 			children: firstSegment
-		}), /* @__PURE__ */ u$2("div", {
+		}), /* @__PURE__ */ u$1("div", {
 			"data-truncate-segment-priority": priority === "end" || priority === "equal" ? "1" : "2",
 			children: secondSegment
 		})]
 	});
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/model/layout.js
 const EMPTY_FILE_TREE_LAYOUT_RANGE = {
@@ -7297,7 +7474,6 @@ function computeFileTreeLayout(rows, metrics) {
 		}
 	};
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/utils/gitStatusPresentation.js
 const GIT_STATUS_LABEL = {
@@ -7317,7 +7493,13 @@ const GIT_STATUS_TITLE = {
 	untracked: "Git status: untracked"
 };
 const GIT_STATUS_DESCENDANT_TITLE = "Contains git status items";
-
+//#endregion
+//#region node_modules/@pierre/trees/dist/render/controllerSnapshotSubscription.js
+function shouldBumpControllerRevision(hasSeenInitialSnapshot) {
+	if (hasSeenInitialSnapshot.current) return true;
+	hasSeenInitialSnapshot.current = true;
+	return false;
+}
 //#endregion
 //#region node_modules/@pierre/trees/dist/render/scrollTarget.js
 function computeFocusedRowScrollIntoView(input) {
@@ -7367,7 +7549,6 @@ function computeViewportOffsetScrollTop(input) {
 	const preservedScrollTop = Math.max(0, Math.min(itemTop - effectiveOffset, maxScrollTop));
 	return preservedScrollTop === currentScrollTop ? null : preservedScrollTop;
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/render/focusHelpers.js
 function focusElement(element) {
@@ -7381,8 +7562,8 @@ function focusElement(element) {
 function getActiveTreeElement(rootElement) {
 	const rootNode = rootElement.getRootNode();
 	if (rootNode instanceof ShadowRoot) {
-		const activeElement$1 = rootNode.activeElement;
-		return activeElement$1 instanceof HTMLElement ? activeElement$1 : null;
+		const activeElement = rootNode.activeElement;
+		return activeElement instanceof HTMLElement ? activeElement : null;
 	}
 	const activeElement = document.activeElement;
 	return activeElement instanceof HTMLElement && rootElement.contains(activeElement) ? activeElement : null;
@@ -7447,7 +7628,6 @@ function getParkedFocusedRowOffset(focusedIndex, itemHeight, range, windowHeight
 	if (focusedIndex > range.end) return windowHeight;
 	return null;
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/render/renameHandoff.js
 function classifyFileTreeRenameHandoff(input) {
@@ -7457,11 +7637,10 @@ function classifyFileTreeRenameHandoff(input) {
 	if (previousRenamingPath === renamingPath) return "ignore";
 	return "focus-input";
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/render/RenameInput.js
 function RenameInput({ ariaLabel, isFlattened = false, ref, value, onBlur, onInput }) {
-	return /* @__PURE__ */ u$2("input", {
+	return /* @__PURE__ */ u$1("input", {
 		ref,
 		"data-item-rename-input": true,
 		...isFlattened ? { "data-item-flattened-rename-input": true } : {},
@@ -7474,7 +7653,6 @@ function RenameInput({ ariaLabel, isFlattened = false, ref, value, onBlur, onInp
 		onPointerDown: (event) => event.stopPropagation()
 	});
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/render/rowAttributes.js
 function computeFileTreeRowElementAttributes(input) {
@@ -7518,7 +7696,6 @@ function computeFileTreeRowElementAttributes(input) {
 		...stateAttributes
 	};
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/render/rowClickPlan.js
 function computeFileTreeRowClickPlan(input) {
@@ -7536,27 +7713,39 @@ function computeFileTreeRowClickPlan(input) {
 		toggleDirectory: !hasModifier && isDirectory
 	};
 }
-
 //#endregion
 //#region node_modules/preact/hooks/dist/hooks.mjs
-var t, r$1, u$1, i$1, o$1 = Object.is, f$1 = 0, c$1 = [], e = n, a$1 = e.__b, v$1 = e.__r, l$1 = e.diffed, m$1 = e.__c, s$1 = e.unmount, p$1 = e.__;
-function d$1(n, t) {
-	e.__h && e.__h(r$1, n, f$1 || t), f$1 = 0;
-	var u = r$1.__H || (r$1.__H = {
+var t;
+var r;
+var u;
+var i;
+var o = Object.is;
+var f = 0;
+var c = [];
+var e = n;
+var a = e.__b;
+var v = e.__r;
+var l = e.diffed;
+var m = e.__c;
+var s = e.unmount;
+var p = e.__;
+function d(n, t) {
+	e.__h && e.__h(r, n, f || t), f = 0;
+	var u = r.__H || (r.__H = {
 		__: [],
 		__h: []
 	});
 	return n >= u.__.length && u.__.push({}), u.__[n];
 }
-function h$1(n) {
-	return f$1 = 1, y$1(D$1, n);
+function h(n) {
+	return f = 1, y(D, n);
 }
-function y$1(n, u, i) {
-	var f = d$1(t++, 2);
-	if (f.t = n, !f.__c && (f.__ = [i ? i(u) : D$1(void 0, u), function(n) {
+function y(n, u, i) {
+	var f = d(t++, 2);
+	if (f.t = n, !f.__c && (f.__ = [i ? i(u) : D(void 0, u), function(n) {
 		var t = f.__N ? f.__N[0] : f.__[0], r = f.t(t, n);
-		o$1(t, r) || (f.__N = [r, f.__[1]], f.__c.setState({}));
-	}], f.__c = r$1, !r$1.__f)) {
+		o(t, r) || (f.__N = [r, f.__[1]], f.__c.setState({}));
+	}], f.__c = r, !r.__f)) {
 		var c = function(n, t, r) {
 			if (!f.__c.__H) return !0;
 			var u = f.__c.__H.__.filter(function(n) {
@@ -7569,128 +7758,128 @@ function y$1(n, u, i) {
 			return u.forEach(function(n) {
 				if (n.__N) {
 					var t = n.__[0];
-					n.__ = n.__N, n.__N = void 0, o$1(t, n.__[0]) || (i = !0);
+					n.__ = n.__N, n.__N = void 0, o(t, n.__[0]) || (i = !0);
 				}
 			}), e && e.call(this, n, t, r) || i;
 		};
-		r$1.__f = !0;
-		var e = r$1.shouldComponentUpdate, a = r$1.componentWillUpdate;
-		r$1.componentWillUpdate = function(n, t, r) {
+		r.__f = !0;
+		var e = r.shouldComponentUpdate, a = r.componentWillUpdate;
+		r.componentWillUpdate = function(n, t, r) {
 			if (4 & this.__g) {
 				var u = e;
 				e = void 0, c(n, t, r), e = u;
 			}
 			a && a.call(this, n, t, r);
-		}, r$1.shouldComponentUpdate = c;
+		}, r.shouldComponentUpdate = c;
 	}
 	return f.__N || f.__;
 }
-function _$1(n, u) {
-	var i = d$1(t++, 3);
-	!e.__s && C$1(i.__H, u) && (i.__ = n, i.u = u, r$1.__H.__h.push(i));
+function _(n, u) {
+	var i = d(t++, 3);
+	!e.__s && C(i.__H, u) && (i.__ = n, i.u = u, r.__H.__h.push(i));
 }
-function A$1(n, u) {
-	var i = d$1(t++, 4);
-	!e.__s && C$1(i.__H, u) && (i.__ = n, i.u = u, r$1.__h.push(i));
+function A(n, u) {
+	var i = d(t++, 4);
+	!e.__s && C(i.__H, u) && (i.__ = n, i.u = u, r.__h.push(i));
 }
-function F$1(n) {
-	return f$1 = 5, q$1(function() {
+function F(n) {
+	return f = 5, q(function() {
 		return { current: n };
 	}, []);
 }
-function q$1(n, r) {
-	var u = d$1(t++, 7);
-	return C$1(u.__H, r) && (u.__ = n(), u.__H = r, u.__h = n), u.__;
+function q(n, r) {
+	var u = d(t++, 7);
+	return C(u.__H, r) && (u.__ = n(), u.__H = r, u.__h = n), u.__;
 }
-function b$1(n, t) {
-	return f$1 = 8, q$1(function() {
+function b(n, t) {
+	return f = 8, q(function() {
 		return n;
 	}, t);
 }
-function g$1() {
-	for (var n; n = c$1.shift();) if (n.__P && n.__H) try {
-		n.__H.__h.forEach(z$1), n.__H.__h.forEach(B$1), n.__H.__h = [];
+function g() {
+	for (var n; n = c.shift();) if (n.__P && n.__H) try {
+		n.__H.__h.forEach(z), n.__H.__h.forEach(B), n.__H.__h = [];
 	} catch (t) {
 		n.__H.__h = [], e.__e(t, n.__v);
 	}
 }
 e.__b = function(n) {
-	r$1 = null, a$1 && a$1(n);
+	r = null, a && a(n);
 }, e.__ = function(n, t) {
-	n && t.__k && t.__k.__m && (n.__m = t.__k.__m), p$1 && p$1(n, t);
+	n && t.__k && t.__k.__m && (n.__m = t.__k.__m), p && p(n, t);
 }, e.__r = function(n) {
-	v$1 && v$1(n), t = 0;
-	var i = (r$1 = n.__c).__H;
-	i && (u$1 === r$1 ? (i.__h = [], r$1.__h = [], i.__.forEach(function(n) {
+	v && v(n), t = 0;
+	var i = (r = n.__c).__H;
+	i && (u === r ? (i.__h = [], r.__h = [], i.__.forEach(function(n) {
 		n.__N && (n.__ = n.__N), n.u = n.__N = void 0;
-	})) : (i.__h.forEach(z$1), i.__h.forEach(B$1), i.__h = [], t = 0)), u$1 = r$1;
+	})) : (i.__h.forEach(z), i.__h.forEach(B), i.__h = [], t = 0)), u = r;
 }, e.diffed = function(n) {
-	l$1 && l$1(n);
+	l && l(n);
 	var t = n.__c;
-	t && t.__H && (t.__H.__h.length && (1 !== c$1.push(t) && i$1 === e.requestAnimationFrame || ((i$1 = e.requestAnimationFrame) || w$1)(g$1)), t.__H.__.forEach(function(n) {
+	t && t.__H && (t.__H.__h.length && (1 !== c.push(t) && i === e.requestAnimationFrame || ((i = e.requestAnimationFrame) || w)(g)), t.__H.__.forEach(function(n) {
 		n.u && (n.__H = n.u), n.u = void 0;
-	})), u$1 = r$1 = null;
+	})), u = r = null;
 }, e.__c = function(n, t) {
 	t.some(function(n) {
 		try {
-			n.__h.forEach(z$1), n.__h = n.__h.filter(function(n) {
-				return !n.__ || B$1(n);
+			n.__h.forEach(z), n.__h = n.__h.filter(function(n) {
+				return !n.__ || B(n);
 			});
 		} catch (r) {
 			t.some(function(n) {
 				n.__h && (n.__h = []);
 			}), t = [], e.__e(r, n.__v);
 		}
-	}), m$1 && m$1(n, t);
+	}), m && m(n, t);
 }, e.unmount = function(n) {
-	s$1 && s$1(n);
+	s && s(n);
 	var t, r = n.__c;
 	r && r.__H && (r.__H.__.forEach(function(n) {
 		try {
-			z$1(n);
+			z(n);
 		} catch (n) {
 			t = n;
 		}
 	}), r.__H = void 0, t && e.__e(t, r.__v));
 };
-var k$1 = "function" == typeof requestAnimationFrame;
-function w$1(n) {
+var k = "function" == typeof requestAnimationFrame;
+function w(n) {
 	var t, r = function() {
-		clearTimeout(u), k$1 && cancelAnimationFrame(t), setTimeout(n);
+		clearTimeout(u), k && cancelAnimationFrame(t), setTimeout(n);
 	}, u = setTimeout(r, 35);
-	k$1 && (t = requestAnimationFrame(r));
+	k && (t = requestAnimationFrame(r));
 }
-function z$1(n) {
-	var t = r$1, u = n.__c;
-	"function" == typeof u && (n.__c = void 0, u()), r$1 = t;
+function z(n) {
+	var t = r, u = n.__c;
+	"function" == typeof u && (n.__c = void 0, u()), r = t;
 }
-function B$1(n) {
-	var t = r$1;
-	n.__c = n.__(), r$1 = t;
+function B(n) {
+	var t = r;
+	n.__c = n.__(), r = t;
 }
-function C$1(n, t) {
+function C(n, t) {
 	return !n || n.length !== t.length || t.some(function(t, r) {
-		return !o$1(t, n[r]);
+		return !o(t, n[r]);
 	});
 }
-function D$1(n, t) {
+function D(n, t) {
 	return "function" == typeof t ? t(n) : t;
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/render/FileTreeView.js
+/** @jsxImportSource preact */
 function formatFlattenedSegments(row, renameInput = null, dragTargetFlattenedSegmentPath = null) {
 	"use no memo";
 	const segments = row.flattenedSegments;
 	if (segments == null || segments.length === 0) return renameInput ?? row.name;
-	return /* @__PURE__ */ u$2("span", {
+	return /* @__PURE__ */ u$1("span", {
 		"data-item-flattened-subitems": true,
 		children: segments.map((segment, index) => {
 			const isLast = index === segments.length - 1;
-			return /* @__PURE__ */ u$2(k$2, { children: [/* @__PURE__ */ u$2("span", {
+			return /* @__PURE__ */ u$1(k$1, { children: [/* @__PURE__ */ u$1("span", {
 				"data-item-flattened-subitem": segment.path,
 				"data-item-flattened-subitem-drag-target": dragTargetFlattenedSegmentPath === segment.path ? "true" : void 0,
-				children: isLast && renameInput != null ? renameInput : /* @__PURE__ */ u$2(Truncate, { children: segment.name })
+				children: isLast && renameInput != null ? renameInput : /* @__PURE__ */ u$1(Truncate, { children: segment.name })
 			}), index < segments.length - 1 ? " / " : ""] }, segment.path);
 		})
 	});
@@ -7740,7 +7929,6 @@ function computeFileTreeViewLayoutState({ controller, itemHeight, overscan, scro
 	};
 }
 const TOUCH_LONG_PRESS_DELAY = 400;
-const TOUCH_LONG_PRESS_MOVE_THRESHOLD = 10;
 const DRAG_EDGE_SCROLL_THRESHOLD = 40;
 const DRAG_EDGE_SCROLL_MAX_SPEED = 18;
 function getPointElement(rootNode, clientX, clientY) {
@@ -7815,15 +8003,9 @@ function shouldUseCustomPointerDragImage() {
 }
 function getDragEdgeScrollDelta(clientY, scrollRect) {
 	const topDistance = clientY - scrollRect.top;
-	if (topDistance < DRAG_EDGE_SCROLL_THRESHOLD) {
-		const clampedDistance = Math.max(0, topDistance);
-		return -Math.ceil((DRAG_EDGE_SCROLL_THRESHOLD - clampedDistance) / DRAG_EDGE_SCROLL_THRESHOLD * DRAG_EDGE_SCROLL_MAX_SPEED);
-	}
+	if (topDistance < DRAG_EDGE_SCROLL_THRESHOLD) return -Math.ceil((DRAG_EDGE_SCROLL_THRESHOLD - Math.max(0, topDistance)) / DRAG_EDGE_SCROLL_THRESHOLD * DRAG_EDGE_SCROLL_MAX_SPEED);
 	const bottomDistance = scrollRect.bottom - clientY;
-	if (bottomDistance < DRAG_EDGE_SCROLL_THRESHOLD) {
-		const clampedDistance = Math.max(0, bottomDistance);
-		return Math.ceil((DRAG_EDGE_SCROLL_THRESHOLD - clampedDistance) / DRAG_EDGE_SCROLL_THRESHOLD * DRAG_EDGE_SCROLL_MAX_SPEED);
-	}
+	if (bottomDistance < DRAG_EDGE_SCROLL_THRESHOLD) return Math.ceil((DRAG_EDGE_SCROLL_THRESHOLD - Math.max(0, bottomDistance)) / DRAG_EDGE_SCROLL_THRESHOLD * DRAG_EDGE_SCROLL_MAX_SPEED);
 	return 0;
 }
 function getBuiltInGitStatusDecoration(gitStatus, containsGitChange) {
@@ -7886,7 +8068,7 @@ function canKeyUseStickyKeyboardState(event, contextMenuEnabled) {
 	if ((event.ctrlKey || event.metaKey) && isSpaceSelectionKey(event)) return true;
 	return event.key === "ArrowDown" || event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "ArrowUp";
 }
-const BLOCKED_CONTEXT_MENU_NAV_KEYS = new Set([
+const BLOCKED_CONTEXT_MENU_NAV_KEYS = /* @__PURE__ */ new Set([
 	"ArrowDown",
 	"ArrowLeft",
 	"ArrowRight",
@@ -7900,8 +8082,8 @@ function isEventInContextMenu(event) {
 	for (const entry of event.composedPath()) {
 		if (!(entry instanceof HTMLElement)) continue;
 		if (entry.dataset.fileTreeContextMenuRoot === "true") return true;
-		if (entry.dataset.type === "context-menu-anchor" || entry.dataset.type === CONTEXT_MENU_TRIGGER_TYPE) return true;
-		if (entry.getAttribute("slot") === CONTEXT_MENU_SLOT_NAME) return true;
+		if (entry.dataset.type === "context-menu-anchor" || entry.dataset.type === "context-menu-trigger") return true;
+		if (entry.getAttribute("slot") === "context-menu") return true;
 	}
 	return false;
 }
@@ -7991,10 +8173,19 @@ function isBuiltInDecorationIconName(name) {
 }
 function renderRowDecoration(decoration, resolveIcon) {
 	if (decoration == null) return null;
-	if ("text" in decoration) return /* @__PURE__ */ u$2("span", {
-		title: decoration.title,
-		children: decoration.text
-	});
+	if ("text" in decoration) {
+		if (decoration.parts != null) return /* @__PURE__ */ u$1("span", {
+			title: decoration.title,
+			children: decoration.parts.map((part, index) => /* @__PURE__ */ u$1("span", {
+				style: { color: part.color },
+				children: part.text
+			}, index))
+		});
+		return /* @__PURE__ */ u$1("span", {
+			title: decoration.title,
+			children: decoration.text
+		});
+	}
 	const icon = typeof decoration.icon === "string" ? isBuiltInDecorationIconName(decoration.icon) ? resolveIcon(decoration.icon) : { name: decoration.icon } : isBuiltInDecorationIconName(decoration.icon.name) ? (() => {
 		const resolvedIcon = resolveIcon(decoration.icon.name);
 		const { name: _ignoredName, ...iconOverrides } = decoration.icon;
@@ -8003,9 +8194,9 @@ function renderRowDecoration(decoration, resolveIcon) {
 			...iconOverrides
 		};
 	})() : decoration.icon;
-	return /* @__PURE__ */ u$2("span", {
+	return /* @__PURE__ */ u$1("span", {
 		title: decoration.title,
-		children: /* @__PURE__ */ u$2(Icon, { ...icon })
+		children: /* @__PURE__ */ u$1(Icon, { ...icon })
 	});
 }
 function focusFirstMenuElement(menuElement) {
@@ -8021,40 +8212,40 @@ function focusFirstMenuElement(menuElement) {
 }
 function renderFileTreeRowContent(row, resolveIcon, { actionLaneEnabled = false, customDecoration = null, decorationLaneEnabled = false, dragTargetFlattenedSegmentPath = null, gitDecoration = null, gitLaneActive = false, renameInput = null, showDecorativeActionAffordance = false } = {}) {
 	const targetPath = getFileTreeRowPath(row);
-	return /* @__PURE__ */ u$2(k$2, { children: [
-		row.depth > 0 ? /* @__PURE__ */ u$2("div", {
+	return /* @__PURE__ */ u$1(k$1, { children: [
+		row.depth > 0 ? /* @__PURE__ */ u$1("div", {
 			"data-item-section": "spacing",
-			children: Array.from({ length: row.depth }).map((_, index) => /* @__PURE__ */ u$2("div", {
+			children: Array.from({ length: row.depth }).map((_, index) => /* @__PURE__ */ u$1("div", {
 				"data-item-section": "spacing-item",
 				"data-ancestor-path": row.ancestorPaths[index]
 			}, index))
 		}) : null,
-		/* @__PURE__ */ u$2("div", {
+		/* @__PURE__ */ u$1("div", {
 			"data-item-section": "icon",
-			children: row.kind === "directory" ? /* @__PURE__ */ u$2(Icon, { ...resolveIcon("file-tree-icon-chevron") }) : /* @__PURE__ */ u$2(Icon, { ...resolveIcon("file-tree-icon-file", targetPath) })
+			children: row.kind === "directory" ? /* @__PURE__ */ u$1(Icon, { ...resolveIcon("file-tree-icon-chevron") }) : /* @__PURE__ */ u$1(Icon, { ...resolveIcon("file-tree-icon-file", targetPath) })
 		}),
-		/* @__PURE__ */ u$2("div", {
+		/* @__PURE__ */ u$1("div", {
 			"data-item-section": "content",
-			children: row.isFlattened ? formatFlattenedSegments(row, renameInput, dragTargetFlattenedSegmentPath) : renameInput ?? /* @__PURE__ */ u$2(MiddleTruncate, {
+			children: row.isFlattened ? formatFlattenedSegments(row, renameInput, dragTargetFlattenedSegmentPath) : renameInput ?? /* @__PURE__ */ u$1(MiddleTruncate, {
 				minimumLength: 5,
 				split: "extension",
 				children: row.name
 			})
 		}),
-		decorationLaneEnabled ? /* @__PURE__ */ u$2("div", {
+		decorationLaneEnabled ? /* @__PURE__ */ u$1("div", {
 			"data-item-section": "decoration",
 			children: customDecoration != null ? renderRowDecoration(customDecoration, resolveIcon) : null
 		}) : null,
-		gitLaneActive ? /* @__PURE__ */ u$2("div", {
+		gitLaneActive ? /* @__PURE__ */ u$1("div", {
 			"data-item-section": "git",
 			children: renderRowDecoration(gitDecoration, resolveIcon)
 		}) : null,
-		actionLaneEnabled ? /* @__PURE__ */ u$2("div", {
+		actionLaneEnabled ? /* @__PURE__ */ u$1("div", {
 			"data-item-section": "action",
-			children: showDecorativeActionAffordance ? /* @__PURE__ */ u$2("span", {
+			children: showDecorativeActionAffordance ? /* @__PURE__ */ u$1("span", {
 				"aria-hidden": "true",
 				"data-item-action-affordance": "decorative",
-				children: /* @__PURE__ */ u$2(Icon, { ...resolveIcon("file-tree-icon-ellipsis") })
+				children: /* @__PURE__ */ u$1(Icon, { ...resolveIcon("file-tree-icon-ellipsis") })
 			}) : null
 		}) : null
 	] });
@@ -8073,7 +8264,7 @@ function renderStyledRow(frame, row, key, options = {}) {
 	const showDecorativeActionAffordance = actionLaneEnabled && contextMenuButtonVisibility === "always";
 	const isRenamingRow = renameView.getPath() === targetPath;
 	const renamingValue = isRenamingRow ? renameView.getValue() : "";
-	const renameInput = isSticky || !isRenamingRow ? null : /* @__PURE__ */ u$2(RenameInput, {
+	const renameInput = isSticky || !isRenamingRow ? null : /* @__PURE__ */ u$1(RenameInput, {
 		ref: registerRenameInput,
 		ariaLabel: `Rename ${getFileTreeRowAriaLabel(row)}`,
 		isFlattened: row.isFlattened,
@@ -8144,11 +8335,11 @@ function renderStyledRow(frame, row, key, options = {}) {
 			registerButton(targetPath, element);
 		}
 	};
-	if (!isSticky && isRenamingRow) return /* @__PURE__ */ u$2("div", {
+	if (!isSticky && isRenamingRow) return /* @__PURE__ */ u$1("div", {
 		...commonProps,
 		children: rowContent
 	});
-	return /* @__PURE__ */ u$2("button", {
+	return /* @__PURE__ */ u$1("button", {
 		...commonProps,
 		type: "button",
 		draggable: dragAndDropEnabled && !isParked,
@@ -8176,60 +8367,61 @@ function renderRangeChildren(frame, range, hiddenRowPaths) {
 	if (range.end < range.start) return [];
 	return frame.controller.getVisibleRows(range.start, range.end).filter((row) => !hiddenRowPaths.has(getFileTreeRowPath(row))).map((row, slotIndex) => renderStyledRow(frame, row, range.start + slotIndex));
 }
-function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDirectories, directoriesWithGitChanges, icons, instanceId, itemHeight = FILE_TREE_DEFAULT_ITEM_HEIGHT, overscan = FILE_TREE_DEFAULT_OVERSCAN, renamingEnabled = false, renderRowDecoration: renderRowDecoration$1, searchBlurBehavior = "close", searchEnabled = false, searchFakeFocus = false, slotHost, stickyFolders = false, initialViewportHeight = FILE_TREE_DEFAULT_VIEWPORT_HEIGHT }) {
+function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDirectories, directoriesWithGitChanges, icons, instanceId, itemHeight = FILE_TREE_DEFAULT_ITEM_HEIGHT, overscan = 10, renamingEnabled = false, renderRowDecoration, searchBlurBehavior = "close", searchEnabled = false, searchFakeFocus = false, slotHost, stickyFolders = false, initialViewportHeight = 420 }) {
 	"use no memo";
-	const contextMenuAnchorRef = F$1(null);
-	const contextMenuTriggerRef = F$1(null);
-	const isScrollingRef = F$1(false);
-	const listRef = F$1(null);
-	const renameInputRef = F$1(null);
-	const rootRef = F$1(null);
-	const scrollRef = F$1(null);
-	const searchInputRef = F$1(null);
-	const rowButtonRefs = F$1(/* @__PURE__ */ new Map());
-	const stickyRowButtonRefs = F$1(/* @__PURE__ */ new Map());
-	const updateViewportRef = F$1(() => {});
-	const measuredViewportHeightRef = F$1(null);
-	const processedScrollRequestIdRef = F$1(0);
-	const initialFocusedScrollAppliedRef = F$1(false);
-	const initialFocusedScrollControllerRef = F$1(null);
+	const contextMenuAnchorRef = F(null);
+	const contextMenuTriggerRef = F(null);
+	const isScrollingRef = F(false);
+	const listRef = F(null);
+	const renameInputRef = F(null);
+	const rootRef = F(null);
+	const scrollRef = F(null);
+	const searchInputRef = F(null);
+	const rowButtonRefs = F(/* @__PURE__ */ new Map());
+	const stickyRowButtonRefs = F(/* @__PURE__ */ new Map());
+	const updateViewportRef = F(() => {});
+	const measuredViewportHeightRef = F(null);
+	const processedScrollRequestIdRef = F(0);
+	const initialFocusedScrollAppliedRef = F(false);
+	const initialFocusedScrollControllerRef = F(null);
 	if (initialFocusedScrollControllerRef.current !== controller) {
 		initialFocusedScrollAppliedRef.current = false;
 		initialFocusedScrollControllerRef.current = controller;
 	}
-	const domFocusOwnerRef = F$1(false);
-	const previousFocusedPathRef = F$1(null);
-	const previousRenamingPathRef = F$1(null);
-	const restoreTreeFocusAfterSearchCloseRef = F$1(false);
-	const restoreTreeFocusViewportOffsetRef = F$1(null);
-	const dragAutoScrollFrameRef = F$1(null);
-	const dragHoverOpenKeyRef = F$1(null);
-	const dragHoverOpenTimerRef = F$1(null);
-	const dragPointRef = F$1(null);
-	const dragPreviewRef = F$1(null);
-	const dragRowSnapshotRef = F$1(null);
-	const touchCleanupRef = F$1(null);
-	const touchDragActiveRef = F$1(false);
-	const touchPreviewOffsetRef = F$1(null);
-	const touchSourceElementRef = F$1(null);
-	const touchStartPointRef = F$1(null);
-	const touchLongPressTimerRef = F$1(null);
-	const ignoredInheritanceCache = q$1(() => /* @__PURE__ */ new Map(), []);
-	const [, setControllerRevision] = h$1(0);
-	const [activeItemPath, setActiveItemPath] = h$1(null);
-	const [contextHoverPath, setContextHoverPath] = h$1(null);
-	const [contextMenuAnchorTop, setContextMenuAnchorTop] = h$1(null);
-	const [lastContextMenuInteraction, setLastContextMenuInteraction] = h$1(null);
-	const [scrollSettledRevision, setScrollSettledRevision] = h$1(0);
-	const [contextMenuState, setContextMenuState] = h$1(null);
-	const contextMenuStateRef = F$1(contextMenuState);
+	const domFocusOwnerRef = F(false);
+	const previousFocusedPathRef = F(null);
+	const previousRenamingPathRef = F(null);
+	const restoreTreeFocusAfterSearchCloseRef = F(false);
+	const restoreTreeFocusViewportOffsetRef = F(null);
+	const dragAutoScrollFrameRef = F(null);
+	const dragHoverOpenKeyRef = F(null);
+	const dragHoverOpenTimerRef = F(null);
+	const dragPointRef = F(null);
+	const dragPreviewRef = F(null);
+	const dragRowSnapshotRef = F(null);
+	const touchCleanupRef = F(null);
+	const touchDragActiveRef = F(false);
+	const touchPreviewOffsetRef = F(null);
+	const touchSourceElementRef = F(null);
+	const touchStartPointRef = F(null);
+	const touchLongPressTimerRef = F(null);
+	const ignoredInheritanceCache = q(() => /* @__PURE__ */ new Map(), []);
+	const [, setControllerRevision] = h(0);
+	const hasSeenInitialControllerSnapshotRef = F(false);
+	const [activeItemPath, setActiveItemPath] = h(null);
+	const [contextHoverPath, setContextHoverPath] = h(null);
+	const [contextMenuAnchorTop, setContextMenuAnchorTop] = h(null);
+	const [lastContextMenuInteraction, setLastContextMenuInteraction] = h(null);
+	const [scrollSettledRevision, setScrollSettledRevision] = h(0);
+	const [contextMenuState, setContextMenuState] = h(null);
+	const contextMenuStateRef = F(contextMenuState);
 	contextMenuStateRef.current = contextMenuState;
-	const pendingStickyFocusPathRef = F$1(null);
-	const pendingStickyKeyboardFocusPathRef = F$1(null);
-	const pendingStickyKeyboardViewportOffsetRef = F$1(null);
-	const pendingStickyKeyboardScrollTopRef = F$1(null);
-	const debugContextMenuTriggerPathRef = F$1(null);
-	const debugDisableScrollSuppressionRef = F$1(false);
+	const pendingStickyFocusPathRef = F(null);
+	const pendingStickyKeyboardFocusPathRef = F(null);
+	const pendingStickyKeyboardViewportOffsetRef = F(null);
+	const pendingStickyKeyboardScrollTopRef = F(null);
+	const debugContextMenuTriggerPathRef = F(null);
+	const debugDisableScrollSuppressionRef = F(false);
 	const clearPendingStickyKeyboardState = () => {
 		pendingStickyKeyboardFocusPathRef.current = null;
 		pendingStickyKeyboardViewportOffsetRef.current = null;
@@ -8251,17 +8443,17 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 		};
 		pendingStickyKeyboardScrollTopRef.current = null;
 	};
-	const skipInitialSearchAutoFocusRef = F$1(searchBlurBehavior === "retain" && controller.isSearchOpen());
-	const [fakeSearchFocusActive, setFakeSearchFocusActive] = h$1(searchFakeFocus);
-	_$1(() => {
+	const skipInitialSearchAutoFocusRef = F(searchBlurBehavior === "retain" && controller.isSearchOpen());
+	const [fakeSearchFocusActive, setFakeSearchFocusActive] = h(searchFakeFocus);
+	_(() => {
 		if (!searchFakeFocus) setFakeSearchFocusActive(false);
 	}, [searchFakeFocus]);
-	const searchInputUserInteractedRef = F$1(false);
-	const markSearchInputInteracted = b$1(() => {
+	const searchInputUserInteractedRef = F(false);
+	const markSearchInputInteracted = b(() => {
 		searchInputUserInteractedRef.current = true;
 		setFakeSearchFocusActive((previous) => previous ? false : previous);
 	}, []);
-	const [layoutState, setLayoutState] = h$1(() => computeFileTreeViewLayoutState({
+	const [layoutState, setLayoutState] = h(() => computeFileTreeViewLayoutState({
 		controller,
 		itemHeight,
 		overscan,
@@ -8269,8 +8461,8 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 		stickyFolders,
 		viewportHeight: initialViewportHeight
 	}));
-	const [hasStickyUiMount, setHasStickyUiMount] = h$1(false);
-	_$1(() => {
+	const [hasStickyUiMount, setHasStickyUiMount] = h(false);
+	_(() => {
 		setHasStickyUiMount(true);
 	}, []);
 	const contextMenuEnabled = composition?.contextMenu?.enabled === true || composition?.contextMenu?.render != null || composition?.contextMenu?.onOpen != null || composition?.contextMenu?.onClose != null;
@@ -8278,7 +8470,7 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 	const contextMenuButtonTriggerEnabled = contextMenuTriggerMode === "both" || contextMenuTriggerMode === "button";
 	const contextMenuButtonVisibility = composition?.contextMenu?.buttonVisibility ?? "when-needed";
 	const contextMenuRightClickEnabled = contextMenuTriggerMode === "both" || contextMenuTriggerMode === "right-click";
-	A$1(() => {
+	A(() => {
 		const rootElement = rootRef.current;
 		if (rootElement == null) return;
 		const handleDebugSetContextMenuTrigger = (event) => {
@@ -8299,20 +8491,20 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 			rootElement.removeEventListener("file-tree-debug-set-scroll-suppression", handleDebugSetScrollSuppression);
 		};
 	}, []);
-	const registerRowButton = b$1((path, element) => {
+	const registerRowButton = b((path, element) => {
 		setButtonRef(rowButtonRefs.current, path, element);
 	}, []);
-	const registerStickyRowButton = b$1((path, element) => {
+	const registerStickyRowButton = b((path, element) => {
 		setButtonRef(stickyRowButtonRefs.current, path, element);
 	}, []);
-	const registerRenameInput = b$1((element) => {
+	const registerRenameInput = b((element) => {
 		renameInputRef.current = element;
 	}, []);
-	const getTriggerAnchorButton = b$1((path) => {
+	const getTriggerAnchorButton = b((path) => {
 		return getContextMenuAnchorButton(path, stickyRowButtonRefs.current, rowButtonRefs.current);
 	}, []);
 	const gitLaneActive = gitStatusByPath != null || ignoredGitDirectories != null || directoriesWithGitChanges != null;
-	const { resolveIcon } = q$1(() => createFileTreeIconResolver(icons), [icons]);
+	const { resolveIcon } = q(() => createFileTreeIconResolver(icons), [icons]);
 	const renameView = controller[FILE_TREE_RENAME_VIEW]();
 	const renamingPath = renameView.getPath();
 	const isRenaming = renamingPath != null;
@@ -8323,13 +8515,13 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 	const scrollRequest = controller.getScrollRequest();
 	const dragAndDropEnabled = controller.isDragAndDropEnabled();
 	const dragSession = controller.getDragSession();
-	const draggedPathSet = q$1(() => dragSession == null ? null : new Set(dragSession.draggedPaths), [dragSession]);
+	const draggedPathSet = q(() => dragSession == null ? null : new Set(dragSession.draggedPaths), [dragSession]);
 	const dragTarget = dragSession?.target ?? null;
 	const draggedPrimaryPath = dragSession?.primaryPath ?? null;
 	const treeDomId = getFileTreeRootDomId(instanceId);
 	const { overlayHeight: overlayRowsHeight, overlayRows, snapshot: layoutSnapshot, visibleRows } = layoutState;
 	const resolvedViewportHeight = layoutSnapshot.physical.viewportHeight;
-	const range = q$1(() => ({
+	const range = q(() => ({
 		end: layoutSnapshot.window.endIndex,
 		start: layoutSnapshot.window.startIndex
 	}), [layoutSnapshot.window.endIndex, layoutSnapshot.window.startIndex]);
@@ -8337,24 +8529,24 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 	const occludedStickyRows = layoutSnapshot.sticky.rows;
 	const totalScrollableHeight = layoutSnapshot.physical.totalHeight;
 	const stickyOverlayHeight = layoutSnapshot.sticky.height;
-	const stickyRowPathSet = q$1(() => new Set(occludedStickyRows.map((entry) => getFileTreeRowPath(entry.row))), [occludedStickyRows]);
+	const stickyRowPathSet = q(() => new Set(occludedStickyRows.map((entry) => getFileTreeRowPath(entry.row))), [occludedStickyRows]);
 	const focusedRowIsMounted = focusedIndex >= 0 && focusedIndex >= range.start && focusedIndex <= range.end;
-	const renderDecorationForRow = b$1((row, targetPath) => renderRowDecoration$1?.({
+	const renderDecorationForRow = b((row, targetPath) => renderRowDecoration?.({
 		item: createContextMenuItem(row, targetPath),
 		row
-	}) ?? null, [renderRowDecoration$1]);
-	const restoreContextMenuFocus = b$1((restorePath) => {
+	}) ?? null, [renderRowDecoration]);
+	const restoreContextMenuFocus = b((restorePath) => {
 		if (focusElement(restorePath == null ? null : rowButtonRefs.current.get(restorePath) ?? null)) return true;
 		return focusElement(rootRef.current);
 	}, []);
-	const restoreFocusToTree = b$1((path) => {
+	const restoreFocusToTree = b((path) => {
 		restoreContextMenuFocus(controller.focusNearestPath(path));
 	}, [controller, restoreContextMenuFocus]);
-	const restoreFocusToTreeRef = F$1(restoreFocusToTree);
+	const restoreFocusToTreeRef = F(restoreFocusToTree);
 	restoreFocusToTreeRef.current = restoreFocusToTree;
-	const shouldRestoreContextMenuFocusRef = F$1(true);
-	const closeContextMenuRef = F$1(() => {});
-	const closeContextMenu = b$1((restoreFocus = true) => {
+	const shouldRestoreContextMenuFocusRef = F(true);
+	const closeContextMenuRef = F(() => {});
+	const closeContextMenu = b((restoreFocus = true) => {
 		const currentContextMenuState = contextMenuStateRef.current;
 		if (currentContextMenuState == null) return;
 		shouldRestoreContextMenuFocusRef.current = shouldRestoreContextMenuFocusRef.current && restoreFocus;
@@ -8363,11 +8555,11 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 		if (shouldRestoreContextMenuFocusRef.current) restoreFocusToTree(currentContextMenuState.path);
 	}, [composition?.contextMenu, restoreFocusToTree]);
 	closeContextMenuRef.current = closeContextMenu;
-	const updateTriggerPosition = b$1((itemButton) => {
+	const updateTriggerPosition = b((itemButton) => {
 		const nextTop = itemButton == null ? null : getContextMenuAnchorTop(rootRef.current, itemButton);
 		setContextMenuAnchorTop((previousTop) => previousTop === nextTop ? previousTop : nextTop);
 	}, []);
-	const openContextMenuForRow = b$1((row, targetPath, options) => {
+	const openContextMenuForRow = b((row, targetPath, options) => {
 		const item = controller.getItem(targetPath);
 		if (item == null) return;
 		const anchorButton = getTriggerAnchorButton(targetPath);
@@ -8391,7 +8583,7 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 		getTriggerAnchorButton,
 		updateTriggerPosition
 	]);
-	const startRenameFromPath = b$1((path) => {
+	const startRenameFromPath = b((path) => {
 		if (!renamingEnabled) return;
 		if (controller.isSearchOpen()) {
 			const scrollElement = scrollRef.current;
@@ -8409,7 +8601,7 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 		renamingEnabled,
 		resolvedViewportHeight
 	]);
-	const revealCanonicalRowAtStickyOffset = b$1((path, { restoreTreeFocus = true, targetOffset = "live-overlay" } = {}) => {
+	const revealCanonicalRowAtStickyOffset = b((path, { restoreTreeFocus = true, targetOffset = "live-overlay" } = {}) => {
 		const scrollElement = scrollRef.current;
 		if (scrollElement == null) return false;
 		controller.focusPath(path);
@@ -8622,7 +8814,7 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 			if (moveTouch == null || startPoint == null) return;
 			const deltaX = moveTouch.clientX - startPoint.clientX;
 			const deltaY = moveTouch.clientY - startPoint.clientY;
-			if (deltaX * deltaX + deltaY * deltaY <= TOUCH_LONG_PRESS_MOVE_THRESHOLD * TOUCH_LONG_PRESS_MOVE_THRESHOLD) return;
+			if (deltaX * deltaX + deltaY * deltaY <= 100) return;
 			clearPendingTouchStart();
 		};
 		const handlePendingTouchEnd = () => {
@@ -8703,6 +8895,7 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 			return;
 		}
 		if (renameView.isActive()) {
+			if (event.isComposing || event.keyCode === 229) return;
 			if (event.key === "Escape") renameView.cancel();
 			else if (event.key === "Enter") renameView.commit();
 			else return;
@@ -8726,9 +8919,9 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 			} else if (event.key === "Enter") {
 				const currentFocusedPath = controller.getFocusedPath();
 				if (currentFocusedPath != null) controller.selectOnlyPath(currentFocusedPath);
-				const scrollElement$1 = scrollRef.current;
-				const viewportHeight = readMeasuredViewportHeight(scrollElement$1, resolvedViewportHeight);
-				restoreTreeFocusViewportOffsetRef.current = focusedIndex < 0 || scrollElement$1 == null ? null : Math.max(0, Math.min(focusedIndex * itemHeight - scrollElement$1.scrollTop, Math.max(0, viewportHeight - itemHeight)));
+				const scrollElement = scrollRef.current;
+				const viewportHeight = readMeasuredViewportHeight(scrollElement, resolvedViewportHeight);
+				restoreTreeFocusViewportOffsetRef.current = focusedIndex < 0 || scrollElement == null ? null : Math.max(0, Math.min(focusedIndex * itemHeight - scrollElement.scrollTop, Math.max(0, viewportHeight - itemHeight)));
 				restoreTreeFocusAfterSearchCloseRef.current = true;
 				controller.closeSearch();
 			} else if (event.key === "ArrowDown") controller.focusNextSearchMatch();
@@ -8754,8 +8947,8 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 		const activeStickyFocusPath = activeTreeElement?.dataset.fileTreeStickyPath ?? null;
 		const activeStickyRowOwnsFocus = activeTreeElement?.dataset.fileTreeStickyRow === "true" && activeStickyFocusPath != null;
 		if (activeStickyRowOwnsFocus && activeStickyFocusPath !== focusedPath && mountedStickyRowPathSet.has(activeStickyFocusPath)) {
-			const scrollElement$1 = scrollRef.current;
-			preserveStickyKeyboardFocusAtScrollTop(activeStickyFocusPath, scrollElement$1?.scrollTop ?? null);
+			const scrollElement = scrollRef.current;
+			preserveStickyKeyboardFocusAtScrollTop(activeStickyFocusPath, scrollElement?.scrollTop ?? null);
 			controller.focusPath(activeStickyFocusPath);
 		}
 		const effectiveFocusedPath = controller.getFocusedPath();
@@ -8822,7 +9015,7 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 		event.preventDefault();
 		event.stopPropagation();
 	};
-	A$1(() => {
+	A(() => {
 		if (!searchEnabled || !isSearchOpen) return;
 		if (skipInitialSearchAutoFocusRef.current) {
 			skipInitialSearchAutoFocusRef.current = false;
@@ -8830,7 +9023,7 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 		}
 		focusElement(searchInputRef.current);
 	}, [isSearchOpen, searchEnabled]);
-	A$1(() => {
+	A(() => {
 		const input = renameInputRef.current;
 		switch (classifyFileTreeRenameHandoff({
 			hasRenderedInput: input != null,
@@ -8863,7 +9056,7 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 		revealCanonicalRowAtStickyOffset,
 		stickyRowPathSet
 	]);
-	A$1(() => {
+	A(() => {
 		const rootElement = rootRef.current;
 		if (rootElement == null) return;
 		let nullFocusOutTimer = null;
@@ -8913,13 +9106,13 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 			rootElement.removeEventListener("focusout", onFocusOut);
 		};
 	}, []);
-	A$1(() => {
+	A(() => {
 		const rootElement = rootRef.current;
 		if (rootElement == null) return;
 		if (layoutSnapshot.physical.scrollTop <= 0) rootElement.dataset.scrollAtTop = "true";
 		else delete rootElement.dataset.scrollAtTop;
 	}, [layoutSnapshot.physical.scrollTop]);
-	A$1(() => {
+	A(() => {
 		let scrollTimer = null;
 		const scrollElement = scrollRef.current;
 		const listElement = listRef.current;
@@ -8950,10 +9143,8 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 			}
 		}
 		updateViewportRef.current = update;
-		let hasSeenInitialControllerSnapshot = false;
 		const unsubscribe = controller.subscribe(() => {
-			if (hasSeenInitialControllerSnapshot) setControllerRevision((revision) => revision + 1);
-			else hasSeenInitialControllerSnapshot = true;
+			if (shouldBumpControllerRevision(hasSeenInitialControllerSnapshotRef)) setControllerRevision((revision) => revision + 1);
 			update();
 		});
 		const markScrolling = () => {
@@ -9002,7 +9193,7 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 			markScrolling();
 			markOverlayReveal();
 		};
-		const SCROLL_KEYS = new Set([
+		const SCROLL_KEYS = /* @__PURE__ */ new Set([
 			"ArrowUp",
 			"ArrowDown",
 			"ArrowLeft",
@@ -9052,7 +9243,7 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 		overscan,
 		stickyFolders
 	]);
-	A$1(() => {
+	A(() => {
 		if (contextMenuEnabled || contextMenuState == null) return;
 		closeContextMenu(false);
 	}, [
@@ -9060,8 +9251,8 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 		contextMenuEnabled,
 		contextMenuState
 	]);
-	const activeContextMenuKey = q$1(() => contextMenuState == null ? null : `${contextMenuState.path}::${contextMenuState.source}`, [contextMenuState]);
-	A$1(() => {
+	const activeContextMenuKey = q(() => contextMenuState == null ? null : `${contextMenuState.path}::${contextMenuState.source}`, [contextMenuState]);
+	A(() => {
 		if (activeContextMenuKey == null) {
 			slotHost?.clearSlotContent(CONTEXT_MENU_SLOT_NAME);
 			return;
@@ -9098,14 +9289,14 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 		composition?.contextMenu,
 		slotHost
 	]);
-	A$1(() => {
+	A(() => {
 		if (contextMenuState != null && controller.getItem(contextMenuState.path) == null) closeContextMenu();
 	}, [
 		closeContextMenu,
 		contextMenuState,
 		controller
 	]);
-	A$1(() => {
+	A(() => {
 		if (contextMenuState == null) return;
 		const rootNode = rootRef.current?.getRootNode();
 		const host = rootNode instanceof ShadowRoot ? rootNode.host : rootRef.current;
@@ -9131,7 +9322,7 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 			document.removeEventListener("keydown", onKeyDown, true);
 		};
 	}, [closeContextMenu, contextMenuState]);
-	A$1(() => {
+	A(() => {
 		const scrollElement = scrollRef.current;
 		const rootElement = rootRef.current;
 		if (scrollElement == null || rootElement == null) {
@@ -9230,7 +9421,7 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 	const pointerTriggerPath = lastContextMenuInteraction === "pointer" ? contextHoverPath : null;
 	const triggerPath = contextMenuState?.path ?? debugContextMenuTriggerPathRef.current ?? pointerTriggerPath ?? focusTriggerPath ?? contextHoverPath;
 	const isPointerContextMenuOpen = contextMenuState?.source === "right-click";
-	A$1(() => {
+	A(() => {
 		if (isScrollingRef.current && contextMenuState == null) return;
 		updateTriggerPosition(getTriggerAnchorButton(triggerPath));
 	}, [
@@ -9244,22 +9435,22 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 		updateTriggerPosition,
 		visibleRows
 	]);
-	const handleTreePointerOver = b$1((event) => {
+	const handleTreePointerOver = b((event) => {
 		if (isScrollingRef.current) return;
 		if (isEventInContextMenu(event)) return;
 		const target = event.target;
 		if (!(target instanceof HTMLElement)) return;
-		if (target.closest?.(`[data-type="${CONTEXT_MENU_TRIGGER_TYPE}"]`) != null) return;
+		if (target.closest?.(`[data-type="context-menu-trigger"]`) != null) return;
 		const stickyRowButton = target.closest?.("[data-file-tree-sticky-row=\"true\"]");
 		const rowButton = target.closest?.("[data-type=\"item\"]");
 		const nextPath = stickyRowButton instanceof HTMLElement ? stickyRowButton.dataset.fileTreeStickyPath ?? null : rowButton instanceof HTMLElement ? rowButton.dataset.itemPath ?? null : null;
 		if (nextPath != null) setLastContextMenuInteraction((previousMode) => previousMode === "pointer" ? previousMode : "pointer");
 		setContextHoverPath((previousPath) => previousPath === nextPath ? previousPath : nextPath);
 	}, []);
-	const handleTreePointerLeave = b$1(() => {
+	const handleTreePointerLeave = b(() => {
 		setContextHoverPath(null);
 	}, []);
-	A$1(() => {
+	A(() => {
 		if (!dragAndDropEnabled) return;
 		const handleWindowDragEnd = () => {
 			clearTouchDragResources();
@@ -9326,7 +9517,7 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 		top: `${pointerAnchorRect.top}px`
 	} : rowAnchorTop != null ? { top: `${rowAnchorTop}px` } : void 0;
 	const contextMenuTriggerStyle = isPointerContextMenuOpen ? { opacity: "0" } : void 0;
-	const handleRowClick = b$1((event, row, targetPath, mode) => {
+	const handleRowClick = b((event, row, targetPath, mode) => {
 		const plan = computeFileTreeRowClickPlan({
 			event: {
 				ctrlKey: event.ctrlKey,
@@ -9348,9 +9539,7 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 			case "toggle":
 				controller.togglePathSelectionFromInput(actionTargetPath);
 				break;
-			case "single":
-				controller.selectOnlyMountedPathFromInput(actionTargetPath);
-				break;
+			case "single": controller.selectOnlyMountedPathFromInput(actionTargetPath);
 		}
 		const clickedElement = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
 		const clickedRowIsVisible = row.index >= layoutSnapshot.visible.startIndex && row.index <= layoutSnapshot.visible.endIndex;
@@ -9426,7 +9615,7 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 		...flowRowFrame,
 		registerButton: registerStickyRowButton
 	};
-	return /* @__PURE__ */ u$2("div", {
+	return /* @__PURE__ */ u$1("div", {
 		ref: rootRef,
 		id: treeDomId,
 		"data-file-tree-context-menu-button-visibility": contextMenuEnabled && contextMenuButtonTriggerEnabled ? contextMenuButtonVisibility : void 0,
@@ -9447,18 +9636,18 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 			position: "relative"
 		},
 		children: [
-			/* @__PURE__ */ u$2("style", {
+			/* @__PURE__ */ u$1("style", {
 				"data-file-tree-guide-style": "true",
 				dangerouslySetInnerHTML: { __html: guideStyleText }
 			}),
-			/* @__PURE__ */ u$2("slot", {
+			/* @__PURE__ */ u$1("slot", {
 				name: HEADER_SLOT_NAME,
 				"data-type": "header-slot"
 			}),
-			searchEnabled ? /* @__PURE__ */ u$2("div", {
+			searchEnabled ? /* @__PURE__ */ u$1("div", {
 				"data-file-tree-search-container": true,
 				"data-open": isSearchOpen ? "true" : "false",
-				children: /* @__PURE__ */ u$2("input", {
+				children: /* @__PURE__ */ u$1("input", {
 					ref: searchInputRef,
 					"aria-activedescendant": activeDescendantId,
 					"aria-controls": treeDomId,
@@ -9479,13 +9668,13 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 					}
 				})
 			}) : null,
-			/* @__PURE__ */ u$2("div", {
+			/* @__PURE__ */ u$1("div", {
 				ref: scrollRef,
 				"data-file-tree-virtualized-scroll": "true",
-				children: [stickyFolders && hasStickyUiMount && stickyRows.length > 0 ? /* @__PURE__ */ u$2("div", {
+				children: [stickyFolders && hasStickyUiMount && stickyRows.length > 0 ? /* @__PURE__ */ u$1("div", {
 					"aria-hidden": "true",
 					"data-file-tree-sticky-overlay": "true",
-					children: /* @__PURE__ */ u$2("div", {
+					children: /* @__PURE__ */ u$1("div", {
 						"data-file-tree-sticky-overlay-content": "true",
 						style: { height: `${overlayRowsHeight}px` },
 						children: stickyRows.map((entry, index) => renderStyledRow(stickyRowFrame, entry.row, `sticky:${getFileTreeRowPath(entry.row)}`, {
@@ -9499,15 +9688,15 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 							}
 						}))
 					})
-				}) : null, /* @__PURE__ */ u$2("div", {
+				}) : null, /* @__PURE__ */ u$1("div", {
 					ref: listRef,
 					"data-file-tree-virtualized-list": "true",
 					style: { height: `${totalScrollableHeight}px` },
-					children: [/* @__PURE__ */ u$2("div", {
+					children: [/* @__PURE__ */ u$1("div", {
 						"data-file-tree-virtualized-sticky-offset": "true",
 						"aria-hidden": "true",
 						style: { height: `${windowOffsetTop}px` }
-					}), /* @__PURE__ */ u$2("div", {
+					}), /* @__PURE__ */ u$1("div", {
 						"data-file-tree-virtualized-sticky": "true",
 						style: {
 							height: `${windowHeight}px`,
@@ -9542,12 +9731,12 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 					})]
 				})]
 			}),
-			contextMenuEnabled ? /* @__PURE__ */ u$2("div", {
+			contextMenuEnabled ? /* @__PURE__ */ u$1("div", {
 				ref: contextMenuAnchorRef,
 				"data-type": "context-menu-anchor",
 				"data-visible": contextMenuAnchorVisible ? "true" : "false",
 				style: contextMenuAnchorStyle,
-				children: [/* @__PURE__ */ u$2("button", {
+				children: [/* @__PURE__ */ u$1("button", {
 					ref: contextMenuTriggerRef,
 					type: "button",
 					"data-type": CONTEXT_MENU_TRIGGER_TYPE,
@@ -9569,10 +9758,10 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 					},
 					tabIndex: -1,
 					style: contextMenuTriggerStyle,
-					children: /* @__PURE__ */ u$2(Icon, { ...resolveIcon("file-tree-icon-ellipsis") })
-				}), contextMenuState != null ? /* @__PURE__ */ u$2("slot", { name: CONTEXT_MENU_SLOT_NAME }) : null]
+					children: /* @__PURE__ */ u$1(Icon, { ...resolveIcon("file-tree-icon-ellipsis") })
+				}), contextMenuState != null ? /* @__PURE__ */ u$1("slot", { name: CONTEXT_MENU_SLOT_NAME }) : null]
 			}) : null,
-			contextMenuState != null ? /* @__PURE__ */ u$2("div", {
+			contextMenuState != null ? /* @__PURE__ */ u$1("div", {
 				"data-type": "context-menu-wash",
 				"aria-hidden": "true",
 				onMouseDownCapture: (event) => {
@@ -9596,18 +9785,17 @@ function FileTreeView({ composition, controller, gitStatusByPath, ignoredGitDire
 		]
 	});
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/render/runtime.js
 const fileTreeRenderer = {
 	hydrateRoot: (element, props) => {
-		G$1(_$2(FileTreeView, props), element);
+		G(_$1(FileTreeView, props), element);
 	},
 	renderRoot: (element, props) => {
-		F$2(_$2(FileTreeView, props), element);
+		F$1(_$1(FileTreeView, props), element);
 	},
 	unmountRoot: (element) => {
-		F$2(null, element);
+		F$1(null, element);
 	}
 };
 function renderFileTreeRoot(element, props) {
@@ -9619,7 +9807,6 @@ function hydrateFileTreeRoot(element, props) {
 function unmountFileTreeRoot(element) {
 	fileTreeRenderer.unmountRoot(element);
 }
-
 //#endregion
 //#region node_modules/@pierre/trees/dist/render/slotHost.js
 var FileTreeManagedSlotHost = class {
@@ -9699,433 +9886,7 @@ var FileTreeManagedSlotHost = class {
 		}
 	}
 };
-
-//#endregion
-//#region node_modules/preact-render-to-string/dist/index.module.js
-var r = "diffed", o = "__c", i = "__s", a = "__c", c = "__k", u = "__d", s = "__s", l = /[\s\n\\/='"\0<>]/, f = /^(xlink|xmlns|xml)([A-Z])/, p = /^(?:accessK|auto[A-Z]|cell|ch|col|cont|cross|dateT|encT|form[A-Z]|frame|hrefL|inputM|maxL|minL|noV|playsI|popoverT|readO|rowS|src[A-Z]|tabI|useM|item[A-Z])/, h = /^ac|^ali|arabic|basel|cap|clipPath$|clipRule$|color|dominant|enable|fill|flood|font|glyph[^R]|horiz|image|letter|lighting|marker[^WUH]|overline|panose|pointe|paint|rendering|shape|stop|strikethrough|stroke|text[^L]|transform|underline|unicode|units|^v[^i]|^w|^xH/, d = new Set(["draggable", "spellcheck"]);
-function v(e) {
-	void 0 !== e.__g ? e.__g |= 8 : e[u] = !0;
-}
-function m(e) {
-	void 0 !== e.__g ? e.__g &= -9 : e[u] = !1;
-}
-function y(e) {
-	return void 0 !== e.__g ? !!(8 & e.__g) : !0 === e[u];
-}
-var _ = /["&<]/;
-function g(e) {
-	if (0 === e.length || !1 === _.test(e)) return e;
-	for (var t = 0, n = 0, r = "", o = ""; n < e.length; n++) {
-		switch (e.charCodeAt(n)) {
-			case 34:
-				o = "&quot;";
-				break;
-			case 38:
-				o = "&amp;";
-				break;
-			case 60:
-				o = "&lt;";
-				break;
-			default: continue;
-		}
-		n !== t && (r += e.slice(t, n)), r += o, t = n + 1;
-	}
-	return n !== t && (r += e.slice(t, n)), r;
-}
-var b = {}, x = new Set([
-	"animation-iteration-count",
-	"border-image-outset",
-	"border-image-slice",
-	"border-image-width",
-	"box-flex",
-	"box-flex-group",
-	"box-ordinal-group",
-	"column-count",
-	"fill-opacity",
-	"flex",
-	"flex-grow",
-	"flex-negative",
-	"flex-order",
-	"flex-positive",
-	"flex-shrink",
-	"flood-opacity",
-	"font-weight",
-	"grid-column",
-	"grid-row",
-	"line-clamp",
-	"line-height",
-	"opacity",
-	"order",
-	"orphans",
-	"stop-opacity",
-	"stroke-dasharray",
-	"stroke-dashoffset",
-	"stroke-miterlimit",
-	"stroke-opacity",
-	"stroke-width",
-	"tab-size",
-	"widows",
-	"z-index",
-	"zoom"
-]), k = /[A-Z]/g;
-function w(e) {
-	var t = "";
-	for (var n in e) {
-		var r = e[n];
-		if (null != r && "" !== r) {
-			var o = "-" == n[0] ? n : b[n] || (b[n] = n.replace(k, "-$&").toLowerCase()), i = ";";
-			"number" != typeof r || o.startsWith("--") || x.has(o) || (i = "px;"), t = t + o + ":" + r + i;
-		}
-	}
-	return t || void 0;
-}
-function C() {
-	this.__d = !0;
-}
-function A(e, t) {
-	return {
-		__v: e,
-		context: t,
-		props: e.props,
-		setState: C,
-		forceUpdate: C,
-		__d: !0,
-		__h: new Array(0)
-	};
-}
-function S(e, t, n) {
-	if (!e.s) {
-		if (n instanceof L) {
-			if (!n.s) return void (n.o = S.bind(null, e, t));
-			1 & t && (t = n.s), n = n.v;
-		}
-		if (n && n.then) return void n.then(S.bind(null, e, t), S.bind(null, e, 2));
-		e.s = t, e.v = n;
-		const r = e.o;
-		r && r(e);
-	}
-}
-var L = /* @__PURE__ */ function() {
-	function e() {}
-	return e.prototype.then = function(t, n) {
-		var r = new e(), o = this.s;
-		if (o) {
-			var i = 1 & o ? t : n;
-			if (i) {
-				try {
-					S(r, 1, i(this.v));
-				} catch (e) {
-					S(r, 2, e);
-				}
-				return r;
-			}
-			return this;
-		}
-		return this.o = function(e) {
-			try {
-				var o = e.v;
-				1 & e.s ? S(r, 1, t ? t(o) : o) : n ? S(r, 1, n(o)) : S(r, 2, o);
-			} catch (e) {
-				S(r, 2, e);
-			}
-		}, r;
-	}, e;
-}();
-function E(e) {
-	return e instanceof L && 1 & e.s;
-}
-function j(e, t, n) {
-	for (var r;;) {
-		var o = e();
-		if (E(o) && (o = o.v), !o) return i;
-		if (o.then) {
-			r = 0;
-			break;
-		}
-		var i = n();
-		if (i && i.then) {
-			if (!E(i)) {
-				r = 1;
-				break;
-			}
-			i = i.s;
-		}
-		if (t) {
-			var a = t();
-			if (a && a.then && !E(a)) {
-				r = 2;
-				break;
-			}
-		}
-	}
-	var c = new L(), u = S.bind(null, c, 2);
-	return (0 === r ? o.then(l) : 1 === r ? i.then(s) : a.then(f)).then(void 0, u), c;
-	function s(r) {
-		i = r;
-		do {
-			if (t && (a = t()) && a.then && !E(a)) return void a.then(f).then(void 0, u);
-			if (!(o = e()) || E(o) && !o.v) return void S(c, 1, i);
-			if (o.then) return void o.then(l).then(void 0, u);
-			E(i = n()) && (i = i.v);
-		} while (!i || !i.then);
-		i.then(s).then(void 0, u);
-	}
-	function l(e) {
-		e ? (i = n()) && i.then ? i.then(s).then(void 0, u) : s(i) : S(c, 1, i);
-	}
-	function f() {
-		(o = e()) ? o.then ? o.then(l).then(void 0, u) : l(o) : S(c, 1, i);
-	}
-}
-function T(e, t) {
-	try {
-		var n = e();
-	} catch (e) {
-		return t(!0, e);
-	}
-	return n && n.then ? n.then(t.bind(null, !1), t.bind(null, !0)) : t(!1, n);
-}
-var D, P, $, U, Z = function(a, u) {
-	try {
-		var s = n[i];
-		n[i] = !0, D = n.__b, P = n[r], $ = n.__r, U = n.unmount;
-		var l = _$2(k$2, null);
-		return l[c] = [a], Promise.resolve(T(function() {
-			return Promise.resolve(O(a, u || F, !1, void 0, l, !0, void 0)).then(function(e) {
-				var t, n = function() {
-					if (W(e)) {
-						var n = function() {
-							var e = o.join(H);
-							return t = 1, e;
-						}, r = 0, o = e, i = j(function() {
-							return !!o.some(function(e) {
-								return e && "function" == typeof e.then;
-							}) && r++ < 25;
-						}, void 0, function() {
-							return Promise.resolve(Promise.all(o)).then(function(e) {
-								o = e.flat();
-							});
-						});
-						return i && i.then ? i.then(n) : n();
-					}
-				}();
-				return n && n.then ? n.then(function(n) {
-					return t ? n : e;
-				}) : t ? n : e;
-			});
-		}, function(t, n$1) {
-			if (n[o] && n[o](a, M), n[i] = s, M.length = 0, t) throw n$1;
-			return n$1;
-		}));
-	} catch (e) {
-		return Promise.reject(e);
-	}
-}, F = {}, M = [], W = Array.isArray, z = Object.assign, H = "", N = "<!--$s-->", q = "<!--/$s-->";
-function B(a, u, s) {
-	var l = n[i];
-	n[i] = !0, D = n.__b, P = n[r], $ = n.__r, U = n.unmount;
-	var f = _$2(k$2, null);
-	f[c] = [a];
-	try {
-		var p = O(a, u || F, !1, void 0, f, !1, s);
-		return W(p) ? p.join(H) : p;
-	} catch (e) {
-		if (e.then) throw new Error("Use \"renderToStringAsync\" for suspenseful rendering.");
-		throw e;
-	} finally {
-		n[o] && n[o](a, M), n[i] = l, M.length = 0;
-	}
-}
-function I(e, t) {
-	var n, r = e.type, o = !0;
-	return e[a] ? (o = !1, (n = e[a]).state = n[s]) : n = new r(e.props, t), e[a] = n, n.__v = e, n.props = e.props, n.context = t, v(n), n.state ?? (n.state = F), n[s] ?? (n[s] = n.state), r.getDerivedStateFromProps ? n.state = z({}, n.state, r.getDerivedStateFromProps(n.props, n.state)) : o && n.componentWillMount ? (n.componentWillMount(), n.state = n[s] !== n.state ? n[s] : n.state) : !o && n.componentWillUpdate && n.componentWillUpdate(), $ && $(e), n.render(n.props, n.state, t);
-}
-function O(t, r, o, i, u, _, b) {
-	if (null == t || !0 === t || !1 === t || t === H) return H;
-	var x = typeof t;
-	if ("object" != x) return "function" == x ? H : "string" == x ? g(t) : t + H;
-	if (W(t)) {
-		var k, C = H;
-		u[c] = t;
-		for (var S = t.length, L = 0; L < S; L++) {
-			var E = t[L];
-			if (null != E && "boolean" != typeof E) {
-				var j, T = O(E, r, o, i, u, _, b);
-				"string" == typeof T ? C += T : (k || (k = new Array(S)), C && k.push(C), C = H, W(T) ? (j = k).push.apply(j, T) : k.push(T));
-			}
-		}
-		return k ? (C && k.push(C), k) : C;
-	}
-	if (void 0 !== t.constructor) return H;
-	t.__ = u, D && D(t);
-	var Z = t.type, M = t.props;
-	if ("function" == typeof Z) {
-		var B, V, K, J = r;
-		if (Z === k$2) {
-			if ("tpl" in M) {
-				for (var Q = H, X = 0; X < M.tpl.length; X++) if (Q += M.tpl[X], M.exprs && X < M.exprs.length) {
-					var Y = M.exprs[X];
-					if (null == Y) continue;
-					"object" != typeof Y || void 0 !== Y.constructor && !W(Y) ? Q += Y : Q += O(Y, r, o, i, t, _, b);
-				}
-				return Q;
-			}
-			if ("UNSTABLE_comment" in M) return "<!--" + g(M.UNSTABLE_comment) + "-->";
-			V = M.children;
-		} else {
-			if (null != (B = Z.contextType)) {
-				var ee = r[B.__c];
-				J = ee ? ee.props.value : B.__;
-			}
-			var te = Z.prototype && "function" == typeof Z.prototype.render;
-			if (te) V = I(t, J), K = t[a];
-			else {
-				t[a] = K = A(t, J);
-				for (var ne = 0; y(K) && ne++ < 25;) {
-					m(K), $ && $(t);
-					try {
-						V = Z.call(K, M, J);
-					} catch (e) {
-						throw _ && e && "function" == typeof e.then && (t._suspended = !0), e;
-					}
-				}
-				v(K);
-			}
-			if (null != K.getChildContext && (r = z({}, r, K.getChildContext())), te && n.errorBoundaries && (Z.getDerivedStateFromError || K.componentDidCatch)) {
-				V = null != V && V.type === k$2 && null == V.key && null == V.props.tpl ? V.props.children : V;
-				try {
-					return O(V, r, o, i, t, _, !1);
-				} catch (e) {
-					return Z.getDerivedStateFromError && (K[s] = Z.getDerivedStateFromError(e)), K.componentDidCatch && K.componentDidCatch(e, F), y(K) ? (V = I(t, r), null != (K = t[a]).getChildContext && (r = z({}, r, K.getChildContext())), O(V = null != V && V.type === k$2 && null == V.key && null == V.props.tpl ? V.props.children : V, r, o, i, t, _, b)) : H;
-				} finally {
-					P && P(t), U && U(t);
-				}
-			}
-		}
-		V = null != V && V.type === k$2 && null == V.key && null == V.props.tpl ? V.props.children : V;
-		try {
-			var re = O(V, r, o, i, t, _, b);
-			return P && P(t), n.unmount && n.unmount(t), t._suspended ? "string" == typeof re ? N + re + q : W(re) ? (re.unshift(N), re.push(q), re) : re.then(function(e) {
-				return N + e + q;
-			}) : re;
-		} catch (n$2) {
-			if (!_ && b && b.onError) {
-				var oe = function e(n) {
-					return b.onError(n, t, function(t, n) {
-						try {
-							return O(t, r, o, i, n, _, b);
-						} catch (t) {
-							return e(t);
-						}
-					});
-				}(n$2);
-				if (void 0 !== oe) return oe;
-				var ie = n.__e;
-				return ie && ie(n$2, t), H;
-			}
-			if (!_) throw n$2;
-			if (!n$2 || "function" != typeof n$2.then) throw n$2;
-			return n$2.then(function e() {
-				try {
-					var n = O(V, r, o, i, t, _, b);
-					return t._suspended ? N + n + q : n;
-				} catch (t) {
-					if (!t || "function" != typeof t.then) throw t;
-					return t.then(e);
-				}
-			});
-		}
-	}
-	var ae, ce = "<" + Z, ue = H;
-	for (var se in M) {
-		var le = M[se];
-		if ("function" != typeof (le = G(le) ? le.value : le) || "class" === se || "className" === se) {
-			switch (se) {
-				case "children":
-					ae = le;
-					continue;
-				case "key":
-				case "ref":
-				case "__self":
-				case "__source": continue;
-				case "htmlFor":
-					if ("for" in M) continue;
-					se = "for";
-					break;
-				case "className":
-					if ("class" in M) continue;
-					se = "class";
-					break;
-				case "defaultChecked":
-					se = "checked";
-					break;
-				case "defaultSelected":
-					se = "selected";
-					break;
-				case "defaultValue":
-				case "value":
-					switch (se = "value", Z) {
-						case "textarea":
-							ae = le;
-							continue;
-						case "select":
-							i = le;
-							continue;
-						case "option": i != le || "selected" in M || (ce += " selected");
-					}
-					break;
-				case "dangerouslySetInnerHTML":
-					ue = le && le.__html;
-					continue;
-				case "style":
-					"object" == typeof le && (le = w(le));
-					break;
-				case "acceptCharset":
-					se = "accept-charset";
-					break;
-				case "httpEquiv":
-					se = "http-equiv";
-					break;
-				default: if (f.test(se)) se = se.replace(f, "$1:$2").toLowerCase();
-				else {
-					if (l.test(se)) continue;
-					"-" !== se[4] && !d.has(se) || null == le ? o ? h.test(se) && (se = "panose1" === se ? "panose-1" : se.replace(/([A-Z])/g, "-$1").toLowerCase()) : p.test(se) && (se = se.toLowerCase()) : le += H;
-				}
-			}
-			null != le && !1 !== le && (ce = !0 === le || le === H ? ce + " " + se : ce + " " + se + "=\"" + ("string" == typeof le ? g(le) : le + H) + "\"");
-		}
-	}
-	if (l.test(Z)) throw new Error(Z + " is not a valid HTML tag name in " + ce + ">");
-	if (ue || ("string" == typeof ae ? ue = g(ae) : null != ae && !1 !== ae && !0 !== ae && (ue = O(ae, r, "svg" === Z || "foreignObject" !== Z && o, i, t, _, b))), P && P(t), U && U(t), !ue && R.has(Z)) return ce + "/>";
-	var fe = "</" + Z + ">", pe = ce + ">";
-	return W(ue) ? [pe].concat(ue, [fe]) : "string" != typeof ue ? [
-		pe,
-		ue,
-		fe
-	] : pe + ue + fe;
-}
-var R = new Set([
-	"area",
-	"base",
-	"br",
-	"col",
-	"command",
-	"embed",
-	"hr",
-	"img",
-	"input",
-	"keygen",
-	"link",
-	"meta",
-	"param",
-	"source",
-	"track",
-	"wbr"
-]), V = B, K = B;
-function G(e) {
-	return null !== e && "object" == typeof e && "function" == typeof e.peek && "value" in e;
-}
-
+Array.isArray;
 //#endregion
 //#region node_modules/@pierre/trees/dist/render/FileTree.js
 let clientInstanceId = 0;
@@ -10135,7 +9896,7 @@ function createClientId(explicitId) {
 	return `pst_ft_${clientInstanceId}`;
 }
 function resolveInitialViewportHeight({ initialVisibleRowCount, itemHeight }) {
-	return initialVisibleRowCount == null ? FILE_TREE_DEFAULT_VIEWPORT_HEIGHT : Math.max(0, initialVisibleRowCount) * (itemHeight ?? FILE_TREE_DEFAULT_ITEM_HEIGHT);
+	return initialVisibleRowCount == null ? 420 : Math.max(0, initialVisibleRowCount) * (itemHeight ?? FILE_TREE_DEFAULT_ITEM_HEIGHT);
 }
 function parseSpriteSheet(spriteSheet) {
 	if (typeof document === "undefined") return;
@@ -10151,7 +9912,7 @@ function getTopLevelSpriteSheets(shadowRoot) {
 	return Array.from(shadowRoot.children).filter((element) => element instanceof SVGElement);
 }
 var FileTree = class {
-	static LoadedCustomComponent = FileTreeContainerLoaded;
+	static LoadedCustomComponent = true;
 	#composition;
 	#controller;
 	#id;
@@ -10239,6 +10000,15 @@ var FileTree = class {
 	getFocusedPath() {
 		return this.#controller.getFocusedPath();
 	}
+	getFocusedIndex() {
+		return this.#controller.getFocusedIndex();
+	}
+	getVisibleCount() {
+		return this.#controller.getVisibleCount();
+	}
+	getVisibleRows(start, end) {
+		return this.#controller.getVisibleRows(start, end);
+	}
 	getSelectedPaths() {
 		return this.#controller.getSelectedPaths();
 	}
@@ -10264,6 +10034,21 @@ var FileTree = class {
 	focusPath(path) {
 		this.#controller.focusPath(path);
 	}
+	focusFirstItem() {
+		this.#controller.focusFirstItem();
+	}
+	focusLastItem() {
+		this.#controller.focusLastItem();
+	}
+	focusNextItem() {
+		this.#controller.focusNextItem();
+	}
+	focusPreviousItem() {
+		this.#controller.focusPreviousItem();
+	}
+	focusParentItem() {
+		this.#controller.focusParentItem();
+	}
 	scrollToPath(path, options) {
 		this.#controller.scrollToPath(path, options);
 	}
@@ -10275,6 +10060,14 @@ var FileTree = class {
 	}
 	batch(operations) {
 		this.#controller.batch(operations);
+	}
+	applyGitStatusPatch(patch) {
+		const nextGitStatusState = applyFileTreeGitStatusPatch(this.#gitStatusState, patch);
+		if (nextGitStatusState === this.#gitStatusState) return;
+		this.#gitStatusState = nextGitStatusState;
+		const mountedTree = this.#getMountedTreeElements();
+		if (mountedTree == null) return;
+		renderFileTreeRoot(mountedTree.wrapper, this.#getViewProps());
 	}
 	move(fromPath, toPath, options) {
 		this.#controller.move(fromPath, toPath, options);
@@ -10312,8 +10105,9 @@ var FileTree = class {
 	remove(path, options) {
 		this.#controller.remove(path, options);
 	}
-	resetPaths(paths, options) {
-		this.#controller.resetPaths(paths, options);
+	resetPaths(pathsOrOptions, options) {
+		if (Array.isArray(pathsOrOptions)) this.#controller.resetPaths(pathsOrOptions, options);
+		else this.#controller.resetPaths(pathsOrOptions);
 	}
 	setComposition(composition) {
 		this.#composition = composition;
@@ -10323,7 +10117,9 @@ var FileTree = class {
 		renderFileTreeRoot(mountedTree.wrapper, this.#getViewProps());
 	}
 	setGitStatus(gitStatus) {
-		this.#gitStatusState = resolveFileTreeGitStatusState(gitStatus, this.#gitStatusState);
+		const nextGitStatusState = resolveFileTreeGitStatusState(gitStatus, this.#gitStatusState);
+		if (nextGitStatusState === this.#gitStatusState) return;
+		this.#gitStatusState = nextGitStatusState;
 		const mountedTree = this.#getMountedTreeElements();
 		if (mountedTree == null) return;
 		renderFileTreeRoot(mountedTree.wrapper, this.#getViewProps());
@@ -10471,7 +10267,7 @@ var FileTree = class {
 		return this.#wrapper;
 	}
 	#prepareHost(fileTreeContainer, parentNode) {
-		const host = fileTreeContainer ?? this.#fileTreeContainer ?? document.createElement(FILE_TREE_TAG_NAME);
+		const host = fileTreeContainer ?? this.#fileTreeContainer ?? document.createElement("file-tree-container");
 		if (parentNode != null && host.parentNode !== parentNode) parentNode.appendChild(host);
 		const shadowRoot = host.shadowRoot ?? host.attachShadow({ mode: "open" });
 		prepareFileTreeShadowRoot(host, shadowRoot);
@@ -10504,7 +10300,6 @@ var FileTree = class {
 		}
 	}
 };
-
 //#endregion
 //#region web/src/file-list-methods.ts
 var FileListMethods = class {
@@ -10808,7 +10603,6 @@ var FileListMethods = class {
     `;
 	}
 };
-
 //#endregion
 //#region web/src/language.ts
 function globPatternToRegExp(pattern) {
@@ -10903,7 +10697,6 @@ function detectLanguageFromPathAndContent(path = "", content = "") {
 	}
 	return "plaintext";
 }
-
 //#endregion
 //#region web/src/font.ts
 const MONO_FALLBACK = "'Monaco', 'Menlo', 'Consolas', monospace";
@@ -10924,7 +10717,6 @@ function monoFontStack(font) {
 function prefersReducedMotion() {
 	return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
-
 //#endregion
 //#region web/src/file-loading-methods.ts
 let _loadSerial = 0;
@@ -10963,7 +10755,7 @@ var FileLoadingMethods = class {
 		const container = document.getElementById("editor-container");
 		container?.querySelector(".binary-file-notice")?.remove();
 		container?.classList.remove("binary-file-view", "diff-loading", "file-added-view");
-		const oldBanner = $$2("#old-missing-banner");
+		const oldBanner = $$1("#old-missing-banner");
 		if (oldBanner) oldBanner.style.display = "none";
 	}
 	binaryPreviewUrl(file, side) {
@@ -11082,7 +10874,7 @@ var FileLoadingMethods = class {
 			this._commitViewEl.style.display = "none";
 			container.style.display = "";
 		}
-		const oldBanner = $$2("#old-missing-banner");
+		const oldBanner = $$1("#old-missing-banner");
 		if (oldBanner) oldBanner.style.display = "none";
 		if (file.is_binary) {
 			container.classList.add("binary-file-view");
@@ -11297,12 +11089,10 @@ var FileLoadingMethods = class {
 		}
 	}
 };
-
 //#endregion
 //#region web/src/platform.ts
 const IS_MAC = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
 const MOD_KEY_LABEL = IS_MAC ? "⌘" : "Ctrl";
-
 //#endregion
 //#region web/src/shortcuts.ts
 const KEYBOARD_SHORTCUTS = [
@@ -11380,7 +11170,6 @@ const KEYBOARD_SHORTCUTS = [
 		description: "Previous commit (series mode)"
 	}
 ];
-
 //#endregion
 //#region web/src/navigation-methods.ts
 var NavigationMethods = class {
@@ -11433,9 +11222,7 @@ var NavigationMethods = class {
 				case "nextCommit":
 					this.nextCommit();
 					break;
-				case "previousCommit":
-					this.previousCommit();
-					break;
+				case "previousCommit": this.previousCommit();
 			}
 		});
 	}
@@ -11645,7 +11432,6 @@ var NavigationMethods = class {
 		this.showCommentDialog(file.path, hunkRange.start, hunkRange.start, side);
 	}
 };
-
 //#endregion
 //#region web/src/modal.ts
 function openModal({ title, titleId, modalClass = "", footerContent = [], onKeydown }) {
@@ -11720,7 +11506,6 @@ function openModal({ title, titleId, modalClass = "", footerContent = [], onKeyd
 		close
 	};
 }
-
 //#endregion
 //#region web/src/commit-methods.ts
 var CommitMethods = class {
@@ -11764,7 +11549,8 @@ var CommitMethods = class {
 		ta.addEventListener("input", autoResize);
 		ta.value = this.overallReviewComment;
 		const save = () => {
-			this.overallReviewComment = ta.value.trim();
+			const bodyText = ta.value.trim();
+			this.overallReviewComment = bodyText;
 			this.renderFileList();
 			if (this.currentFileIsCommit) this.loadCommitView();
 			close();
@@ -12068,7 +11854,6 @@ var CommitMethods = class {
 		setTimeout(() => ta.focus(), 100);
 	}
 };
-
 //#endregion
 //#region web/src/comments-ui-methods.ts
 var CommentsUIMethods = class {
@@ -12227,7 +12012,6 @@ var CommentsUIMethods = class {
 		this.renderFileList();
 	}
 };
-
 //#endregion
 //#region web/src/review-note-methods.ts
 var ReviewNoteMethods = class {
@@ -12480,7 +12264,6 @@ var ReviewNoteMethods = class {
 		return Math.max(124, Math.min(460, 88 + visualLines * 18));
 	}
 };
-
 //#endregion
 //#region web/src/dialog-methods.ts
 function parseQueuedReviewNoteBody(body) {
@@ -12816,7 +12599,8 @@ var DialogMethods = class {
 				className: "comment-preview-side",
 				text: sideText
 			})]);
-			const lines = fileContents[`${comment.file}:${comment.side}`] ?? [];
+			const fileKey = `${comment.file}:${comment.side}`;
+			const lines = fileContents[fileKey] ?? [];
 			const rangeStart = commentStartLine(comment);
 			const rangeEnd = commentEndLine(comment);
 			const startLine = Math.max(0, rangeStart - 2);
@@ -12929,7 +12713,6 @@ var DialogMethods = class {
 		return container;
 	}
 };
-
 //#endregion
 //#region web/src/series-methods.ts
 function prGroups(series) {
@@ -12951,14 +12734,15 @@ function prGroups(series) {
 	return groups;
 }
 var SeriesMethods = class {
-        commitLoadController;
+	commitLoadController;
 	commentCountFor(commitIdx) {
 		return this.commentManager.getComments().filter((c) => c.commit_idx === commitIdx).length + this.reviewNoteManager.getNotes().filter((n) => n.commit_idx === commitIdx).length;
 	}
 	prHeader(group, repos) {
 		const { pr } = group;
 		const count = group.commitIdxs.reduce((n, idx) => n + this.commentCountFor(idx), 0);
-		const row = el("div", { className: `pr-row${group.commitIdxs.includes(this.currentCommitIdx) ? " active" : ""}${pr ? "" : " no-pr"}` });
+		const active = group.commitIdxs.includes(this.currentCommitIdx);
+		const row = el("div", { className: `pr-row${active ? " active" : ""}${pr ? "" : " no-pr"}` });
 		const title = el("div", { className: "pr-row-title" });
 		if (!pr) title.textContent = "No PR";
 		else {
@@ -13111,7 +12895,6 @@ var SeriesMethods = class {
 		this.loadCommit(this.currentCommitIdx - 1);
 	}
 };
-
 //#endregion
 //#region web/src/stacked-view-methods.ts
 const DIFFS_THEME = {
@@ -13121,10 +12904,10 @@ const DIFFS_THEME = {
 let diffsRuntimePromise = null;
 function loadDiffsRuntime() {
 	diffsRuntimePromise ??= Promise.all([
-		import("./chunks/stacked-diff-a6Yv5Xck.js").then((n) => n.La),
-		import("./chunks/stacked-diff-a6Yv5Xck.js").then((n) => n.za),
-		import("./chunks/stacked-diff-a6Yv5Xck.js").then((n) => n.Ra),
-		import("./chunks/stacked-diff-a6Yv5Xck.js").then((n) => n.Ia)
+		import("./chunks/stacked-diff-CXzcki7R.js").then((n) => n.n),
+		import("./chunks/stacked-diff-CXzcki7R.js").then((n) => n.i),
+		import("./chunks/stacked-diff-CXzcki7R.js").then((n) => n.r),
+		import("./chunks/stacked-diff-CXzcki7R.js").then((n) => n.t)
 	]).then(([codeView, patchParser, fileParser, workerPool]) => ({
 		CodeView: codeView.CodeView,
 		parsePatchFiles: patchParser.parsePatchFiles,
@@ -13718,7 +13501,6 @@ var StackedViewMethods = class {
     `;
 	}
 };
-
 //#endregion
 //#region web/src/monaco-app.ts
 function applyMixin(TargetClass, MethodsClass) {
@@ -14047,7 +13829,7 @@ var MonacoApp = class {
 		});
 	}
 	renderProjectInfo() {
-		const container = $$2("#project-info");
+		const container = $$1("#project-info");
 		if (!container) return;
 		clearEl(container);
 		if (this.context.title) {
@@ -14096,7 +13878,7 @@ var MonacoApp = class {
 		}
 	}
 	setupUI() {
-		$$2("#file-list")?.addEventListener("click", (e) => {
+		$$1("#file-list")?.addEventListener("click", (e) => {
 			const li = e.target?.closest("li");
 			if (li) {
 				const dirKey = li.getAttribute("data-dir-key");
@@ -14109,35 +13891,37 @@ var MonacoApp = class {
 				if (li.dataset.commit === "1") this.loadCommitView();
 				else {
 					const index = Number(li.dataset.index ?? -1);
-					if (index >= 0) if (this.isStacked) this.scrollToFileInStacked(index);
-					else this.loadFile(index);
+					if (index >= 0) {
+						if (this.isStacked) this.scrollToFileInStacked(index);
+						else this.loadFile(index);
+					}
 				}
 			}
 		});
-		$$2("#settings-btn")?.addEventListener("click", () => {
+		$$1("#settings-btn")?.addEventListener("click", () => {
 			this.showSettingsModal();
 		});
-		$$2("#help-btn")?.addEventListener("click", () => this.showKeyboardHelp());
-		$$2("#submit-review")?.addEventListener("click", async () => {
+		$$1("#help-btn")?.addEventListener("click", () => this.showKeyboardHelp());
+		$$1("#submit-review")?.addEventListener("click", async () => {
 			this.showSubmitConfirmation();
 		});
-		$$2("#toggle-view")?.addEventListener("click", () => {
+		$$1("#toggle-view")?.addEventListener("click", () => {
 			this.toggleView();
 		});
-		$$2("#toggle-stacked")?.addEventListener("click", () => {
+		$$1("#toggle-stacked")?.addEventListener("click", () => {
 			this.toggleStackedView();
 		});
-		const statsEl = $$2("#stats");
+		const statsEl = $$1("#stats");
 		if (statsEl) statsEl.textContent = `${this.stats.files_changed} files, +${this.stats.additions} -${this.stats.deletions}`;
 		if (this.context.is_public) {
-			const b = $$2("#public-banner");
+			const b = $$1("#public-banner");
 			if (b) b.style.display = "";
 		}
 		if (this.context.comment_store_error) showCommentStoreError(this.context.comment_store_error);
 		if (this.context.claude_skill_installed === false) {
-			const banner = $$2("#skill-banner");
-			const installBtn = $$2("#skill-install-btn");
-			const dismissBtn = $$2("#skill-dismiss-btn");
+			const banner = $$1("#skill-banner");
+			const installBtn = $$1("#skill-install-btn");
+			const dismissBtn = $$1("#skill-dismiss-btn");
 			if (banner) {
 				banner.style.display = "";
 				const hide = () => {
@@ -14176,7 +13960,6 @@ applyMixin(MonacoApp, ReviewNoteMethods);
 applyMixin(MonacoApp, DialogMethods);
 applyMixin(MonacoApp, SeriesMethods);
 applyMixin(MonacoApp, StackedViewMethods);
-
 //#endregion
 //#region web/src/main.ts
 document.title = "lrv — Loading…";
@@ -14197,5 +13980,4 @@ window.__APP = app;
 app.init().then(() => {
 	if (window.DEBUG) console.info("Monaco Editor initialized");
 });
-
 //#endregion
