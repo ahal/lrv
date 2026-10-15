@@ -23,10 +23,13 @@ import { NavigationMethods } from './navigation-methods';
 import { CommitMethods } from './commit-methods';
 import { CommentsUIMethods } from './comments-ui-methods';
 import { ReviewNoteMethods } from './review-note-methods';
+import { PublishDialogMethods } from './publish-dialog-methods';
 import { DialogMethods } from './dialog-methods';
 import { SeriesMethods } from './series-methods';
 import { StackedViewMethods } from './stacked-view-methods';
 import type {
+  PhabStatus,
+  PublishTabState,
   AppConfig,
   AppConfigInput,
   AppContextData,
@@ -56,6 +59,11 @@ function applyMixin(TargetClass: Constructor, MethodsClass: Constructor) {
 }
 
 export class MonacoApp {
+  publishedCommentKeys = new Set<string>();
+  publishTabStates = new Map<string, PublishTabState>();
+  phabStatus: Promise<PhabStatus> | null = null;
+  declare showPublishDialog: () => Promise<void>;
+  declare prefetchPhabricator: () => Promise<PhabStatus>;
   commentManager: CommentManager;
   reviewNoteManager: ReviewNoteManager;
   currentFileIndex: number;
@@ -605,9 +613,59 @@ export class MonacoApp {
     // Help button
     $('#help-btn')?.addEventListener('click', () => this.showKeyboardHelp());
 
-    // Submit button
-    $('#submit-review')?.addEventListener('click', async () => {
-      this.showSubmitConfirmation();
+    // Submit button: a plain button, or a menu of destinations when there's a revision to publish to.
+    const submitBtn = $<HTMLButtonElement>('#submit-review')!;
+    const menu = $<HTMLElement>('#submit-menu')!;
+    const menuItems = Array.from(menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
+    const hasMenu = !!this.context.phabricator_available;
+    if (hasMenu) {
+      submitBtn.textContent = 'Submit To..';
+      submitBtn.setAttribute('aria-haspopup', 'menu');
+      submitBtn.setAttribute('aria-expanded', 'false');
+    }
+    const closeMenu = () => {
+      menu.hidden = true;
+      submitBtn.setAttribute('aria-expanded', 'false');
+    };
+    submitBtn.addEventListener('click', () => {
+      if (!hasMenu) {
+        void this.showSubmitConfirmation();
+        return;
+      }
+      menu.hidden = !menu.hidden;
+      submitBtn.setAttribute('aria-expanded', String(!menu.hidden));
+      if (!menu.hidden) {
+        menuItems[0]?.focus();
+        void this.prefetchPhabricator().catch(() => {});
+      }
+    });
+    menu.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') {
+        return;
+      }
+      event.preventDefault();
+      const step = event.key === 'ArrowDown' ? 1 : -1;
+      const current = menuItems.indexOf(document.activeElement as HTMLButtonElement);
+      menuItems[(current + step + menuItems.length) % menuItems.length]?.focus();
+    });
+    document.addEventListener('click', (event) => {
+      if (!(event.target instanceof Node) || !submitBtn.parentElement?.contains(event.target)) {
+        closeMenu();
+      }
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !menu.hidden) {
+        closeMenu();
+        submitBtn.focus();
+      }
+    });
+    $('#send-to-agent')?.addEventListener('click', () => {
+      closeMenu();
+      void this.showSubmitConfirmation();
+    });
+    $('#publish-to-phabricator')?.addEventListener('click', () => {
+      closeMenu();
+      void this.showPublishDialog();
     });
 
     // Toggle view
@@ -687,3 +745,5 @@ applyMixin(MonacoApp, ReviewNoteMethods);
 applyMixin(MonacoApp, DialogMethods);
 applyMixin(MonacoApp, SeriesMethods);
 applyMixin(MonacoApp, StackedViewMethods);
+
+applyMixin(MonacoApp, PublishDialogMethods);

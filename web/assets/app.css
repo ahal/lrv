@@ -2221,6 +2221,11 @@ body {
   font-style: italic;
 }
 
+.submit-publish-note {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
 .submit-error {
   margin-bottom: 14px;
   padding: 8px 10px;
@@ -2233,4 +2238,72 @@ body {
 
 .submit-error[hidden] {
   display: none;
+}
+
+.submit-split {
+  position: relative;
+  display: flex;
+}
+
+/* Pseudo-element, so the arrow isn't part of the button's text. */
+#submit-review[aria-haspopup='menu']::after {
+  content: '▾';
+  margin-left: 6px;
+}
+
+#submit-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 100;
+  min-width: 140px;
+  padding: 4px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+}
+
+#submit-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+#submit-menu button:hover,
+#submit-menu button:focus-visible {
+  background: var(--bg-secondary);
+}
+
+.publish-tabs,
+.publish-verdict {
+  display: flex;
+  gap: 4px;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+
+.publish-tabs[hidden] {
+  display: none;
+}
+
+.publish-tab,
+.publish-verdict button {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.publish-tab[aria-selected='true'],
+.publish-verdict button[aria-pressed='true'] {
+  border-color: var(--accent-color);
+  background: var(--bg-elevated);
+}
+
+.publish-verdict button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }

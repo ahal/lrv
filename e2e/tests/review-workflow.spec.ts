@@ -636,6 +636,135 @@ test.describe('Review Workflow E2E', () => {
     await expect(page.locator('#submit-review')).toHaveText('Review Submitted');
   });
 
+  test('submit is a plain button without detected revisions', async ({ page }) => {
+    await openApp(page);
+    const submit = page.locator('#submit-review');
+    await expect(submit).toHaveText('Submit');
+    await expect(submit).not.toHaveAttribute('aria-haspopup');
+    expect(await submit.evaluate((button) => getComputedStyle(button, '::after').content)).toBe(
+      'none',
+    );
+    await submit.click();
+    await expect(page.locator('#submit-menu')).toBeHidden();
+    await expect(page.locator('.submit-review-modal')).toBeVisible();
+  });
+
+  test('publish dialog keeps per-revision state, retries, locks and advances, then closes when done', async ({
+    page,
+  }) => {
+    await page.route('**/api/context', async (route) => {
+      const response = await route.fetch();
+      await route.fulfill({
+        response,
+        json: { ...(await response.json()), phabricator_available: true },
+      });
+    });
+    await page.route('**/api/phabricator', (route) =>
+      route.fulfill({
+        json: {
+          user: 'reviewer',
+          revisions: [
+            {
+              id: 'D123',
+              title: 'First revision',
+              url: 'https://phab.example/D123',
+              commit_idxs: [0],
+              own: false,
+              closed: false,
+              publishable: true,
+              published: false,
+            },
+            {
+              id: 'D124',
+              title: 'Own revision',
+              url: 'https://phab.example/D124',
+              commit_idxs: [1],
+              own: true,
+              closed: true,
+              publishable: true,
+              published: false,
+            },
+            {
+              id: 'D125',
+              title: '',
+              url: 'https://phab.example/D125',
+              commit_idxs: [2],
+              own: false,
+              closed: false,
+              publishable: false,
+              reason: 'Diff mismatch',
+              published: false,
+            },
+          ],
+        },
+      }),
+    );
+    const bodies: any[] = [];
+    await page.route('**/api/phabricator/publish', async (route) => {
+      bodies.push(route.request().postDataJSON());
+      await route.fulfill(
+        bodies.length === 1
+          ? { status: 502, body: 'boom' }
+          : { json: { url: 'https://phab.example/D123' } },
+      );
+    });
+    await openApp(page);
+    await expect(page.locator('#submit-review')).toHaveText('Submit To..');
+    const arrow = await page
+      .locator('#submit-review')
+      .evaluate((button) => getComputedStyle(button, '::after').content);
+    expect(arrow).toBe('"▾"');
+    await page.locator('#submit-review').click();
+    await expect(page.locator('#submit-menu')).toContainText('Agent');
+    await page.locator('#publish-to-phabricator').click();
+    const dialog = page.locator('.publish-dialog');
+    await expect(dialog.getByRole('tab')).toHaveCount(3);
+    await expect(dialog).toContainText('as @reviewer');
+    await expect(dialog.locator('.publish-revision')).toBeDisabled();
+    await dialog.getByRole('tab', { name: 'D125' }).click();
+    await expect(dialog.getByRole('tab', { name: 'D125' })).toHaveAttribute(
+      'title',
+      'Diff mismatch',
+    );
+    await expect(dialog.locator('.publish-revision')).toBeDisabled();
+    await dialog.getByRole('tab', { name: 'D124' }).click();
+    await expect(dialog.getByRole('button', { name: 'Accept', exact: true })).toBeDisabled();
+    await expect(dialog.getByRole('button', { name: 'Request Changes' })).toBeDisabled();
+    await expect(dialog).toContainText('closed or abandoned');
+    await expect(dialog).toContainText('You are the author of D124');
+    await dialog.getByRole('tab', { name: 'D123' }).click();
+    await dialog.getByRole('textbox').fill('Overall for D123');
+    await dialog.getByRole('button', { name: 'Request Changes' }).click();
+    await dialog
+      .locator('.submit-modal-footer')
+      .getByRole('button', { name: 'Close', exact: true })
+      .click();
+    await page.locator('#submit-review').click();
+    await page.locator('#publish-to-phabricator').click();
+    await expect(dialog.getByRole('textbox')).toHaveValue('Overall for D123');
+    await dialog.locator('.publish-revision').click();
+    await expect(dialog.locator('.submit-error')).toContainText('boom');
+    await expect(dialog.locator('.publish-revision')).toBeEnabled();
+    await dialog.getByRole('textbox').press('Control+Enter');
+    await expect(dialog.getByRole('tab', { name: 'D124' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await dialog.getByRole('tab', { name: 'D123' }).click();
+    await expect(dialog.locator('.publish-revision')).toHaveText('Published ✓');
+    await expect(dialog.getByRole('textbox')).toBeDisabled();
+    expect(bodies[1].action).toBe('request-changes');
+    expect(bodies[1].overall_comment).toBe('Overall for D123');
+    // D124 is still publishable, so the dialog stays open.
+    await dialog.getByRole('tab', { name: 'D124' }).click();
+    await dialog.getByRole('textbox').fill('Reply on D124');
+    await dialog.locator('.publish-revision').click();
+    // D125 can't be published, so once D124 is the dialog closes itself.
+    await expect(dialog).toHaveCount(0, { timeout: 3000 });
+    expect(bodies[2]).toMatchObject({ revision: 'D124', overall_comment: 'Reply on D124' });
+    await expect(page.locator('#submit-review')).toBeEnabled();
+  });
+
   test('stacked mode should add, edit, and delete a comment', async ({ page }) => {
     await openStackedView(page);
 

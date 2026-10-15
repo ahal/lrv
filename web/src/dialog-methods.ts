@@ -16,7 +16,7 @@ type QueuedReviewNoteBody = {
   source?: string;
 };
 
-function parseQueuedReviewNoteBody(body: string): QueuedReviewNoteBody | null {
+export function parseQueuedReviewNoteBody(body: string): QueuedReviewNoteBody | null {
   const lines = body.replace(/\r\n?/g, '\n').trim().split('\n');
   let source: string | undefined;
 
@@ -76,6 +76,16 @@ function parseQueuedReviewNoteBody(body: string): QueuedReviewNoteBody | null {
     parsed.source = source;
   }
   return parsed;
+}
+
+export function commentKey(comment: ReviewComment): string {
+  return JSON.stringify([
+    comment.file,
+    comment.line,
+    comment.side,
+    comment.commit_idx ?? 0,
+    comment.body,
+  ]);
 }
 
 export class DialogMethods {
@@ -487,79 +497,7 @@ export class DialogMethods {
       );
     }
 
-    const fileContents: Record<string, string[]> = {};
-    await Promise.all(
-      Object.keys(commentsByFile).map(async (filePath) => {
-        if (filePath === '(commit)') {
-          return;
-        }
-        const fileComments = commentsByFile[filePath] ?? [];
-        const sides = [...new Set(fileComments.map((c) => c.side))];
-
-        for (const side of sides) {
-          const key = `${filePath}:${side}`;
-          // Use commit_idx from the first comment for this file to fetch correct content
-          const commitParam =
-            fileComments[0]?.commit_idx !== undefined
-              ? `&commit=${fileComments[0].commit_idx}`
-              : '';
-          try {
-            const data = await fetchJSON<{ content?: string }>(
-              `/api/file?path=${encodeURIComponent(filePath)}&side=${side}${commitParam}`,
-            );
-            fileContents[key] = String(data.content ?? '').split('\n');
-          } catch (err) {
-            console.error(`Failed to fetch ${key}:`, err);
-            fileContents[key] = [];
-          }
-        }
-      }),
-    );
-
-    submissionComments.forEach((comment) => {
-      const preview = el('div', { className: 'comment-preview' });
-
-      const isCommitComment = comment.file === '(commit)';
-      const locationText = isCommitComment
-        ? `Commit message line ${commentLineLabel(comment)}`
-        : `${comment.file}:${commentLineLabel(comment)}`;
-      const sideText = isCommitComment ? '' : ` (${comment.side})`;
-      const previewHeader = el('div', { className: 'comment-preview-header' }, [
-        el('span', { className: 'comment-preview-location', text: locationText }),
-        el('span', { className: 'comment-preview-side', text: sideText }),
-      ]);
-
-      const fileKey = `${comment.file}:${comment.side}`;
-      const lines = fileContents[fileKey] ?? [];
-      const rangeStart = commentStartLine(comment);
-      const rangeEnd = commentEndLine(comment);
-      const startLine = Math.max(0, rangeStart - 2);
-      const endLine = Math.min(lines.length, rangeEnd + 1);
-      const excerpt = lines.slice(startLine, endLine);
-
-      const codeBlock = el('div', { className: 'comment-preview-code' });
-      excerpt.forEach((line, idx) => {
-        const lineDiv = el('div', { className: 'comment-preview-code-line' });
-        const lineNumber = startLine + idx + 1;
-        if (lineNumber >= rangeStart && lineNumber <= rangeEnd) {
-          lineDiv.classList.add('target');
-        }
-        lineDiv.appendChild(
-          el('span', { className: 'comment-preview-code-line-number', text: lineNumber }),
-        );
-        lineDiv.appendChild(
-          el('span', { className: 'comment-preview-code-line-text', text: line || ' ' }),
-        );
-        codeBlock.appendChild(lineDiv);
-      });
-
-      preview.appendChild(previewHeader);
-      if (!isCommitComment && excerpt.length > 0) {
-        preview.appendChild(codeBlock);
-      }
-      preview.appendChild(this.renderSubmitCommentBody(comment));
-      body.appendChild(preview);
-    });
+    await this.renderSubmitComments(body, submissionComments);
 
     submit = async () => {
       const submitBtn = footer.querySelector<HTMLButtonElement>('.confirm-submit-btn');
@@ -633,6 +571,86 @@ export class DialogMethods {
         f.focus();
       }
     }, 0);
+  }
+
+  async renderSubmitComments(body: HTMLElement, comments: ReviewComment[]) {
+    const commentsByFile: Record<string, ReviewComment[]> = {};
+    comments.forEach((c) => {
+      (commentsByFile[c.file] ??= []).push(c);
+    });
+    const fileContents: Record<string, string[]> = {};
+    await Promise.all(
+      Object.keys(commentsByFile).map(async (filePath) => {
+        if (filePath === '(commit)') {
+          return;
+        }
+        const fileComments = commentsByFile[filePath] ?? [];
+        const sides = [...new Set(fileComments.map((c) => c.side))];
+
+        for (const side of sides) {
+          const key = `${filePath}:${side}`;
+          // Use commit_idx from the first comment for this file to fetch correct content
+          const commitParam =
+            fileComments[0]?.commit_idx !== undefined
+              ? `&commit=${fileComments[0].commit_idx}`
+              : '';
+          try {
+            const data = await fetchJSON<{ content?: string }>(
+              `/api/file?path=${encodeURIComponent(filePath)}&side=${side}${commitParam}`,
+            );
+            fileContents[key] = String(data.content ?? '').split('\n');
+          } catch (err) {
+            console.error(`Failed to fetch ${key}:`, err);
+            fileContents[key] = [];
+          }
+        }
+      }),
+    );
+
+    comments.forEach((comment) => {
+      const preview = el('div', { className: 'comment-preview' });
+
+      const isCommitComment = comment.file === '(commit)';
+      const locationText = isCommitComment
+        ? `Commit message line ${commentLineLabel(comment)}`
+        : `${comment.file}:${commentLineLabel(comment)}`;
+      const sideText = isCommitComment ? '' : ` (${comment.side})`;
+      const previewHeader = el('div', { className: 'comment-preview-header' }, [
+        el('span', { className: 'comment-preview-location', text: locationText }),
+        el('span', { className: 'comment-preview-side', text: sideText }),
+      ]);
+
+      const fileKey = `${comment.file}:${comment.side}`;
+      const lines = fileContents[fileKey] ?? [];
+      const rangeStart = commentStartLine(comment);
+      const rangeEnd = commentEndLine(comment);
+      const startLine = Math.max(0, rangeStart - 2);
+      const endLine = Math.min(lines.length, rangeEnd + 1);
+      const excerpt = lines.slice(startLine, endLine);
+
+      const codeBlock = el('div', { className: 'comment-preview-code' });
+      excerpt.forEach((line, idx) => {
+        const lineDiv = el('div', { className: 'comment-preview-code-line' });
+        const lineNumber = startLine + idx + 1;
+        if (lineNumber >= rangeStart && lineNumber <= rangeEnd) {
+          lineDiv.classList.add('target');
+        }
+        lineDiv.appendChild(
+          el('span', { className: 'comment-preview-code-line-number', text: lineNumber }),
+        );
+        lineDiv.appendChild(
+          el('span', { className: 'comment-preview-code-line-text', text: line || ' ' }),
+        );
+        codeBlock.appendChild(lineDiv);
+      });
+
+      preview.appendChild(previewHeader);
+      if (!isCommitComment && excerpt.length > 0) {
+        preview.appendChild(codeBlock);
+      }
+      preview.appendChild(this.renderSubmitCommentBody(comment));
+      body.appendChild(preview);
+    });
   }
 
   private renderSubmitCommentBody(comment: ReviewComment): HTMLElement {

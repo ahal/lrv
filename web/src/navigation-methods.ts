@@ -19,7 +19,6 @@ export class NavigationMethods {
   declare focusedLineDecorationsOld: AppContext['focusedLineDecorationsOld'];
   declare loadFile: (index: number) => Promise<void>;
   declare isAddedFile: AppContext['isAddedFile'];
-  declare showSubmitConfirmation: () => Promise<void>;
   declare showKeyboardHelp: () => void;
   declare showCommentDialog: AppContext['showCommentDialog'];
   declare nextCommit: () => void;
@@ -87,7 +86,8 @@ export class NavigationMethods {
           this.openCommentOnCurrentFocus();
           break;
         case 'submitReview':
-          this.showSubmitConfirmation();
+          // Goes through the button so that, with several destinations, the menu opens.
+          document.getElementById('submit-review')?.click();
           break;
         case 'showHelp':
           this.showKeyboardHelp();
