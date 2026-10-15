@@ -61,12 +61,12 @@ export class PublishDialogMethods {
     const forRevision = (id: string) => {
       const revision = status.revisions.find((r) => r.id === id)!;
       return originals.filter(
-        (c) => revision.commit_idxs.includes(c.commit_idx ?? 0) && !isQueued(c),
+        (c) => revision.commit_idxs.includes(c.commit_idx ?? 0) && !isAddress(c),
       );
     };
     const unassigned = originals.filter(
       (c) =>
-        isQueued(c) || !status.revisions.some((r) => r.commit_idxs.includes(c.commit_idx ?? 0)),
+        isAddress(c) || !status.revisions.some((r) => r.commit_idxs.includes(c.commit_idx ?? 0)),
     );
     const tabs = el('div', { className: 'publish-tabs', attrs: { role: 'tablist' } });
     const panel = el('div', { className: 'publish-panel', attrs: { role: 'tabpanel' } });
@@ -224,7 +224,8 @@ export class PublishDialogMethods {
       }
       const preview = el('div');
       panel.appendChild(preview);
-      void this.renderSubmitComments(preview, comments).then(() => {
+      const plainComments = comments.map(unwrapReply);
+      void this.renderSubmitComments(preview, plainComments).then(() => {
         if (generation !== rendering) {
           preview.remove();
         }
@@ -249,7 +250,7 @@ export class PublishDialogMethods {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               revision: revision.id,
-              comments,
+              comments: plainComments,
               overall_comment: tabState.overall,
               action: tabState.action,
             }),
@@ -278,7 +279,12 @@ export class PublishDialogMethods {
   }
 }
 
-// Replies to and Address requests for review notes are instructions for the agent.
-function isQueued(comment: ReviewComment): boolean {
-  return parseQueuedReviewNoteBody(comment.body) !== null;
+function isAddress(comment: ReviewComment): boolean {
+  const parsed = parseQueuedReviewNoteBody(comment.body);
+  return parsed !== null && !parsed.instruction;
+}
+
+function unwrapReply(comment: ReviewComment): ReviewComment {
+  const parsed = parseQueuedReviewNoteBody(comment.body);
+  return parsed?.instruction ? { ...comment, body: parsed.instruction } : comment;
 }

@@ -765,6 +765,81 @@ test.describe('Review Workflow E2E', () => {
     await expect(page.locator('#submit-review')).toBeEnabled();
   });
 
+  test('publishing unwraps replies and leaves Address items for the agent', async ({ page }) => {
+    await page.route('**/api/context', async (route) => {
+      const response = await route.fetch();
+      await route.fulfill({
+        response,
+        json: { ...(await response.json()), phabricator_available: true },
+      });
+    });
+    await page.route('**/api/phabricator', (route) =>
+      route.fulfill({
+        json: {
+          user: 'reviewer',
+          revisions: [
+            {
+              id: 'D123',
+              title: 'Revision',
+              url: 'https://phab.example/D123',
+              commit_idxs: [0],
+              own: false,
+              closed: false,
+              publishable: true,
+              published: false,
+            },
+          ],
+        },
+      }),
+    );
+    await page.route('**/api/review-notes', (route) =>
+      route.fulfill({
+        json: ['test.txt', 'file2.txt', 'file3.txt'].flatMap((file) => [
+          {
+            id: file + '-reply',
+            file,
+            line: 1,
+            side: 'new',
+            body: 'Why is this needed?',
+            author: 'Author',
+          },
+          {
+            id: file + '-address',
+            file,
+            line: 2,
+            side: 'new',
+            body: 'Please fix this.',
+            author: 'Author',
+          },
+        ]),
+      }),
+    );
+    let published: any;
+    await page.route('**/api/phabricator/publish', async (route) => {
+      published = route.request().postDataJSON();
+      await route.fulfill({ json: { url: 'https://phab.example/D123' } });
+    });
+    await openApp(page);
+    const note = page.locator('.review-note').first();
+    await expect(note.locator('button', { hasText: 'Address' })).toHaveCount(1);
+    await expect(note.locator('button', { hasText: 'Ignore' })).toHaveCount(1);
+    await note.locator('button', { hasText: 'Reply' }).click();
+    await note.locator('.review-note-reply-text').fill('Because of the cache.');
+    await note.locator('button', { hasText: 'Queue' }).click();
+    await page.locator('.review-note').nth(1).locator('button', { hasText: 'Address' }).click();
+    await page.locator('#submit-review').click();
+    await page.locator('#publish-to-phabricator').click();
+    const dialog = page.locator('.publish-dialog');
+    await expect(dialog.locator('.comment-preview-text')).toHaveText('Because of the cache.');
+    await dialog.getByRole('tab', { name: 'Not published' }).click();
+    await expect(dialog).toContainText('Please fix this.');
+    await dialog.getByRole('tab', { name: 'D123' }).click();
+    await dialog.locator('.publish-revision').click();
+    await expect(dialog.locator('.publish-revision')).toHaveText('Published ✓');
+    expect(published.comments).toHaveLength(1);
+    expect(published.comments[0].body).toBe('Because of the cache.');
+  });
+
   test('stacked mode should add, edit, and delete a comment', async ({ page }) => {
     await openStackedView(page);
 

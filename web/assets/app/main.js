@@ -12801,9 +12801,9 @@ var PublishDialogMethods = class {
 		const originals = this.commentManager.getComments().filter((c) => !this.publishedCommentKeys.has(commentKey(c)));
 		const forRevision = (id) => {
 			const revision = status.revisions.find((r) => r.id === id);
-			return originals.filter((c) => revision.commit_idxs.includes(c.commit_idx ?? 0) && !isQueued(c));
+			return originals.filter((c) => revision.commit_idxs.includes(c.commit_idx ?? 0) && !isAddress(c));
 		};
-		const unassigned = originals.filter((c) => isQueued(c) || !status.revisions.some((r) => r.commit_idxs.includes(c.commit_idx ?? 0)));
+		const unassigned = originals.filter((c) => isAddress(c) || !status.revisions.some((r) => r.commit_idxs.includes(c.commit_idx ?? 0)));
 		const tabs = el("div", {
 			className: "publish-tabs",
 			attrs: { role: "tablist" }
@@ -12943,7 +12943,8 @@ var PublishDialogMethods = class {
 			}));
 			const preview = el("div");
 			panel.appendChild(preview);
-			this.renderSubmitComments(preview, comments).then(() => {
+			const plainComments = comments.map(unwrapReply);
+			this.renderSubmitComments(preview, plainComments).then(() => {
 				if (generation !== rendering) preview.remove();
 			});
 			panel.appendChild(el("p", {
@@ -12962,7 +12963,7 @@ var PublishDialogMethods = class {
 						headers: { "Content-Type": "application/json" },
 						body: JSON.stringify({
 							revision: revision.id,
-							comments,
+							comments: plainComments,
 							overall_comment: tabState.overall,
 							action: tabState.action
 						})
@@ -12985,8 +12986,16 @@ var PublishDialogMethods = class {
 		render();
 	}
 };
-function isQueued(comment) {
-	return parseQueuedReviewNoteBody(comment.body) !== null;
+function isAddress(comment) {
+	const parsed = parseQueuedReviewNoteBody(comment.body);
+	return parsed !== null && !parsed.instruction;
+}
+function unwrapReply(comment) {
+	const parsed = parseQueuedReviewNoteBody(comment.body);
+	return parsed?.instruction ? {
+		...comment,
+		body: parsed.instruction
+	} : comment;
 }
 //#endregion
 //#region web/src/series-methods.ts
