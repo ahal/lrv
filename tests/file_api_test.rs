@@ -43,6 +43,7 @@ fn make_state_with_root(root: &str) -> lrv::server::AppState {
         is_public: false,
         claude_skill_installed: false,
         comment_store_error: None,
+        phabricator_available: false,
     };
     let (shutdown_tx, _rx) = mpsc::channel::<()>(1);
     lrv::server::AppState {
@@ -62,6 +63,7 @@ fn make_state_with_root(root: &str) -> lrv::server::AppState {
         is_series: false,
         pull_requests: Default::default(),
         store: None,
+        publish: None,
     }
 }
 

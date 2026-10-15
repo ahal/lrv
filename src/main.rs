@@ -63,6 +63,7 @@ fn get_project_context() -> ProjectContext {
         is_public: false,
         claude_skill_installed: skill::all_skills_installed(),
         comment_store_error: None,
+        phabricator_available: false,
     }
 }
 
@@ -924,6 +925,17 @@ async fn main() -> Result<()> {
         .filter(|r| !r.is_empty())
         .cloned()
         .collect();
+    let messages = diffs
+        .iter()
+        .map(|d| d.commit_message.as_deref())
+        .collect::<Vec<_>>();
+    let targets = phabricator::resolve_phab_targets(&named_revisions, &phab_base_url, &messages);
+    let publisher = if targets.iter().any(Option::is_some) {
+        project_context.phabricator_available = true;
+        Some(Arc::new(phabricator::Publisher::new(targets, &diffs)))
+    } else {
+        None
+    };
     review_notes.extend(
         load_phabricator_notes(
             &named_revisions,
@@ -1053,6 +1065,7 @@ async fn main() -> Result<()> {
         is_series,
         pull_requests: Arc::new(pull_requests),
         store,
+        publish: publisher,
     };
 
     // Create router (we'll clone per listener)

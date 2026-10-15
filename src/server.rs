@@ -63,6 +63,8 @@ pub struct AppState {
     // Durable comment store. `None` when the database could not be opened;
     // reviewing still works, only crash recovery is unavailable.
     pub store: Option<Arc<CommentStore>>,
+    // Optional, lazily validated Phabricator publisher.
+    pub publish: Option<Arc<crate::phabricator::Publisher>>,
 }
 
 impl AppState {
@@ -730,6 +732,8 @@ pub fn create_router(state: AppState, enable_trace: bool) -> Router {
             get(get_review_notes).post(add_review_note),
         )
         .route("/api/complete", post(complete_review))
+        .route("/api/phabricator", get(get_phabricator))
+        .route("/api/phabricator/publish", post(publish_phabricator))
         .layer(middleware::from_fn(security_headers))
         .with_state(state);
 
@@ -1594,5 +1598,56 @@ mod precompute_tests {
             old_maps[1].get("new.txt").map(String::as_str),
             Some("hello\n")
         );
+    }
+}
+
+async fn get_phabricator(
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let publisher = state.publish.as_ref().ok_or(StatusCode::NOT_FOUND)?;
+    let validation = publisher.validate().await;
+    Ok(Json(
+        serde_json::json!({ "user": validation.user, "error": validation.error, "revisions": publisher.statuses().await }),
+    ))
+}
+
+#[derive(serde::Deserialize)]
+struct PublishRequest {
+    revision: String,
+    comments: Vec<Comment>,
+    overall_comment: Option<String>,
+    #[serde(default)]
+    action: crate::types::ReviewAction,
+}
+
+async fn publish_phabricator(
+    State(state): State<AppState>,
+    Json(payload): Json<PublishRequest>,
+) -> (StatusCode, String) {
+    let Some(publisher) = &state.publish else {
+        return (StatusCode::NOT_FOUND, String::new());
+    };
+    if payload.comments.iter().any(|c| !c.is_valid()) {
+        return (StatusCode::BAD_REQUEST, "Invalid comment".into());
+    }
+    match publisher
+        .publish_revision(
+            &payload.revision,
+            &payload.comments,
+            payload.overall_comment.as_deref(),
+            payload.action,
+        )
+        .await
+    {
+        Ok(url) => (StatusCode::OK, serde_json::json!({"url": url}).to_string()),
+        Err(e) => {
+            let message = format!("{e:#}");
+            let status = if message == "Revision already published" {
+                StatusCode::CONFLICT
+            } else {
+                StatusCode::BAD_GATEWAY
+            };
+            (status, message)
+        }
     }
 }

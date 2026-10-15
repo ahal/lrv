@@ -69,6 +69,7 @@ fn get_project_context(cwd: Option<&PathBuf>) -> lrv::types::ProjectContext {
         is_public: false,
         claude_skill_installed: false,
         comment_store_error: None,
+        phabricator_available: false,
     }
 }
 

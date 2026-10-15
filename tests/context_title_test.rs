@@ -28,6 +28,7 @@ async fn test_context_includes_title_when_set() {
         is_public: false,
         claude_skill_installed: false,
         comment_store_error: None,
+        phabricator_available: false,
     };
     let (shutdown_tx, _rx) = tokio::sync::mpsc::channel::<()>(1);
     let state = lrv::server::AppState {
@@ -47,6 +48,7 @@ async fn test_context_includes_title_when_set() {
         is_series: false,
         pull_requests: Default::default(),
         store: None,
+        publish: None,
     };
 
     let app = lrv::server::create_router(state, false);
@@ -99,6 +101,7 @@ async fn test_context_title_null_when_unset() {
         is_public: false,
         claude_skill_installed: false,
         comment_store_error: None,
+        phabricator_available: false,
     };
     let (shutdown_tx, _rx) = tokio::sync::mpsc::channel::<()>(1);
     let state = lrv::server::AppState {
@@ -118,6 +121,7 @@ async fn test_context_title_null_when_unset() {
         is_series: false,
         pull_requests: Default::default(),
         store: None,
+        publish: None,
     };
 
     let app = lrv::server::create_router(state, false);

@@ -1,4 +1,4 @@
-use crate::types::{CommentLine, ReviewNote, Side};
+use crate::types::{Comment, CommentLine, DiffResponse, LineType, ReviewAction, ReviewNote, Side};
 use anyhow::{Context, Result};
 use reqwest::Client;
 use serde::Deserialize;
@@ -38,7 +38,19 @@ struct RevisionData {
 
 #[derive(Debug, Deserialize)]
 struct RevisionFields {
+    title: Option<String>,
     uri: Option<String>,
+    #[serde(rename = "diffPHID")]
+    diff_phid: Option<String>,
+    #[serde(rename = "authorPHID")]
+    author_phid: Option<String>,
+    status: Option<RevisionStatus>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RevisionStatus {
+    #[serde(default)]
+    closed: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -393,6 +405,293 @@ impl PhabricatorClient {
     }
 }
 
+/// The user the API token belongs to.
+#[derive(Debug, Clone)]
+pub struct Viewer {
+    pub phid: String,
+    pub username: String,
+}
+
+/// A revision's active diff, as far as it is needed to check that a local commit matches it.
+#[derive(Debug, Clone)]
+pub struct ActiveDiff {
+    pub title: String,
+    pub uri: String,
+    pub author_phid: Option<String>,
+    /// Closed or abandoned revisions can still be commented on, but rarely should be.
+    pub closed: bool,
+    pub diff_id: u64,
+    /// Lines added and deleted per path.
+    pub files: HashMap<String, (usize, usize)>,
+}
+
+/// A draft inline comment: `length` is the number of lines it covers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InlineDraft {
+    pub file: String,
+    pub is_new_file: bool,
+    pub line: usize,
+    pub length: usize,
+    pub body: String,
+}
+
+/// Everything to publish on one revision.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RevisionPublish {
+    pub inlines: Vec<InlineDraft>,
+    pub comment: Option<String>,
+    pub action: ReviewAction,
+}
+
+/// How far publishing a revision got, so that retrying after a failure doesn't repeat it.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct PublishProgress {
+    pub inlines_created: usize,
+    pub published: bool,
+}
+
+/// Build the inlines and general comment for one revision.
+pub fn build_revision_publish(
+    comments: &[Comment],
+    overall_comment: Option<&str>,
+    action: ReviewAction,
+) -> RevisionPublish {
+    let mut revision = RevisionPublish {
+        inlines: Vec::new(),
+        comment: None,
+        action,
+    };
+    let mut general = Vec::new();
+    for comment in comments {
+        if comment.file == "(commit)" {
+            general.push(comment.body.as_str());
+            continue;
+        }
+        let (line, length) = match comment.line {
+            CommentLine::Single(line) => (line, 1),
+            CommentLine::Range((start, end)) => (start, end - start + 1),
+        };
+        revision.inlines.push(InlineDraft {
+            file: comment.file.clone(),
+            is_new_file: comment.side == Side::New,
+            line,
+            length,
+            body: comment.body.clone(),
+        });
+    }
+    if let Some(overall) = overall_comment.filter(|s| !s.trim().is_empty()) {
+        general.push(overall);
+    }
+    if !general.is_empty() {
+        revision.comment = Some(general.join("\n\n"));
+    }
+    revision
+}
+
+/// Per-path lines added and deleted of a local commit, to compare with a revision's diff.
+pub fn local_file_stats(diff: &DiffResponse) -> HashMap<String, (usize, usize)> {
+    diff.files
+        .iter()
+        .map(|file| {
+            let lines = file.hunks.iter().flat_map(|h| &h.lines);
+            let (mut added, mut deleted) = (0, 0);
+            for line in lines {
+                match line.line_type {
+                    LineType::Add => added += 1,
+                    LineType::Delete => deleted += 1,
+                    LineType::Context => {}
+                }
+            }
+            (file.path.clone(), (added, deleted))
+        })
+        .collect()
+}
+
+/// Inline comments are anchored to lines of the revision's diff, so publishing from a commit that
+/// differs from it would put them on the wrong lines. Binary files have no line counts to compare.
+pub fn check_diff_matches(
+    revision: &str,
+    local: &HashMap<String, (usize, usize)>,
+    active: &ActiveDiff,
+) -> Result<()> {
+    let mut mismatched: Vec<&str> = local
+        .iter()
+        .filter(|(path, stats)| active.files.get(*path) != Some(stats))
+        .map(|(path, _)| path.as_str())
+        .chain(
+            active
+                .files
+                .keys()
+                .filter(|path| !local.contains_key(*path))
+                .map(String::as_str),
+        )
+        .collect();
+    if mismatched.is_empty() {
+        return Ok(());
+    }
+    mismatched.sort_unstable();
+    mismatched.dedup();
+    anyhow::bail!(
+        "the local commit doesn't match the latest diff (id {}) of {}; these files differ: {}",
+        active.diff_id,
+        revision,
+        mismatched.join(", ")
+    )
+}
+
+impl PhabricatorClient {
+    async fn conduit<T: serde::de::DeserializeOwned>(
+        &self,
+        method: &str,
+        mut params: Vec<(String, String)>,
+    ) -> Result<T> {
+        params.push(("api.token".to_string(), self.token.clone()));
+        self.client
+            .post(format!("{}/api/{}", self.base_url, method))
+            .form(&params)
+            .send()
+            .await
+            .with_context(|| format!("Phabricator {method} request failed"))?
+            .json::<ConduitResponse<T>>()
+            .await
+            .with_context(|| format!("Failed to parse Phabricator {method} response"))?
+            .into_result()
+    }
+
+    /// The user the token belongs to; also proves the token works.
+    pub async fn whoami(&self) -> Result<Viewer> {
+        let value: serde_json::Value = self.conduit("user.whoami", Vec::new()).await?;
+        let text = |key: &str| value.get(key).and_then(|v| v.as_str()).map(str::to_string);
+        Ok(Viewer {
+            phid: text("phid").context("user.whoami returned no phid")?,
+            username: text("userName").context("user.whoami returned no userName")?,
+        })
+    }
+
+    /// The revision and the files of its latest diff.
+    pub async fn fetch_active_diff(&self, revision: u32) -> Result<ActiveDiff> {
+        let revision = self.fetch_revision(revision).await?;
+        let diff_phid = revision
+            .fields
+            .diff_phid
+            .clone()
+            .context("Phabricator revision has no diff")?;
+
+        let search: serde_json::Value = self
+            .conduit(
+                "differential.diff.search",
+                vec![("constraints[phids][0]".to_string(), diff_phid)],
+            )
+            .await?;
+        let diff_id = search
+            .pointer("/data/0/id")
+            .and_then(|v| v.as_u64())
+            .context("Phabricator diff not found")?;
+
+        let queried: serde_json::Value = self
+            .conduit(
+                "differential.querydiffs",
+                vec![("ids[0]".to_string(), diff_id.to_string())],
+            )
+            .await?;
+        let changes = queried
+            .get(diff_id.to_string())
+            .and_then(|d| d.get("changes"))
+            .and_then(|c| c.as_array())
+            .context("Phabricator diff has no changes")?;
+        // Line counts arrive as strings.
+        let count = |change: &serde_json::Value, key: &str| {
+            change.get(key).map_or(0, |v| {
+                v.as_u64()
+                    .or_else(|| v.as_str().and_then(|s| s.parse().ok()))
+                    .unwrap_or(0) as usize
+            })
+        };
+        let files = changes
+            .iter()
+            .filter_map(|change| {
+                // Deleted files have no current path; lrv names them by their old one.
+                let path = ["currentPath", "oldPath"]
+                    .iter()
+                    .filter_map(|key| change.get(*key)?.as_str())
+                    .find(|p| !p.is_empty())?
+                    .to_string();
+                Some((path, (count(change, "addLines"), count(change, "delLines"))))
+            })
+            .collect();
+
+        let status = revision.fields.status.as_ref();
+        Ok(ActiveDiff {
+            title: revision.fields.title.unwrap_or_default(),
+            uri: revision.fields.uri.unwrap_or_default(),
+            author_phid: revision.fields.author_phid,
+            // Phabricator marks abandoned revisions closed too.
+            closed: status.is_some_and(|s| s.closed),
+            diff_id,
+            files,
+        })
+    }
+
+    async fn create_inline(&self, diff_id: u64, inline: &InlineDraft) -> Result<()> {
+        let _: serde_json::Value = self
+            .conduit(
+                "differential.createinline",
+                vec![
+                    ("diffID".to_string(), diff_id.to_string()),
+                    ("filePath".to_string(), inline.file.clone()),
+                    // Phabricator wants 1/0; `true` is read as false.
+                    (
+                        "isNewFile".to_string(),
+                        u8::from(inline.is_new_file).to_string(),
+                    ),
+                    ("lineNumber".to_string(), inline.line.to_string()),
+                    // The number of lines after the first.
+                    ("lineLength".to_string(), (inline.length - 1).to_string()),
+                    ("content".to_string(), inline.body.clone()),
+                ],
+            )
+            .await?;
+        Ok(())
+    }
+
+    /// Publish a revision's review: create its inline comments as drafts, then post the comment
+    /// (and verdict) with the drafts attached. `progress` records how far it got, so that calling
+    /// this again after an error continues instead of creating the inlines twice.
+    pub async fn publish_revision(
+        &self,
+        revision: u32,
+        diff_id: u64,
+        publish: &RevisionPublish,
+        progress: &mut PublishProgress,
+    ) -> Result<()> {
+        if progress.published {
+            return Ok(());
+        }
+        for inline in publish.inlines.iter().skip(progress.inlines_created) {
+            self.create_inline(diff_id, inline).await?;
+            progress.inlines_created += 1;
+        }
+        let mut params = vec![
+            ("revision_id".to_string(), revision.to_string()),
+            (
+                "message".to_string(),
+                publish.comment.clone().unwrap_or_default(),
+            ),
+            ("attach_inlines".to_string(), "1".to_string()),
+        ];
+        match publish.action {
+            ReviewAction::Comment => {}
+            ReviewAction::Accept => params.push(("action".to_string(), "accept".to_string())),
+            ReviewAction::RequestChanges => {
+                params.push(("action".to_string(), "reject".to_string()))
+            }
+        }
+        let _: serde_json::Value = self.conduit("differential.createcomment", params).await?;
+        progress.published = true;
+        Ok(())
+    }
+}
+
 /// The Phabricator API token: from the environment, else from `~/.arcrc` (shared with moz-phab
 /// and arc), where it is stored per host.
 pub fn phabricator_token(base_url: &str) -> Result<String> {
@@ -427,6 +726,245 @@ fn arcrc_token(path: &std::path::Path, base_url: &str) -> Option<String> {
         .find(|(host, _)| normalize(host) == wanted)
         .and_then(|(_, entry)| entry.get("token")?.as_str())
         .map(str::to_string)
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct RevisionStatusInfo {
+    pub id: String,
+    pub title: String,
+    pub url: String,
+    pub commit_idxs: Vec<usize>,
+    pub own: bool,
+    pub closed: bool,
+    pub publishable: bool,
+    pub reason: Option<String>,
+    pub published: bool,
+    #[serde(skip)]
+    diff_id: u64,
+}
+
+pub struct Validation {
+    pub user: String,
+    pub error: Option<String>,
+    pub revisions: Vec<RevisionStatusInfo>,
+    client: Option<PhabricatorClient>,
+}
+
+pub struct Publisher {
+    targets: Vec<Option<PhabTarget>>,
+    stats: Vec<HashMap<String, (usize, usize)>>,
+    validation: tokio::sync::OnceCell<Validation>,
+    attempts: tokio::sync::Mutex<HashMap<String, (RevisionPublish, PublishProgress)>>,
+}
+
+impl Publisher {
+    #[cfg(test)]
+    pub(crate) fn published_for_test() -> Self {
+        let publisher = Self::new(Vec::new(), &[]);
+        publisher
+            .validation
+            .set(Validation {
+                user: "reviewer".into(),
+                error: None,
+                client: None,
+                revisions: vec![RevisionStatusInfo {
+                    id: "D123".into(),
+                    title: "Revision".into(),
+                    url: "https://phab.example/D123".into(),
+                    commit_idxs: vec![0],
+                    own: false,
+                    closed: false,
+                    publishable: true,
+                    reason: None,
+                    published: false,
+                    diff_id: 1,
+                }],
+            })
+            .ok()
+            .unwrap();
+        publisher.attempts.try_lock().unwrap().insert(
+            "D123".into(),
+            (
+                build_revision_publish(&[], Some("review"), ReviewAction::Comment),
+                PublishProgress {
+                    inlines_created: 0,
+                    published: true,
+                },
+            ),
+        );
+        publisher
+    }
+
+    pub fn new(targets: Vec<Option<PhabTarget>>, diffs: &[DiffResponse]) -> Self {
+        Self {
+            targets,
+            stats: diffs.iter().map(local_file_stats).collect(),
+            validation: Default::default(),
+            attempts: Default::default(),
+        }
+    }
+
+    pub async fn validate(&self) -> &Validation {
+        self.validation
+            .get_or_init(|| async {
+                let base = &self
+                    .targets
+                    .iter()
+                    .flatten()
+                    .next()
+                    .expect("publisher has targets")
+                    .base_url;
+                let mut revisions: Vec<RevisionStatusInfo> = Vec::new();
+                for (idx, target) in self
+                    .targets
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, t)| t.as_ref().map(|t| (i, t)))
+                {
+                    let id = format!("D{}", target.id);
+                    if let Some(existing) = revisions
+                        .iter_mut()
+                        .find(|r| r.url == format!("{}/{}", target.base_url, id))
+                    {
+                        existing.commit_idxs.push(idx);
+                        existing.reason = Some("Revision spans several commits".into());
+                        continue;
+                    }
+                    revisions.push(RevisionStatusInfo {
+                        id: id.clone(),
+                        title: String::new(),
+                        url: format!("{}/{}", target.base_url, id),
+                        commit_idxs: vec![idx],
+                        own: false,
+                        closed: false,
+                        publishable: false,
+                        published: false,
+                        diff_id: 0,
+                        reason: (target.base_url != *base)
+                            .then(|| "Revision is on a different server".into()),
+                    });
+                }
+                let auth = async {
+                    let client = PhabricatorClient::new(base.clone(), phabricator_token(base)?)?;
+                    let viewer = client.whoami().await?;
+                    Ok::<_, anyhow::Error>((client, viewer))
+                }
+                .await;
+                let (client, viewer) = match auth {
+                    Ok(value) => value,
+                    Err(e) => {
+                        return Validation {
+                            user: String::new(),
+                            error: Some(format!("{e:#}")),
+                            revisions,
+                            client: None,
+                        }
+                    }
+                };
+                for revision in &mut revisions {
+                    if revision.reason.is_some() {
+                        continue;
+                    }
+                    let id = revision.id[1..].parse().expect("revision id");
+                    match client.fetch_active_diff(id).await {
+                        Ok(active) => {
+                            revision.reason = check_diff_matches(
+                                &revision.id,
+                                &self.stats[revision.commit_idxs[0]],
+                                &active,
+                            )
+                            .err()
+                            .map(|e| e.to_string());
+                            revision.title = active.title;
+                            revision.url = active.uri;
+                            revision.own =
+                                active.author_phid.as_deref() == Some(viewer.phid.as_str());
+                            revision.closed = active.closed;
+                            revision.diff_id = active.diff_id;
+                            revision.publishable = revision.reason.is_none();
+                        }
+                        Err(e) => revision.reason = Some(format!("{e:#}")),
+                    }
+                }
+                Validation {
+                    user: viewer.username,
+                    error: None,
+                    revisions,
+                    client: Some(client),
+                }
+            })
+            .await
+    }
+
+    pub async fn statuses(&self) -> Vec<RevisionStatusInfo> {
+        let validation = self.validate().await;
+        let attempts = self.attempts.lock().await;
+        validation
+            .revisions
+            .iter()
+            .cloned()
+            .map(|mut r| {
+                r.published = attempts.get(&r.id).is_some_and(|(_, p)| p.published);
+                r
+            })
+            .collect()
+    }
+
+    pub async fn publish_revision(
+        &self,
+        id: &str,
+        comments: &[Comment],
+        overall: Option<&str>,
+        action: ReviewAction,
+    ) -> Result<String> {
+        let validation = self.validate().await;
+        if let Some(error) = &validation.error {
+            anyhow::bail!("{error}");
+        }
+        let target = validation
+            .revisions
+            .iter()
+            .find(|r| r.id == id)
+            .context("Unknown revision")?;
+        if !target.publishable {
+            anyhow::bail!("{}", target.reason.as_deref().unwrap_or("Cannot publish"));
+        }
+        if target.own && action != ReviewAction::Comment {
+            anyhow::bail!("{id} is your own revision; you can only comment on it");
+        }
+        let comments: Vec<Comment> = comments
+            .iter()
+            .filter(|c| target.commit_idxs.contains(&c.commit_idx.unwrap_or(0)))
+            .cloned()
+            .collect();
+        let revision = build_revision_publish(&comments, overall, action);
+        if revision.inlines.is_empty()
+            && revision.comment.is_none()
+            && action == ReviewAction::Comment
+        {
+            anyhow::bail!("Nothing to publish");
+        }
+        let mut attempts = self.attempts.lock().await;
+        let (last, progress) = attempts
+            .entry(id.into())
+            .or_insert_with(|| (revision.clone(), PublishProgress::default()));
+        if progress.published {
+            anyhow::bail!("Revision already published");
+        }
+        if *last != revision {
+            if progress.inlines_created > 0 {
+                anyhow::bail!("The review changed after a failed publish left draft inlines; restore the original review before retrying");
+            }
+            *last = revision.clone();
+        }
+        validation
+            .client
+            .as_ref()
+            .context("No Phabricator client")?
+            .publish_revision(id[1..].parse()?, target.diff_id, &revision, progress)
+            .await?;
+        Ok(target.url.clone())
+    }
 }
 
 /// Find the `Differential Revision: <url>` trailer that moz-phab and arc add to
@@ -511,7 +1049,22 @@ fn note_line_start(line: &CommentLine) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::{detect_revision, parse_revision_id, resolve_phab_targets, PhabTarget};
+    use super::{
+        build_revision_publish, check_diff_matches, detect_revision, parse_revision_id,
+        resolve_phab_targets, ActiveDiff, PhabTarget,
+    };
+    use crate::types::{Comment, CommentLine, ReviewAction, Side};
+    use std::collections::HashMap;
+
+    fn comment(file: &str, line: CommentLine, side: Side, commit_idx: Option<usize>) -> Comment {
+        Comment {
+            file: file.to_string(),
+            line,
+            side,
+            body: format!("body of {file}"),
+            commit_idx,
+        }
+    }
 
     #[test]
     fn detects_revision_trailer() {
@@ -563,5 +1116,137 @@ mod tests {
                 None
             ]
         );
+    }
+
+    #[tokio::test]
+    async fn publishing_filters_commits_resumes_inlines_and_rejects_duplicates() {
+        use super::{PhabricatorClient, Publisher};
+        use axum::{
+            extract::{Path, State},
+            routing::post,
+            Form, Json, Router,
+        };
+        use std::sync::Arc;
+
+        type Calls = Arc<tokio::sync::Mutex<Vec<(String, HashMap<String, String>)>>>;
+        async fn conduit(
+            State(calls): State<Calls>,
+            Path(method): Path<String>,
+            Form(params): Form<HashMap<String, String>>,
+        ) -> Json<serde_json::Value> {
+            let mut calls = calls.lock().await;
+            let fail =
+                method == "differential.createcomment" && !calls.iter().any(|(m, _)| m == &method);
+            calls.push((method, params));
+            Json(if fail {
+                serde_json::json!({"error_code": "ERR", "error_info": "retry me", "result": null})
+            } else {
+                serde_json::json!({"error_code": null, "error_info": null, "result": {}})
+            })
+        }
+        let calls: Calls = Default::default();
+        let app = Router::new()
+            .route("/api/{method}", post(conduit))
+            .with_state(calls.clone());
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let server = tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        let mut publisher = Publisher::published_for_test();
+        let mut validation = publisher.validation.take().unwrap();
+        validation.client = Some(PhabricatorClient::new(base, "test-token".into()).unwrap());
+        publisher.validation.set(validation).ok().unwrap();
+        publisher.attempts.lock().await.clear();
+        let comments = vec![
+            comment("a.rs", CommentLine::Range((5, 8)), Side::Old, Some(0)),
+            comment("other.rs", CommentLine::Single(1), Side::New, Some(1)),
+        ];
+        let result = publisher
+            .publish_revision("D123", &comments, Some("overall"), ReviewAction::Comment)
+            .await;
+        assert!(result.unwrap_err().to_string().contains("retry me"));
+        let changed = publisher
+            .publish_revision("D123", &comments, Some("changed"), ReviewAction::Comment)
+            .await;
+        assert!(changed.unwrap_err().to_string().contains("review changed"));
+        assert_eq!(
+            publisher
+                .publish_revision("D123", &comments, Some("overall"), ReviewAction::Comment)
+                .await
+                .unwrap(),
+            "https://phab.example/D123"
+        );
+        assert_eq!(
+            publisher
+                .publish_revision("D123", &comments, Some("overall"), ReviewAction::Comment)
+                .await
+                .unwrap_err()
+                .to_string(),
+            "Revision already published"
+        );
+        let calls = calls.lock().await;
+        assert_eq!(calls.len(), 3);
+        assert_eq!(calls[0].1["filePath"], "a.rs");
+        assert_eq!(calls[0].1["isNewFile"], "0");
+        assert_eq!(calls[0].1["lineLength"], "3");
+        assert_eq!(calls[1].1["message"], "overall");
+        assert_eq!(calls[1].1["attach_inlines"], "1");
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn own_revision_verdict_is_rejected_before_creating_drafts() {
+        let mut publisher = super::Publisher::published_for_test();
+        let mut validation = publisher.validation.take().unwrap();
+        validation.revisions[0].own = true;
+        publisher.validation.set(validation).ok().unwrap();
+        publisher.attempts.lock().await.clear();
+        let error = publisher
+            .publish_revision("D123", &[], None, ReviewAction::Accept)
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("your own revision"));
+        assert!(publisher.attempts.lock().await.is_empty());
+    }
+
+    #[test]
+    fn revision_publish_joins_general_comments() {
+        let comments = vec![
+            comment("a.rs", CommentLine::Range((5, 8)), Side::Old, Some(1)),
+            comment("(commit)", CommentLine::Single(1), Side::New, Some(1)),
+        ];
+        let plan = build_revision_publish(&comments, Some("overall"), ReviewAction::Accept);
+        assert_eq!(plan.inlines[0].length, 4);
+        assert!(!plan.inlines[0].is_new_file);
+        assert_eq!(plan.comment.as_deref(), Some("body of (commit)\n\noverall"));
+        assert_eq!(plan.action, ReviewAction::Accept);
+        assert_eq!(
+            build_revision_publish(&[], Some("  "), ReviewAction::Comment).comment,
+            None
+        );
+    }
+
+    #[test]
+    fn diff_match_reports_differing_files() {
+        let active = ActiveDiff {
+            title: String::new(),
+            uri: String::new(),
+            author_phid: None,
+            closed: false,
+            diff_id: 9,
+            files: HashMap::from([("a.rs".to_string(), (2, 1)), ("b.rs".to_string(), (1, 1))]),
+        };
+        let mut local = HashMap::from([("a.rs".to_string(), (2, 1)), ("b.rs".to_string(), (1, 1))]);
+        assert!(check_diff_matches("D1", &local, &active).is_ok());
+
+        local.insert("a.rs".to_string(), (3, 1));
+        local.remove("b.rs");
+        local.insert("c.rs".to_string(), (1, 0));
+        let err = check_diff_matches("D1", &local, &active)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("a.rs, b.rs, c.rs"), "{err}");
+        assert!(err.contains("id 9"), "{err}");
     }
 }
