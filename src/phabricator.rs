@@ -393,6 +393,42 @@ impl PhabricatorClient {
     }
 }
 
+/// The Phabricator API token: from the environment, else from `~/.arcrc` (shared with moz-phab
+/// and arc), where it is stored per host.
+pub fn phabricator_token(base_url: &str) -> Result<String> {
+    if let Ok(token) =
+        std::env::var("PHABRICATOR_API_KEY").or_else(|_| std::env::var("PHABRICATOR_TOKEN"))
+    {
+        return Ok(token);
+    }
+    if let Some(token) =
+        dirs::home_dir().and_then(|home| arcrc_token(&home.join(".arcrc"), base_url))
+    {
+        return Ok(token);
+    }
+    anyhow::bail!(
+        "Set PHABRICATOR_API_KEY or PHABRICATOR_TOKEN (or log in with moz-phab) to load Phabricator comments"
+    )
+}
+
+fn arcrc_token(path: &std::path::Path, base_url: &str) -> Option<String> {
+    let value: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(path).ok()?).ok()?;
+    let normalize = |url: &str| {
+        url.trim_end_matches('/')
+            .trim_end_matches("/api")
+            .to_string()
+    };
+    let wanted = normalize(base_url);
+    value
+        .get("hosts")?
+        .as_object()?
+        .iter()
+        .find(|(host, _)| normalize(host) == wanted)
+        .and_then(|(_, entry)| entry.get("token")?.as_str())
+        .map(str::to_string)
+}
+
 /// Find the `Differential Revision: <url>` trailer that moz-phab and arc add to
 /// commit messages. Returns the Phabricator base URL and the revision id, so the
 /// host comes from the commit itself rather than from configuration.
@@ -406,6 +442,36 @@ pub fn detect_revision(commit_message: &str) -> Option<(String, u32)> {
     })?;
     let (base, _) = url.rsplit_once("/D")?;
     Some((base.to_string(), parse_revision_id(url)?))
+}
+
+/// A Phabricator revision a commit is reviewed on.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PhabTarget {
+    pub base_url: String,
+    pub id: u32,
+}
+
+/// The revision of each commit: the `named` revision at the same position when given, else the
+/// commit's `Differential Revision:` trailer. `None` for commits with neither.
+pub fn resolve_phab_targets(
+    named: &[String],
+    base_url: &str,
+    commit_messages: &[Option<&str>],
+) -> Vec<Option<PhabTarget>> {
+    commit_messages
+        .iter()
+        .enumerate()
+        .map(|(i, message)| {
+            if let Some(id) = named.get(i).and_then(|r| parse_revision_id(r)) {
+                return Some(PhabTarget {
+                    base_url: base_url.to_string(),
+                    id,
+                });
+            }
+            let (base_url, id) = detect_revision((*message)?)?;
+            Some(PhabTarget { base_url, id })
+        })
+        .collect()
 }
 
 fn parse_revision_id(input: &str) -> Option<u32> {
@@ -445,7 +511,7 @@ fn note_line_start(line: &CommentLine) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::{detect_revision, parse_revision_id};
+    use super::{detect_revision, parse_revision_id, resolve_phab_targets, PhabTarget};
 
     #[test]
     fn detects_revision_trailer() {
@@ -473,5 +539,29 @@ mod tests {
             Some(301379)
         );
         assert_eq!(parse_revision_id("Dnope"), None);
+    }
+
+    #[test]
+    fn resolves_named_then_trailer_targets() {
+        let trailer = "Bug 1\n\nDifferential Revision: https://phab.example/D7\n";
+        let target = |base: &str, id| {
+            Some(PhabTarget {
+                base_url: base.to_string(),
+                id,
+            })
+        };
+        let targets = resolve_phab_targets(
+            &["D5".to_string()],
+            "https://named.example",
+            &[Some("Bug 0"), Some(trailer), None],
+        );
+        assert_eq!(
+            targets,
+            vec![
+                target("https://named.example", 5),
+                target("https://phab.example", 7),
+                None
+            ]
+        );
     }
 }
