@@ -12525,13 +12525,14 @@ var DialogMethods = class {
 	async showSubmitConfirmation() {
 		const comments = this.commentManager.getComments();
 		const submissionComments = [...comments];
+		const submitLabel = "Submit Review";
 		let submit = () => {};
 		const footerContent = [el("button", {
 			className: "btn-secondary cancel-submit-btn",
 			text: "Cancel"
 		}), el("button", {
 			className: "btn-primary confirm-submit-btn",
-			text: "Submit Review"
+			text: submitLabel
 		})];
 		const { overlay, modal, body, footer, close } = openModal({
 			title: submissionComments.length === 0 ? "Submit Review" : `Review Comments (${submissionComments.length})`,
@@ -12562,6 +12563,9 @@ var DialogMethods = class {
 		});
 		summaryInput.value = this.overallReviewComment;
 		summaryField.appendChild(summaryInput);
+		const errorBox = el("div", { className: "submit-error" });
+		errorBox.hidden = true;
+		body.appendChild(errorBox);
 		body.appendChild(summaryField);
 		const commentsByFile = {};
 		submissionComments.forEach((comment) => {
@@ -12637,7 +12641,8 @@ var DialogMethods = class {
 		});
 		submit = async () => {
 			const submitBtn = footer.querySelector(".confirm-submit-btn");
-			if (!submitBtn) return;
+			if (!submitBtn || submitBtn.disabled) return;
+			errorBox.hidden = true;
 			this.overallReviewComment = summaryInput.value.trim();
 			submitBtn.disabled = true;
 			submitBtn.textContent = "Submitting...";
@@ -12650,7 +12655,10 @@ var DialogMethods = class {
 						overall_comment: this.overallReviewComment || void 0
 					})
 				});
-				if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+				if (!resp.ok) {
+					const detail = (await resp.text()).trim();
+					throw new Error(detail || `HTTP ${resp.status}`);
+				}
 				this.reviewSubmitted = true;
 				await this.clearPersistedComments();
 				this.commentManager.setComments([]);
@@ -12669,9 +12677,10 @@ var DialogMethods = class {
 					if (this.config.auto_close_tab) window.close();
 				}, 1e3);
 			} catch (error) {
-				alert(`Failed to submit review: ${error}`);
+				errorBox.textContent = `Failed to submit review: ${error instanceof Error ? error.message : error}`;
+				errorBox.hidden = false;
 				submitBtn.disabled = false;
-				submitBtn.textContent = "Submit Review";
+				submitBtn.textContent = submitLabel;
 			}
 		};
 		const cancelSubmitBtn = footer.querySelector(".cancel-submit-btn");

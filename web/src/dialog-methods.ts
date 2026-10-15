@@ -412,11 +412,12 @@ export class DialogMethods {
   async showSubmitConfirmation() {
     const comments = this.commentManager.getComments();
     const submissionComments = [...comments];
+    const submitLabel = 'Submit Review';
     let submit: () => void | Promise<void> = () => {};
 
     const footerContent = [
       el('button', { className: 'btn-secondary cancel-submit-btn', text: 'Cancel' }),
-      el('button', { className: 'btn-primary confirm-submit-btn', text: 'Submit Review' }),
+      el('button', { className: 'btn-primary confirm-submit-btn', text: submitLabel }),
     ];
 
     const { overlay, modal, body, footer, close } = openModal({
@@ -452,6 +453,10 @@ export class DialogMethods {
     }) as HTMLTextAreaElement;
     summaryInput.value = this.overallReviewComment;
     summaryField.appendChild(summaryInput);
+
+    const errorBox = el('div', { className: 'submit-error' });
+    errorBox.hidden = true;
+    body.appendChild(errorBox);
     body.appendChild(summaryField);
 
     const commentsByFile: Record<string, ReviewComment[]> = {};
@@ -558,9 +563,10 @@ export class DialogMethods {
 
     submit = async () => {
       const submitBtn = footer.querySelector<HTMLButtonElement>('.confirm-submit-btn');
-      if (!submitBtn) {
+      if (!submitBtn || submitBtn.disabled) {
         return;
       }
+      errorBox.hidden = true;
       this.overallReviewComment = summaryInput.value.trim();
       submitBtn.disabled = true;
       submitBtn.textContent = 'Submitting...';
@@ -575,7 +581,8 @@ export class DialogMethods {
           }),
         });
         if (!resp.ok) {
-          throw new Error(`HTTP ${resp.status}`);
+          const detail = (await resp.text()).trim();
+          throw new Error(detail || `HTTP ${resp.status}`);
         }
         this.reviewSubmitted = true;
 
@@ -604,9 +611,10 @@ export class DialogMethods {
           }
         }, 1000);
       } catch (error) {
-        alert(`Failed to submit review: ${error}`);
+        errorBox.textContent = `Failed to submit review: ${error instanceof Error ? error.message : error}`;
+        errorBox.hidden = false;
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit Review';
+        submitBtn.textContent = submitLabel;
       }
     };
 

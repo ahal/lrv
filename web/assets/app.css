@@ -2220,3 +2220,17 @@ body {
   color: var(--text-secondary);
   font-style: italic;
 }
+
+.submit-error {
+  margin-bottom: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--error-color, #d73a49);
+  border-radius: 6px;
+  color: var(--error-color, #d73a49);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.submit-error[hidden] {
+  display: none;
+}

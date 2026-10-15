@@ -620,6 +620,22 @@ test.describe('Review Workflow E2E', () => {
     await expect(page.locator('text=Review Submitted')).toBeVisible({ timeout: 3000 });
   });
 
+  test('submit failures are shown in the dialog and can be retried', async ({ page }) => {
+    let attempts = 0;
+    await page.route('**/api/complete', (route) => {
+      attempts += 1;
+      return route.fulfill(attempts === 1 ? { status: 500, body: 'boom' } : { status: 200 });
+    });
+    await openApp(page);
+    await page.locator('#submit-review').click();
+    await page.locator('.confirm-submit-btn').click();
+    await expect(page.locator('.submit-error')).toHaveText('Failed to submit review: boom');
+    await expect(page.locator('.confirm-submit-btn')).toBeEnabled();
+    await page.locator('.confirm-submit-btn').click();
+    await expect(page.locator('.submit-error')).toBeHidden();
+    await expect(page.locator('#submit-review')).toHaveText('Review Submitted');
+  });
+
   test('stacked mode should add, edit, and delete a comment', async ({ page }) => {
     await openStackedView(page);
 
