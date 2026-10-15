@@ -765,7 +765,9 @@ test.describe('Review Workflow E2E', () => {
     await expect(page.locator('#submit-review')).toBeEnabled();
   });
 
-  test('publishing unwraps replies and leaves Address items for the agent', async ({ page }) => {
+  test('publishing unwraps replies, leaves Address items for the agent and omits published comments', async ({
+    page,
+  }) => {
     await page.route('**/api/context', async (route) => {
       const response = await route.fetch();
       await route.fulfill({
@@ -819,6 +821,11 @@ test.describe('Review Workflow E2E', () => {
       published = route.request().postDataJSON();
       await route.fulfill({ json: { url: 'https://phab.example/D123' } });
     });
+    let sent: any;
+    await page.route('**/api/complete', async (route) => {
+      sent = route.request().postDataJSON();
+      await route.fulfill({ status: 200, body: '' });
+    });
     await openApp(page);
     const note = page.locator('.review-note').first();
     await expect(note.locator('button', { hasText: 'Address' })).toHaveCount(1);
@@ -838,6 +845,18 @@ test.describe('Review Workflow E2E', () => {
     await expect(dialog.locator('.publish-revision')).toHaveText('Published ✓');
     expect(published.comments).toHaveLength(1);
     expect(published.comments[0].body).toBe('Because of the cache.');
+    await dialog
+      .locator('.submit-modal-footer')
+      .getByRole('button', { name: 'Close', exact: true })
+      .click();
+    await page.locator('#submit-review').click();
+    await page.locator('#send-to-agent').click();
+    await expect(page.locator('.submit-review-modal')).toContainText('Already published to D123');
+    await expect(page.locator('.comment-preview')).toHaveCount(1);
+    await page.locator('.confirm-submit-btn').click();
+    await expect(page.locator('#submit-review')).toHaveText('Review Submitted');
+    expect(sent.comments).toHaveLength(1);
+    expect(sent.comments[0].body).toContain('Address this review comment');
   });
 
   test('stacked mode should add, edit, and delete a comment', async ({ page }) => {

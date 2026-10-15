@@ -12532,8 +12532,8 @@ var DialogMethods = class {
 		}, 0);
 	}
 	async showSubmitConfirmation() {
-		const comments = this.commentManager.getComments();
-		const submissionComments = [...comments];
+		const submissionComments = this.commentManager.getComments().filter((c) => !this.publishedCommentKeys.has(commentKey(c)));
+		const comments = submissionComments;
 		const submitLabel = "Submit Review";
 		let submit = () => {};
 		const footerContent = [el("button", {
@@ -12575,6 +12575,7 @@ var DialogMethods = class {
 		const errorBox = el("div", { className: "submit-error" });
 		errorBox.hidden = true;
 		body.appendChild(errorBox);
+		if (this.publishedRevisionIds.size) body.appendChild(el("p", { text: `Already published to ${[...this.publishedRevisionIds].join(", ")}` }));
 		body.appendChild(summaryField);
 		const commentsByFile = {};
 		submissionComments.forEach((comment) => {
@@ -12971,6 +12972,7 @@ var PublishDialogMethods = class {
 					if (!response.ok) throw new Error((await response.text()).trim() || `HTTP ${response.status}`);
 					revision.published = true;
 					comments.forEach((c) => this.publishedCommentKeys.add(commentKey(c)));
+					this.publishedRevisionIds.add(revision.id);
 					const next = status.revisions.find((r) => r.publishable && !r.published);
 					if (!next) setTimeout(close, 1e3);
 					active = next?.id ?? revision.id;
@@ -13802,6 +13804,7 @@ function applyMixin(TargetClass, MethodsClass) {
 }
 var MonacoApp = class {
 	publishedCommentKeys = /* @__PURE__ */ new Set();
+	publishedRevisionIds = /* @__PURE__ */ new Set();
 	publishTabStates = /* @__PURE__ */ new Map();
 	phabStatus = null;
 	commentManager;

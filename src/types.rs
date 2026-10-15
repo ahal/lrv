@@ -178,6 +178,8 @@ impl ReviewNote {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReviewOutput {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub published: Option<Vec<String>>,
     pub status: String,
     pub comments: Vec<Comment>,
     pub summary: String,
@@ -197,6 +199,8 @@ pub struct CommitReview {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SeriesReviewOutput {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub published: Option<Vec<String>>,
     pub status: String,
     pub summary: String,
     pub commits: Vec<CommitReview>,

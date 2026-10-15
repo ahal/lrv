@@ -60,6 +60,7 @@ function applyMixin(TargetClass: Constructor, MethodsClass: Constructor) {
 
 export class MonacoApp {
   publishedCommentKeys = new Set<string>();
+  publishedRevisionIds = new Set<string>();
   publishTabStates = new Map<string, PublishTabState>();
   phabStatus: Promise<PhabStatus> | null = null;
   declare showPublishDialog: () => Promise<void>;

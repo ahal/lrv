@@ -89,6 +89,8 @@ export function commentKey(comment: ReviewComment): string {
 }
 
 export class DialogMethods {
+  declare publishedCommentKeys: Set<string>;
+  declare publishedRevisionIds: Set<string>;
   declare config: AppContext['config'];
   declare isInline: boolean;
   declare currentFileIndex: number;
@@ -420,8 +422,10 @@ export class DialogMethods {
   }
 
   async showSubmitConfirmation() {
-    const comments = this.commentManager.getComments();
-    const submissionComments = [...comments];
+    const submissionComments = this.commentManager
+      .getComments()
+      .filter((c) => !this.publishedCommentKeys.has(commentKey(c)));
+    const comments = submissionComments;
     const submitLabel = 'Submit Review';
     let submit: () => void | Promise<void> = () => {};
 
@@ -467,6 +471,12 @@ export class DialogMethods {
     const errorBox = el('div', { className: 'submit-error' });
     errorBox.hidden = true;
     body.appendChild(errorBox);
+
+    if (this.publishedRevisionIds.size) {
+      body.appendChild(
+        el('p', { text: `Already published to ${[...this.publishedRevisionIds].join(', ')}` }),
+      );
+    }
     body.appendChild(summaryField);
 
     const commentsByFile: Record<string, ReviewComment[]> = {};

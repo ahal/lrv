@@ -1218,6 +1218,11 @@ async fn main() -> Result<()> {
         is_series,
         overall_comment,
     );
+    let output = if let Some(publisher) = &state.publish {
+        output::with_published(output, &output_format, publisher.published_urls().await)
+    } else {
+        output
+    };
     println!("{}", output);
 
     Ok(())

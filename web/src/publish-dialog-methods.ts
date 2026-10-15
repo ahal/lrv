@@ -9,6 +9,7 @@ export class PublishDialogMethods {
   declare commentManager: AppContext['commentManager'];
   declare seriesInfo: AppContext['seriesInfo'];
   declare publishedCommentKeys: Set<string>;
+  declare publishedRevisionIds: Set<string>;
   declare publishTabStates: Map<string, PublishTabState>;
   declare phabStatus: Promise<PhabStatus> | null;
   declare renderSubmitComments: (body: HTMLElement, comments: ReviewComment[]) => Promise<void>;
@@ -260,6 +261,7 @@ export class PublishDialogMethods {
           }
           revision.published = true;
           comments.forEach((c) => this.publishedCommentKeys.add(commentKey(c)));
+          this.publishedRevisionIds.add(revision.id);
           const next = status.revisions.find((r) => r.publishable && !r.published);
           if (!next) {
             // Everything that can be published has been: there's nothing left to do here.

@@ -185,3 +185,20 @@ fn test_no_overall_comment_omits_field() {
     let v: serde_json::Value = serde_json::from_str(&json).expect("valid json");
     assert!(v.get("overall_comment").is_none());
 }
+
+#[test]
+fn published_output_includes_destinations() {
+    use lrv::output::{format_output, with_published, OutputFormat};
+    let urls = vec!["https://phab.example/D123".to_string()];
+    for series in [false, true] {
+        let base = format_output(vec![], &OutputFormat::Json, &[], series, None);
+        let agent = with_published(base, &OutputFormat::Json, urls.clone());
+        let value: serde_json::Value = serde_json::from_str(&agent).unwrap();
+        assert_eq!(value["status"], "completed");
+        assert_eq!(value["published"][0], urls[0]);
+    }
+    assert_eq!(
+        with_published("No comments".to_string(), &OutputFormat::Text, urls),
+        "No comments\nReview published to Phabricator:\n  https://phab.example/D123"
+    );
+}

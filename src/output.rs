@@ -39,6 +39,7 @@ fn format_json_single(comments: &[Comment], overall_comment: Option<String>) -> 
         if f == 1 { "" } else { "s" },
     );
     let output = ReviewOutput {
+        published: None,
         status: "completed".to_string(),
         comments: comments.to_vec(),
         summary,
@@ -85,6 +86,7 @@ fn format_json_series(
     );
 
     let output = SeriesReviewOutput {
+        published: None,
         status: "completed".to_string(),
         summary,
         commits,
@@ -186,5 +188,23 @@ impl std::str::FromStr for OutputFormat {
             "text" => Ok(OutputFormat::Text),
             _ => anyhow::bail!("Invalid output format: {}", s),
         }
+    }
+}
+
+/// Tell the agent which revisions the review was already published to.
+pub fn with_published(output: String, format: &OutputFormat, urls: Vec<String>) -> String {
+    if urls.is_empty() {
+        return output;
+    }
+    match format {
+        OutputFormat::Json => {
+            let mut value: serde_json::Value = serde_json::from_str(&output).expect("review JSON");
+            value["published"] = serde_json::json!(urls);
+            serde_json::to_string_pretty(&value).expect("review JSON")
+        }
+        OutputFormat::Text => format!(
+            "{output}\nReview published to Phabricator:\n  {}",
+            urls.join("\n  ")
+        ),
     }
 }

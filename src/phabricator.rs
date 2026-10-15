@@ -910,6 +910,19 @@ impl Publisher {
             .collect()
     }
 
+    pub async fn published_urls(&self) -> Vec<String> {
+        // Reading the summary must not trigger authentication.
+        if self.validation.get().is_none() {
+            return Vec::new();
+        }
+        self.statuses()
+            .await
+            .into_iter()
+            .filter(|r| r.published)
+            .map(|r| r.url)
+            .collect()
+    }
+
     pub async fn publish_revision(
         &self,
         id: &str,
@@ -1166,6 +1179,7 @@ mod tests {
             .publish_revision("D123", &comments, Some("overall"), ReviewAction::Comment)
             .await;
         assert!(result.unwrap_err().to_string().contains("retry me"));
+        assert!(publisher.published_urls().await.is_empty());
         let changed = publisher
             .publish_revision("D123", &comments, Some("changed"), ReviewAction::Comment)
             .await;
@@ -1184,6 +1198,10 @@ mod tests {
                 .unwrap_err()
                 .to_string(),
             "Revision already published"
+        );
+        assert_eq!(
+            publisher.published_urls().await,
+            vec!["https://phab.example/D123"]
         );
         let calls = calls.lock().await;
         assert_eq!(calls.len(), 3);
