@@ -765,7 +765,7 @@ test.describe('Review Workflow E2E', () => {
     await expect(page.locator('#submit-review')).toBeEnabled();
   });
 
-  test('publishing unwraps replies, leaves Address items for the agent and omits published comments', async ({
+  test('publishing sends only reply bodies, leaves Address items for the agent and omits published comments', async ({
     page,
   }) => {
     await page.route('**/api/context', async (route) => {
@@ -856,7 +856,34 @@ test.describe('Review Workflow E2E', () => {
     await page.locator('.confirm-submit-btn').click();
     await expect(page.locator('#submit-review')).toHaveText('Review Submitted');
     expect(sent.comments).toHaveLength(1);
-    expect(sent.comments[0].body).toContain('Address this review comment');
+    expect(sent.comments[0].body).toBe('');
+    expect(sent.comments[0].in_reply_to).toEqual({
+      id: `${sent.comments[0].file}-address`,
+      author: 'Author',
+      body: 'Please fix this.',
+    });
+  });
+
+  test('undoing a queued review note removes its comment', async ({ page }) => {
+    await page.route('**/api/review-notes', (route) =>
+      route.fulfill({
+        json: ['test.txt', 'file2.txt', 'file3.txt'].map((file) => ({
+          id: file,
+          file,
+          line: 2,
+          side: 'new',
+          body: 'Please fix this.',
+        })),
+      }),
+    );
+    await openApp(page);
+    const note = page.locator('.review-note').first();
+    await note.locator('button', { hasText: 'Address' }).click();
+    await expect(note).toContainText('Queued for agent');
+    await expect(page.locator('#comment-count')).toHaveText('1');
+    await note.locator('button', { hasText: 'Undo' }).click();
+    await expect(note.locator('button', { hasText: 'Address' })).toHaveCount(1);
+    await expect(page.locator('#comment-count')).toHaveText('0');
   });
 
   test('stacked mode should add, edit, and delete a comment', async ({ page }) => {

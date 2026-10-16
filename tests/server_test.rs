@@ -237,6 +237,7 @@ async fn test_comment_storage() {
             side: lrv::types::Side::New,
             body: "test comment".to_string(),
             commit_idx: None,
+            in_reply_to: None,
         });
     }
 

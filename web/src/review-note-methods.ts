@@ -1,6 +1,12 @@
 import { el } from './dom';
 import { appendLinkifiedText } from './linkify';
-import { commentEndLine, commentLineLabel, commentStartLine } from './comments';
+import {
+  commentEndLine,
+  commentLineLabel,
+  commentStartLine,
+  type ReplyTarget,
+  type ReviewComment,
+} from './comments';
 import type { AppContext } from './types/app';
 import type { ReviewNote } from './review-notes';
 import type { editor } from 'monaco-editor';
@@ -235,7 +241,8 @@ export class ReviewNoteMethods {
       undo.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
-        this.reviewNoteManager.updateNote(note, { disposition: 'open', instruction: undefined });
+        this.unqueueReviewNote(note);
+        this.reviewNoteManager.updateNote(note, { disposition: 'open' });
       });
       actions.appendChild(undo);
       return actions;
@@ -303,37 +310,30 @@ export class ReviewNoteMethods {
   }
 
   private queueReviewNoteForAgent(note: ReviewNote, instruction?: string) {
-    const comment = {
+    const comment: ReviewComment = {
       file: note.file,
       line: note.line,
       side: note.side,
-      body: this.formatReviewNoteInstruction(note, instruction),
+      body: instruction ?? '',
+      in_reply_to: replyTarget(note),
     };
     this.commentManager.addComment(
       note.commit_idx === undefined ? comment : { ...comment, commit_idx: note.commit_idx },
     );
-    this.reviewNoteManager.updateNote(
-      note,
-      instruction === undefined
-        ? { disposition: 'addressed' }
-        : {
-            disposition: 'addressed',
-            instruction,
-          },
-    );
+    this.reviewNoteManager.updateNote(note, { disposition: 'addressed' });
   }
 
-  private formatReviewNoteInstruction(note: ReviewNote, instruction?: string) {
-    const author = note.author ? ` from ${note.author}` : '';
-    const quoted = note.body
-      .split('\n')
-      .map((line) => `> ${line}`)
-      .join('\n');
-    const source = note.source_url ? `\n\nSource: ${note.source_url}` : '';
-    if (instruction) {
-      return `${instruction}\n\nReview comment${author}:\n${quoted}${source}`;
+  private unqueueReviewNote(note: ReviewNote) {
+    const index = this.commentManager.comments.findIndex(
+      ({ in_reply_to: target }) =>
+        target !== undefined &&
+        target.id === note.id &&
+        target.author === note.author &&
+        target.body === note.body,
+    );
+    if (index >= 0) {
+      this.commentManager.removeComment(index);
     }
-    return `Address this review comment${author}:\n${quoted}${source}`;
   }
 
   private reviewNoteHeightPx(note: ReviewNote) {
@@ -342,4 +342,18 @@ export class ReviewNoteMethods {
       .reduce((total, line) => total + Math.max(1, Math.ceil(line.length / 86)), 0);
     return Math.max(124, Math.min(460, 88 + visualLines * 18));
   }
+}
+
+function replyTarget(note: ReviewNote): ReplyTarget {
+  const target: ReplyTarget = { body: note.body };
+  if (note.id !== undefined) {
+    target.id = note.id;
+  }
+  if (note.author !== undefined) {
+    target.author = note.author;
+  }
+  if (note.source_url !== undefined) {
+    target.source_url = note.source_url;
+  }
+  return target;
 }

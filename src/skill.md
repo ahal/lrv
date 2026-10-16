@@ -88,6 +88,9 @@ lrv --phab-mcp-comments /tmp/phab.md ...
 - Wait for the user to submit comments.
 - Plan one fix per comment before touching any code. Never skip a comment.
 - Apply all fixes directly. No explanations or commentary.
+- A comment with `in_reply_to` responds to a review note (`author`, `body`,
+  `source_url`). An empty `body` means address that note; otherwise `body` is
+  the user's reply, which tells you how they want it handled.
 - If the user asks for a local LLM pre-review, perform the review before
   starting `lrv`, write a JSON array of review notes, and pass it with
   `--review-notes-file`. Do not make `lrv` call a model.

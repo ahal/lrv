@@ -1,4 +1,4 @@
-use crate::types::{Comment, CommentLine, Side};
+use crate::types::{Comment, CommentLine, ReplyTarget, Side};
 use anyhow::{Context, Result};
 use rusqlite::{params, Connection, OptionalExtension};
 use std::path::{Path, PathBuf};
@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS comments (
     line_start INTEGER NOT NULL,
     line_end INTEGER NOT NULL,
     side TEXT NOT NULL,
-    body TEXT NOT NULL
+    body TEXT NOT NULL,
+    in_reply_to TEXT
 );
 CREATE INDEX IF NOT EXISTS comments_session_idx ON comments(session_id, position);
 ";
@@ -141,6 +142,7 @@ impl CommentStore {
         conn.pragma_update(None, "foreign_keys", true)?;
         conn.execute_batch(SCHEMA)
             .context("Failed to initialize comment database schema")?;
+        migrate(&conn).context("Failed to migrate comment database schema")?;
         Ok(Self {
             conn: Mutex::new(conn),
             meta,
@@ -263,7 +265,7 @@ impl CommentStore {
         };
 
         let mut stmt = conn.prepare(
-            "SELECT file, line_start, line_end, side, body, commit_idx
+            "SELECT file, line_start, line_end, side, body, commit_idx, in_reply_to
              FROM comments WHERE session_id = ?1 ORDER BY position",
         )?;
         let comments = stmt
@@ -272,6 +274,7 @@ impl CommentStore {
                 let line_end: i64 = row.get(2)?;
                 let side: String = row.get(3)?;
                 let commit_idx: Option<i64> = row.get(5)?;
+                let in_reply_to: Option<String> = row.get(6)?;
                 Ok(Comment {
                     file: row.get(0)?,
                     line: if line_start == line_end {
@@ -282,6 +285,8 @@ impl CommentStore {
                     side: if side == "old" { Side::Old } else { Side::New },
                     body: row.get(4)?,
                     commit_idx: commit_idx.map(|i| i as usize),
+                    in_reply_to: in_reply_to
+                        .and_then(|json| serde_json::from_str::<ReplyTarget>(&json).ok()),
                 })
             })?
             .collect::<rusqlite::Result<Vec<_>>>()
@@ -289,6 +294,17 @@ impl CommentStore {
 
         Ok(Some((session, comments)))
     }
+}
+
+/// Bring a database created by an older lrv up to date with `SCHEMA`.
+fn migrate(conn: &Connection) -> Result<()> {
+    let has_in_reply_to = conn
+        .prepare("SELECT 1 FROM pragma_table_info('comments') WHERE name = 'in_reply_to'")?
+        .exists([])?;
+    if !has_in_reply_to {
+        conn.execute("ALTER TABLE comments ADD COLUMN in_reply_to TEXT", [])?;
+    }
+    Ok(())
 }
 
 fn open_existing(path: &Path) -> Result<Option<Connection>> {
@@ -346,8 +362,9 @@ fn write_comments(tx: &rusqlite::Transaction<'_>, id: i64, comments: &[Comment])
     tx.execute("DELETE FROM comments WHERE session_id = ?1", params![id])?;
     let mut insert = tx.prepare(
         "INSERT INTO comments
-             (session_id, position, commit_idx, file, line_start, line_end, side, body)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+             (session_id, position, commit_idx, file, line_start, line_end, side, body,
+              in_reply_to)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
     )?;
     for (position, comment) in comments.iter().enumerate() {
         let (start, end) = match &comment.line {
@@ -363,6 +380,11 @@ fn write_comments(tx: &rusqlite::Transaction<'_>, id: i64, comments: &[Comment])
             end as i64,
             comment.side.to_string(),
             comment.body,
+            comment
+                .in_reply_to
+                .as_ref()
+                .map(serde_json::to_string)
+                .transpose()?,
         ])?;
     }
     Ok(())

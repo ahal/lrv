@@ -1,8 +1,8 @@
 import { el } from './dom';
 import { openModal } from './modal';
 import { fetchJSON } from './api';
-import { commentKey, parseQueuedReviewNoteBody } from './dialog-methods';
-import type { ReviewComment } from './comments';
+import { commentKey } from './dialog-methods';
+import { isAddressRequest, type ReviewComment } from './comments';
 import type { AppContext, PhabStatus, PublishTabState, ReviewAction } from './types/app';
 
 export class PublishDialogMethods {
@@ -62,12 +62,13 @@ export class PublishDialogMethods {
     const forRevision = (id: string) => {
       const revision = status.revisions.find((r) => r.id === id)!;
       return originals.filter(
-        (c) => revision.commit_idxs.includes(c.commit_idx ?? 0) && !isAddress(c),
+        (c) => revision.commit_idxs.includes(c.commit_idx ?? 0) && !isAddressRequest(c),
       );
     };
     const unassigned = originals.filter(
       (c) =>
-        isAddress(c) || !status.revisions.some((r) => r.commit_idxs.includes(c.commit_idx ?? 0)),
+        isAddressRequest(c) ||
+        !status.revisions.some((r) => r.commit_idxs.includes(c.commit_idx ?? 0)),
     );
     const tabs = el('div', { className: 'publish-tabs', attrs: { role: 'tablist' } });
     const panel = el('div', { className: 'publish-panel', attrs: { role: 'tabpanel' } });
@@ -225,7 +226,8 @@ export class PublishDialogMethods {
       }
       const preview = el('div');
       panel.appendChild(preview);
-      const plainComments = comments.map(unwrapReply);
+      // Only the reply itself is published, not the note it answers.
+      const plainComments = comments.map(({ in_reply_to: _note, ...comment }) => comment);
       void this.renderSubmitComments(preview, plainComments).then(() => {
         if (generation !== rendering) {
           preview.remove();
@@ -279,14 +281,4 @@ export class PublishDialogMethods {
     publishButton.onclick = () => void publish();
     render();
   }
-}
-
-function isAddress(comment: ReviewComment): boolean {
-  const parsed = parseQueuedReviewNoteBody(comment.body);
-  return parsed !== null && !parsed.instruction;
-}
-
-function unwrapReply(comment: ReviewComment): ReviewComment {
-  const parsed = parseQueuedReviewNoteBody(comment.body);
-  return parsed?.instruction ? { ...comment, body: parsed.instruction } : comment;
 }

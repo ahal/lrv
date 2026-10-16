@@ -13,7 +13,6 @@ export type ReviewNote = {
   commit_idx?: number;
   read_only?: boolean;
   disposition?: 'open' | 'addressed' | 'ignored';
-  instruction?: string | undefined;
 };
 
 export class ReviewNoteManager {

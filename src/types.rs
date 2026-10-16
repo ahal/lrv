@@ -76,6 +76,23 @@ pub struct Comment {
     pub body: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub commit_idx: Option<usize>,
+    /// The review note this comment responds to. With no body, the comment asks the agent to
+    /// address the note; with a body, it is a reply that can also be published.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub in_reply_to: Option<ReplyTarget>,
+}
+
+/// A copy of the review note a comment responds to, so the comment can be understood without
+/// the notes it was written against (e.g. by `--recover`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ReplyTarget {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub author: Option<String>,
+    pub body: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -142,7 +159,7 @@ pub struct ReviewComplete {
 
 impl Comment {
     pub fn is_valid(&self) -> bool {
-        self.line.is_valid()
+        self.line.is_valid() && (self.in_reply_to.is_some() || !self.body.trim().is_empty())
     }
 }
 

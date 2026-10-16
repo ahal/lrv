@@ -39,6 +39,7 @@ fn test_comment_structure() {
         side: lrv::types::Side::New,
         body: "This needs improvement".to_string(),
         commit_idx: None,
+        in_reply_to: None,
     };
 
     assert_eq!(comment.file, "test.rs");
@@ -105,4 +106,25 @@ fn test_side_serde() {
     let side: lrv::types::Side = serde_json::from_value(data["side"].clone()).unwrap();
 
     assert!(matches!(side, lrv::types::Side::New));
+}
+
+#[test]
+fn comments_need_a_body_unless_they_reply_to_a_note() {
+    let comment = |body: &str, in_reply_to| lrv::types::Comment {
+        file: "test.rs".to_string(),
+        line: lrv::types::CommentLine::Single(1),
+        side: lrv::types::Side::New,
+        body: body.to_string(),
+        commit_idx: None,
+        in_reply_to,
+    };
+    let note = lrv::types::ReplyTarget {
+        id: None,
+        author: None,
+        body: "Why?".to_string(),
+        source_url: None,
+    };
+    assert!(comment("Fix this", None).is_valid());
+    assert!(!comment("  ", None).is_valid());
+    assert!(comment("", Some(note)).is_valid());
 }

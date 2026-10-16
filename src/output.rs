@@ -153,6 +153,27 @@ fn format_text_comment(output: &mut String, comment: &Comment) {
         "{}:{} [{}]\n",
         comment.file, line_display, comment.side
     ));
+    if let Some(note) = &comment.in_reply_to {
+        let author = note
+            .author
+            .as_deref()
+            .map(|a| format!(" from {a}"))
+            .unwrap_or_default();
+        if comment.body.trim().is_empty() {
+            output.push_str(&format!("  Address this review comment{author}:\n"));
+        } else {
+            output.push_str(&format!("  {}\n", comment.body));
+            output.push_str(&format!("  In reply to review comment{author}:\n"));
+        }
+        for line in note.body.lines() {
+            output.push_str(&format!("  > {line}\n"));
+        }
+        if let Some(url) = &note.source_url {
+            output.push_str(&format!("  Source: {url}\n"));
+        }
+        output.push('\n');
+        return;
+    }
     output.push_str(&format!("  {}\n\n", comment.body));
 }
 

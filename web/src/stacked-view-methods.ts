@@ -13,7 +13,13 @@ import type {
   SelectedLineRange,
 } from '../../node_modules/@pierre/diffs/dist/types.js';
 import { el, clearEl } from './dom';
-import { commentEndLine, commentLineLabel, type CommentLine, type ReviewComment } from './comments';
+import {
+  commentDisplayText,
+  commentEndLine,
+  commentLineLabel,
+  type CommentLine,
+  type ReviewComment,
+} from './comments';
 import { fetchJSON } from './api';
 import type { ReviewNote } from './review-notes';
 import type { AppConfig, AppContext, DiffFile, DiffLine, Side } from './types/app';
@@ -666,7 +672,10 @@ export class StackedViewMethods {
       className: 'stacked-comment-meta',
       text: `${comment.side} line ${commentLineLabel(comment)}`,
     });
-    const body = el('div', { className: 'stacked-comment-body', text: comment.body });
+    const body = el('div', {
+      className: 'stacked-comment-body',
+      text: commentDisplayText(comment),
+    });
     const actions = el('div', { className: 'stacked-comment-actions-row' });
     const edit = el('button', { className: 'stacked-comment-edit btn-secondary', text: 'Edit' });
     const del = el('button', { className: 'stacked-comment-del btn-danger', text: 'Delete' });

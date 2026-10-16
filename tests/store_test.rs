@@ -1,5 +1,5 @@
 use lrv::store::{CommentStore, SessionMeta};
-use lrv::types::{Comment, CommentLine, Side};
+use lrv::types::{Comment, CommentLine, ReplyTarget, Side};
 
 fn meta() -> SessionMeta {
     SessionMeta {
@@ -19,6 +19,7 @@ fn comment(file: &str, line: CommentLine, body: &str, commit_idx: Option<usize>)
         side: Side::New,
         body: body.to_string(),
         commit_idx,
+        in_reply_to: None,
     }
 }
 
@@ -51,6 +52,76 @@ fn drafts_round_trip_through_sqlite() {
     assert_eq!(stored[1].body, "second");
     assert!(matches!(stored[1].line, CommentLine::Range((3, 7))));
     assert_eq!(stored[1].commit_idx, Some(2));
+}
+
+#[test]
+fn replies_keep_the_note_they_answer() {
+    let path = db_path("reply");
+    let store = CommentStore::open(&path, meta()).unwrap();
+    let note = ReplyTarget {
+        id: Some("42".to_string()),
+        author: Some("alice".to_string()),
+        body: "Why?".to_string(),
+        source_url: None,
+    };
+    let address = Comment {
+        in_reply_to: Some(note.clone()),
+        ..comment("src/a.rs", CommentLine::Single(3), "", None)
+    };
+    store.replace_comments(&[address]).unwrap();
+
+    let (_, stored) = CommentStore::load_session(&path, None).unwrap().unwrap();
+    assert_eq!(stored[0].body, "");
+    assert_eq!(stored[0].in_reply_to, Some(note));
+}
+
+#[test]
+fn databases_from_older_versions_are_migrated() {
+    let path = db_path("migrate");
+    {
+        let conn = rusqlite::Connection::open(&path).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE sessions (
+                id INTEGER PRIMARY KEY,
+                started_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+                submitted_at TEXT,
+                working_directory TEXT NOT NULL,
+                git_branch TEXT,
+                title TEXT,
+                commit_hash TEXT,
+                jj_change_id TEXT,
+                is_series INTEGER NOT NULL,
+                overall_comment TEXT
+            );
+            CREATE TABLE comments (
+                id INTEGER PRIMARY KEY,
+                session_id INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+                position INTEGER NOT NULL,
+                commit_idx INTEGER,
+                file TEXT NOT NULL,
+                line_start INTEGER NOT NULL,
+                line_end INTEGER NOT NULL,
+                side TEXT NOT NULL,
+                body TEXT NOT NULL
+            );
+            INSERT INTO sessions (working_directory, is_series) VALUES ('/tmp/repo', 0);
+            INSERT INTO comments (session_id, position, file, line_start, line_end, side, body)
+                VALUES (1, 0, 'old.rs', 1, 1, 'new', 'old comment');",
+        )
+        .unwrap();
+    }
+
+    let store = CommentStore::open(&path, meta()).unwrap();
+    let (_, stored) = CommentStore::load_session(&path, Some(1)).unwrap().unwrap();
+    assert_eq!(stored[0].body, "old comment");
+    assert_eq!(stored[0].in_reply_to, None);
+
+    store
+        .replace_comments(&[comment("src/a.rs", CommentLine::Single(1), "new", None)])
+        .unwrap();
+    // Opening again must not try to add the column twice.
+    CommentStore::open(&path, meta()).unwrap();
 }
 
 #[test]

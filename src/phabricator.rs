@@ -463,6 +463,10 @@ pub fn build_revision_publish(
     };
     let mut general = Vec::new();
     for comment in comments {
+        // A reply to a note with nothing to say only asks the agent to address the note.
+        if comment.body.trim().is_empty() {
+            continue;
+        }
         if comment.file == "(commit)" {
             general.push(comment.body.as_str());
             continue;
@@ -1084,7 +1088,7 @@ mod tests {
         parse_revision_id, resolve_phab_targets, ActiveDiff, PhabTarget, RevisionStatusInfo,
         Validation,
     };
-    use crate::types::{Comment, CommentLine, ReviewAction, Side};
+    use crate::types::{Comment, CommentLine, ReplyTarget, ReviewAction, Side};
     use std::collections::HashMap;
 
     fn comment(file: &str, line: CommentLine, side: Side, commit_idx: Option<usize>) -> Comment {
@@ -1094,6 +1098,7 @@ mod tests {
             side,
             body: format!("body of {file}"),
             commit_idx,
+            in_reply_to: None,
         }
     }
 
@@ -1311,6 +1316,30 @@ mod tests {
             build_revision_publish(&[], Some("  "), ReviewAction::Comment).comment,
             None
         );
+    }
+
+    #[test]
+    fn revision_publish_skips_replies_without_a_body() {
+        let note = ReplyTarget {
+            id: Some("7".into()),
+            author: Some("alice".into()),
+            body: "Why?".into(),
+            source_url: None,
+        };
+        let address = Comment {
+            body: String::new(),
+            in_reply_to: Some(note.clone()),
+            ..comment("a.rs", CommentLine::Single(3), Side::New, None)
+        };
+        let reply = Comment {
+            body: "Because of the cache.".into(),
+            in_reply_to: Some(note),
+            ..comment("a.rs", CommentLine::Single(3), Side::New, None)
+        };
+        let plan = build_revision_publish(&[address, reply], None, ReviewAction::Comment);
+        assert_eq!(plan.inlines.len(), 1);
+        assert_eq!(plan.inlines[0].body, "Because of the cache.");
+        assert_eq!(plan.comment, None);
     }
 
     #[test]
