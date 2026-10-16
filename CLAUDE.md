@@ -38,6 +38,7 @@ Any comment UX change (shortcuts, edit, delete, validation) must go in both.
 
 ## Key Behaviours
 
+- **Agent discovery**: advertise the repository root, PID, URL and bearer token in `LRV_SERVER_DIR` (otherwise the runtime/cache directory under `lrv/servers`), keyed by an FNV64 root hash. Files are mode 0600 on Unix and removed on shutdown (including Ctrl-C and SIGTERM, which exit 130 and 143) only if still owned by this process. Posting review notes requires the token.
 - **Port**: derived from CWD hash (32768–40959); falls back to ephemeral if taken.
 - **Comment drafts**: IndexedDB, keyed by `working_directory + git_branch + jj_change_id` (stable across amends). On reload, a banner prompts to restore rather than auto-restoring.
 - **Comment persistence**: every draft change is also mirrored to `store.rs` (SQLite, one session row per `lrv` run, created lazily on the first comment) via `POST /api/comments/sync`. Submitting freezes the session, so the UI clearing its drafts afterwards can't erase the record. Read back with `--list-reviews` / `--recover`.

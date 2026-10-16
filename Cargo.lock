@@ -1015,6 +1015,7 @@ dependencies = [
  "axum",
  "clap",
  "dirs 7.0.0",
+ "getrandom 0.4.3",
  "mime_guess",
  "moz-cli-version-check",
  "open",

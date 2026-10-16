@@ -12,7 +12,7 @@ mod types;
 
 use anyhow::{Context, Result};
 use clap::{ArgAction, Parser};
-use lrv::netutil;
+use lrv::{discovery, netutil};
 use moz_cli_version_check::VersionChecker;
 use std::collections::HashMap;
 use std::env;
@@ -462,6 +462,31 @@ fn validate_review_notes(notes: &[ReviewNote]) -> Result<()> {
         );
     }
     Ok(())
+}
+
+/// Wait for Ctrl-C or SIGTERM and return the conventional exit code (128 + signal number), so
+/// `kill` and process managers also get the discovery entry removed.
+async fn shutdown_signal() -> i32 {
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{signal, SignalKind};
+        match signal(SignalKind::terminate()) {
+            Ok(mut terminate) => tokio::select! {
+                _ = tokio::signal::ctrl_c() => 130,
+                _ = terminate.recv() => 143,
+            },
+            Err(e) => {
+                tracing::warn!("Failed to listen for SIGTERM: {e}");
+                let _ = tokio::signal::ctrl_c().await;
+                130
+            }
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = tokio::signal::ctrl_c().await;
+        130
+    }
 }
 
 async fn load_phabricator_notes(
@@ -1112,7 +1137,9 @@ async fn main() -> Result<()> {
     };
 
     // Create app state
+    let agent_token = discovery::new_token()?;
     let state = AppState {
+        agent_token: Arc::from(agent_token.clone()),
         diffs: Arc::new(diffs),
         comments: Arc::new(Mutex::new(Vec::new())),
         overall_comment: Arc::new(Mutex::new(None)),
@@ -1212,6 +1239,27 @@ async fn main() -> Result<()> {
         }
     }
 
+    let discovery_root = repository::root(&env::current_dir()?).unwrap_or(env::current_dir()?);
+    let first_addr = &listeners[0].0;
+    let host = if first_addr == "0.0.0.0" {
+        "127.0.0.1"
+    } else {
+        first_addr
+    };
+    let host = if host.contains(':') {
+        format!("[{host}]")
+    } else {
+        host.to_string()
+    };
+    if let Err(e) = discovery::write(&discovery::ServerInfo {
+        pid: std::process::id(),
+        url: format!("http://{host}:{actual_port}"),
+        token: agent_token,
+        root: discovery_root.clone(),
+    }) {
+        tracing::warn!("Failed to advertise running review: {e:#}");
+    }
+
     for (addr, _) in &listeners {
         if addr == "0.0.0.0" {
             for iface in get_network_interfaces() {
@@ -1253,7 +1301,13 @@ async fn main() -> Result<()> {
     }
 
     // Wait for either shutdown signal or server error
+    let mut signal_exit_code = None;
+    let mut server_result = Ok(());
     tokio::select! {
+        code = shutdown_signal() => {
+            signal_exit_code = Some(code);
+            shutdown_notify.notify_waiters();
+        }
         _ = shutdown_rx.recv() => {
             tracing::info!("Received shutdown signal");
             shutdown_notify.notify_waiters();
@@ -1264,9 +1318,15 @@ async fn main() -> Result<()> {
             }
             Ok(())
         } => {
-            result.context("Server error")?;
+            server_result = result.context("Server error");
         }
     }
+
+    discovery::remove_if_ours(&discovery_root, std::process::id());
+    if let Some(code) = signal_exit_code {
+        std::process::exit(code);
+    }
+    server_result?;
 
     // Output comments
     let comments = state.comments.lock().await;

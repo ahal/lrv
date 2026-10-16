@@ -34,7 +34,7 @@ fn command_root(program: &str, args: &[&str], cwd: &Path) -> Option<PathBuf> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::{is_jj_repo, root};
     use std::fs;
     use std::path::{Path, PathBuf};
@@ -51,7 +51,7 @@ mod tests {
     }
 
     #[cfg(unix)]
-    fn write_fake_root_command(bin: &Path, name: &str, root: &Path) {
+    pub(crate) fn write_fake_root_command(bin: &Path, name: &str, root: &Path) {
         use std::os::unix::fs::PermissionsExt;
 
         let script = bin.join(name);
@@ -68,7 +68,7 @@ mod tests {
         fs::set_permissions(&script, permissions).unwrap();
     }
 
-    fn with_path_prefix<T>(bin: &Path, f: impl FnOnce() -> T) -> T {
+    pub(crate) fn with_path_prefix<T>(bin: &Path, f: impl FnOnce() -> T) -> T {
         let _guard = PATH_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let original_path = std::env::var_os("PATH");
         let path = match &original_path {

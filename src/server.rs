@@ -6,7 +6,7 @@ use crate::themes::{load_user_themes, UserTheme};
 use crate::types::*;
 use axum::{
     extract::{Path as AxumPath, Query, State},
-    http::{header, HeaderValue, StatusCode},
+    http::{header, HeaderMap, HeaderValue, StatusCode},
     middleware,
     response::{IntoResponse, Json, Response},
     routing::{get, post},
@@ -51,6 +51,7 @@ pub struct AppState {
     pub diffs: Arc<Vec<DiffResponse>>,
     pub comments: Arc<Mutex<Vec<Comment>>>,
     pub overall_comment: Arc<Mutex<Option<String>>>,
+    pub agent_token: Arc<str>,
     pub review_notes: Arc<Mutex<Vec<ReviewNote>>>,
     pub shutdown_tx: Arc<Mutex<Option<mpsc::Sender<()>>>>,
     pub config: Arc<Mutex<UserConfig>>,
@@ -1368,8 +1369,16 @@ async fn get_review_notes(State(state): State<AppState>) -> Json<Vec<ReviewNote>
 
 async fn add_review_note(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(mut batch): Json<Vec<ReviewNote>>,
 ) -> Response {
+    if headers
+        .get(header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        != Some(format!("Bearer {}", state.agent_token).as_str())
+    {
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
     if batch
         .iter()
         .any(|note| !note.is_valid() || note.commit_idx.is_some_and(|idx| idx >= state.diffs.len()))

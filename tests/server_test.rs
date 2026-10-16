@@ -41,6 +41,7 @@ fn test_app_state_construction() {
         diffs: Arc::new(vec![diff_data]),
         comments: Arc::new(Mutex::new(vec![])),
         overall_comment: Arc::new(Mutex::new(None)),
+        agent_token: Arc::from("test-token"),
         review_notes: Arc::new(Mutex::new(vec![])),
         shutdown_tx: Arc::new(Mutex::new(Some(shutdown_tx))),
         config: Arc::new(Mutex::new(config)),
@@ -95,6 +96,7 @@ fn test_create_router() {
         diffs: Arc::new(vec![diff_data]),
         comments: Arc::new(Mutex::new(vec![])),
         overall_comment: Arc::new(Mutex::new(None)),
+        agent_token: Arc::from("test-token"),
         review_notes: Arc::new(Mutex::new(vec![])),
         shutdown_tx: Arc::new(Mutex::new(Some(shutdown_tx))),
         config: Arc::new(Mutex::new(config)),
@@ -151,6 +153,7 @@ async fn test_review_note_api_round_trip() {
         diffs: Arc::new(vec![diff_data]),
         comments: Arc::new(Mutex::new(vec![])),
         overall_comment: Arc::new(Mutex::new(None)),
+        agent_token: Arc::from("test-token"),
         review_notes: Arc::new(Mutex::new(vec![])),
         shutdown_tx: Arc::new(Mutex::new(Some(shutdown_tx))),
         config: Arc::new(Mutex::new(config)),
@@ -179,6 +182,21 @@ async fn test_review_note_api_round_trip() {
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    for token in [None, Some("Bearer wrong-token")] {
+        let mut request = Request::builder()
+            .method("POST")
+            .uri("/api/review-notes")
+            .header("content-type", "application/json");
+        if let Some(token) = token {
+            request = request.header("authorization", token);
+        }
+        let response = app
+            .clone()
+            .oneshot(request.body(Body::from("[]")).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
     let note = serde_json::json!({
         "id": "n1",
         "file": "src/lib.rs",
@@ -196,6 +214,7 @@ async fn test_review_note_api_round_trip() {
             Request::builder()
                 .method("POST")
                 .uri("/api/review-notes")
+                .header("authorization", "Bearer test-token")
                 .header("content-type", "application/json")
                 .body(Body::from(serde_json::json!([note]).to_string()))
                 .unwrap(),
@@ -237,6 +256,7 @@ async fn test_review_note_api_round_trip() {
                 Request::builder()
                     .method("POST")
                     .uri("/api/review-notes")
+                    .header("authorization", "Bearer test-token")
                     .header("content-type", "application/json")
                     .body(Body::from(batch.to_string()))
                     .unwrap(),

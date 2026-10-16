@@ -25,6 +25,7 @@ tracing = "0.1"
 tracing-subscriber = "0.3"
 toml = "1"
 dirs = "7"
+getrandom = "0.4"
 mime_guess = "2.0"
 moz-cli-version-check = "0.2.3"
 reqwest = { version = "0.13", default-features = false, features = ["form", "json", "rustls"] }
