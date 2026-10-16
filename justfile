@@ -124,8 +124,9 @@ vendor-fonts inter_url="" geist_url="" jetbrains_url="":
 check-offline:
     bash scripts/check-offline.sh
 
+# Bump major/minor/patch, or release an explicit version.
 release version:
-    bash scripts/release.sh {{version}}
+    bash scripts/release.sh "{{version}}"
 
 clean:
     cargo clean
