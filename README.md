@@ -110,6 +110,16 @@ Notes:
   `PHABRICATOR_BASE_URL` or pass `--phab-base-url` for non-Mozilla instances.
 - `lrv --version` prints the current version and can warn if a newer release exists.
 
+Add notes to a review that is already open by running this from the repository:
+
+```bash
+lrv --add-notes review-notes.json
+# Or: cat review-notes.json | lrv --add-notes -
+```
+
+The notes appear without a reload. Repeating the command skips duplicates
+and reports `{"added":0,"skipped":N}`.
+
 Review notes JSON shape:
 
 ```json

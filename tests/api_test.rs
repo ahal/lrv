@@ -57,6 +57,7 @@ fn test_appstate_required_fields() {
         diffs: std::sync::Arc::new(vec![diff_data]),
         comments: std::sync::Arc::new(tokio::sync::Mutex::new(vec![])),
         overall_comment: std::sync::Arc::new(tokio::sync::Mutex::new(None)),
+        notes_version: std::sync::Arc::new(tokio::sync::watch::channel(0).0),
         agent_token: std::sync::Arc::from("test-token"),
         review_notes: std::sync::Arc::new(tokio::sync::Mutex::new(vec![])),
         shutdown_tx: std::sync::Arc::new(tokio::sync::Mutex::new(Some(shutdown_tx))),

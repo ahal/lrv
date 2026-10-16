@@ -1179,6 +1179,7 @@ async fn main() -> Result<()> {
     // Create app state
     let agent_token = discovery::new_token()?;
     let state = AppState {
+        notes_version: std::sync::Arc::new(tokio::sync::watch::channel(0).0),
         agent_token: Arc::from(agent_token.clone()),
         diffs: Arc::new(diffs),
         comments: Arc::new(Mutex::new(Vec::new())),

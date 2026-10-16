@@ -3,7 +3,9 @@ use axum::{
     http::{Request, StatusCode},
 };
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::Mutex;
+use tokio_stream::StreamExt;
 use tower::util::ServiceExt;
 
 /// Test that AppState can be created with all required fields
@@ -41,6 +43,7 @@ fn test_app_state_construction() {
         diffs: Arc::new(vec![diff_data]),
         comments: Arc::new(Mutex::new(vec![])),
         overall_comment: Arc::new(Mutex::new(None)),
+        notes_version: std::sync::Arc::new(tokio::sync::watch::channel(0).0),
         agent_token: Arc::from("test-token"),
         review_notes: Arc::new(Mutex::new(vec![])),
         shutdown_tx: Arc::new(Mutex::new(Some(shutdown_tx))),
@@ -96,6 +99,7 @@ fn test_create_router() {
         diffs: Arc::new(vec![diff_data]),
         comments: Arc::new(Mutex::new(vec![])),
         overall_comment: Arc::new(Mutex::new(None)),
+        notes_version: std::sync::Arc::new(tokio::sync::watch::channel(0).0),
         agent_token: Arc::from("test-token"),
         review_notes: Arc::new(Mutex::new(vec![])),
         shutdown_tx: Arc::new(Mutex::new(Some(shutdown_tx))),
@@ -153,6 +157,7 @@ async fn test_review_note_api_round_trip() {
         diffs: Arc::new(vec![diff_data]),
         comments: Arc::new(Mutex::new(vec![])),
         overall_comment: Arc::new(Mutex::new(None)),
+        notes_version: std::sync::Arc::new(tokio::sync::watch::channel(0).0),
         agent_token: Arc::from("test-token"),
         review_notes: Arc::new(Mutex::new(vec![])),
         shutdown_tx: Arc::new(Mutex::new(Some(shutdown_tx))),
@@ -197,6 +202,26 @@ async fn test_review_note_api_round_trip() {
             .unwrap();
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
+    let events = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/events")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(events.status(), StatusCode::OK);
+    let mut stream = events.into_body().into_data_stream();
+    let frame = tokio::time::timeout(Duration::from_secs(2), stream.next())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    let frame = String::from_utf8(frame.to_vec()).unwrap();
+    assert!(frame.contains("event: notes"));
+    assert!(frame.contains("data: {\"version\":0}"));
     let note = serde_json::json!({
         "id": "n1",
         "file": "src/lib.rs",
@@ -222,6 +247,14 @@ async fn test_review_note_api_round_trip() {
         .await
         .unwrap();
     assert_eq!(post.status(), StatusCode::OK);
+    let frame = tokio::time::timeout(Duration::from_secs(2), stream.next())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    let frame = String::from_utf8(frame.to_vec()).unwrap();
+    assert!(frame.contains("event: notes"));
+    assert!(frame.contains("data: {\"version\":1}"));
 
     for (batch, expected, status) in [
         (
@@ -274,6 +307,19 @@ async fn test_review_note_api_round_trip() {
             );
         }
     }
+    // Only the batch that added a note bumps the version.
+    let frame = tokio::time::timeout(Duration::from_secs(2), stream.next())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    let frame = String::from_utf8(frame.to_vec()).unwrap();
+    assert!(frame.contains("data: {\"version\":2}"));
+    assert!(
+        tokio::time::timeout(Duration::from_millis(100), stream.next())
+            .await
+            .is_err()
+    );
     let get = app
         .oneshot(
             Request::builder()

@@ -552,6 +552,14 @@ var ReviewNoteManager = class {
 		this.notes = [...notes];
 		this.notifyListeners();
 	}
+	mergeNotes(notes) {
+		let added = false;
+		for (const note of notes) if (!this.notes.some((existing) => this.isSameNote(existing, note))) {
+			this.notes.push(note);
+			added = true;
+		}
+		if (added) this.notifyListeners();
+	}
 	addNote(note) {
 		if (this.currentCommitIdx !== null && note.commit_idx === void 0) note = {
 			...note,
@@ -646,6 +654,48 @@ async function fetchJSON(url, options) {
 			hideFetchSpinnerMaybe();
 		}
 	}
+}
+//#endregion
+//#region web/src/live-events.ts
+function startLiveEvents(app) {
+	const source = new EventSource("/api/events");
+	let pending = null;
+	let timer = null;
+	let fetching = false;
+	let refreshAgain = false;
+	const merge = () => {
+		timer = null;
+		if (!pending) return;
+		if (document.querySelector(".review-note-reply")) {
+			timer = setTimeout(merge, 500);
+			return;
+		}
+		app.reviewNoteManager.mergeNotes(pending);
+		pending = null;
+	};
+	const refresh = async () => {
+		if (fetching) {
+			refreshAgain = true;
+			return;
+		}
+		fetching = true;
+		try {
+			do {
+				refreshAgain = false;
+				pending = await fetchJSON("/api/review-notes");
+				if (timer === null) merge();
+			} while (refreshAgain);
+		} catch (error) {
+			console.warn("Failed to load live review notes", error);
+		} finally {
+			fetching = false;
+		}
+	};
+	source.addEventListener("notes", () => void refresh());
+	window.addEventListener("pagehide", () => {
+		source.close();
+		if (timer !== null) clearTimeout(timer);
+	}, { once: true });
 }
 //#endregion
 //#region web/src/config.ts
@@ -13964,6 +14014,7 @@ var MonacoApp = class {
 					const reviewTime = document.getElementById("review-time");
 					if (reviewTime) reviewTime.textContent = (/* @__PURE__ */ new Date()).toLocaleString();
 					this.renderProjectInfo();
+					startLiveEvents(this);
 					window.Perf.mark("init:final-paint-wait:start");
 					requestAnimationFrame(() => requestAnimationFrame(() => {
 						window.Perf.mark("init:final-paint-wait:end");

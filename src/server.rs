@@ -8,7 +8,10 @@ use axum::{
     extract::{Path as AxumPath, Query, State},
     http::{header, HeaderMap, HeaderValue, StatusCode},
     middleware,
-    response::{IntoResponse, Json, Response},
+    response::{
+        sse::{Event, KeepAlive, Sse},
+        IntoResponse, Json, Response,
+    },
     routing::{get, post},
     Router,
 };
@@ -16,6 +19,7 @@ use rust_embed::RustEmbed;
 include!(concat!(env!("OUT_DIR"), "/web_asset_hash.rs"));
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
+use std::convert::Infallible;
 use std::fs;
 use std::path::{Component, Path};
 use std::process::{ExitStatus, Output};
@@ -26,6 +30,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, Mutex, Semaphore};
 use tokio::task::JoinSet;
+use tokio_stream::{wrappers::WatchStream, StreamExt};
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::TraceLayer;
 
@@ -51,6 +56,7 @@ pub struct AppState {
     pub diffs: Arc<Vec<DiffResponse>>,
     pub comments: Arc<Mutex<Vec<Comment>>>,
     pub overall_comment: Arc<Mutex<Option<String>>>,
+    pub notes_version: Arc<tokio::sync::watch::Sender<u64>>,
     pub agent_token: Arc<str>,
     pub review_notes: Arc<Mutex<Vec<ReviewNote>>>,
     pub shutdown_tx: Arc<Mutex<Option<mpsc::Sender<()>>>>,
@@ -728,6 +734,7 @@ pub fn create_router(state: AppState, enable_trace: bool) -> Router {
         .route("/api/file/raw", get(get_file_raw))
         .route("/api/comment", post(add_comment))
         .route("/api/comments/sync", post(sync_comments))
+        .route("/api/events", get(events))
         .route(
             "/api/review-notes",
             get(get_review_notes).post(add_review_note),
@@ -1362,6 +1369,17 @@ async fn sync_comments(
     (StatusCode::OK, String::new())
 }
 
+async fn events(
+    State(state): State<AppState>,
+) -> Sse<impl tokio_stream::Stream<Item = Result<Event, Infallible>>> {
+    let stream = WatchStream::new(state.notes_version.subscribe()).map(|version| {
+        Ok(Event::default()
+            .event("notes")
+            .data(serde_json::json!({"version": version}).to_string()))
+    });
+    Sse::new(stream).keep_alive(KeepAlive::default())
+}
+
 async fn get_review_notes(State(state): State<AppState>) -> Json<Vec<ReviewNote>> {
     let notes = state.review_notes.lock().await;
     Json(notes.clone())
@@ -1397,6 +1415,9 @@ async fn add_review_note(
             notes.push(note);
             added += 1;
         }
+    }
+    if added > 0 {
+        state.notes_version.send_modify(|version| *version += 1);
     }
     Json(serde_json::json!({ "added": added, "skipped": skipped })).into_response()
 }

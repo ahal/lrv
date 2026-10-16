@@ -31,6 +31,19 @@ export class ReviewNoteManager {
     this.notifyListeners();
   }
 
+  mergeNotes(notes: ReviewNote[]): void {
+    let added = false;
+    for (const note of notes) {
+      if (!this.notes.some((existing) => this.isSameNote(existing, note))) {
+        this.notes.push(note);
+        added = true;
+      }
+    }
+    if (added) {
+      this.notifyListeners();
+    }
+  }
+
   addNote(note: ReviewNote): void {
     if (this.currentCommitIdx !== null && note.commit_idx === undefined) {
       note = { ...note, commit_idx: this.currentCommitIdx };
