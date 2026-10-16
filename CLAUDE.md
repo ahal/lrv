@@ -57,6 +57,7 @@ Any comment UX change (shortcuts, edit, delete, validation) must go in both.
 --series <revset|range>            review a commit series
 --review-notes-file <path>         load review notes JSON
 --validate-review-notes <path>     validate and exit
+--add-notes <path|->              add notes to the running review for this repository
 --github-pr-comments <path>        pipe output of: gh api repos/OWNER/REPO/pulls/N/comments
 --github-pr [<N|O/R#N|url>]        fetch a PR's comments with gh; no value = detect PRs of every commit
 --phab-mcp-comments <path>         pipe output of: mcp__moz__get_phabricator_revision

@@ -50,7 +50,6 @@ pub fn write(info: &ServerInfo) -> Result<()> {
     Ok(())
 }
 
-#[allow(dead_code)] // Used by the agent client and discovery tests.
 pub fn find(cwd: &Path) -> Option<ServerInfo> {
     let root = crate::repository::root(cwd).unwrap_or_else(|| cwd.to_path_buf());
     serde_json::from_slice(&fs::read(path_for(&root).ok()?).ok()?).ok()

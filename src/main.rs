@@ -264,6 +264,10 @@ struct Args {
     #[arg(long)]
     validate_review_notes: Option<String>,
 
+    /// Add review notes to the running review for this repository (- reads stdin)
+    #[arg(long, value_name = "PATH|-")]
+    add_notes: Option<String>,
+
     /// List review sessions stored in the local comment database and exit
     #[arg(long)]
     list_reviews: bool,
@@ -442,12 +446,45 @@ fn get_commit_diff_text(commit_id: &str, working_dir: &str) -> Result<String> {
 }
 
 fn load_review_notes_file(path: &str) -> Result<Vec<ReviewNote>> {
-    let text = std::fs::read_to_string(path)
-        .context(format!("Failed to read review notes file: {}", path))?;
+    let text = if path == "-" {
+        let mut text = String::new();
+        std::io::stdin()
+            .read_to_string(&mut text)
+            .context("Failed to read review notes from stdin")?;
+        text
+    } else {
+        std::fs::read_to_string(path)
+            .context(format!("Failed to read review notes file: {}", path))?
+    };
     let notes: Vec<ReviewNote> =
         serde_json::from_str(&text).context("Failed to parse review notes JSON")?;
     validate_review_notes(&notes)?;
     Ok(notes)
+}
+
+async fn add_notes_to_review(path: &str) -> Result<()> {
+    let notes = load_review_notes_file(path)?;
+    let cwd = env::current_dir()?;
+    let root = repository::root(&cwd).unwrap_or_else(|| cwd.clone());
+    let missing = || format!("No running lrv found for {}", root.display());
+    let info = discovery::find(&cwd).with_context(missing)?;
+    let response = reqwest::Client::new()
+        .post(format!("{}/api/review-notes", info.url))
+        .bearer_auth(&info.token)
+        .json(&notes)
+        .send()
+        .await
+        .with_context(missing)?;
+    if response.status() == reqwest::StatusCode::UNAUTHORIZED {
+        anyhow::bail!("Another lrv now holds the port advertised for {}; run --add-notes again after restarting the review", root.display());
+    }
+    let result: serde_json::Value = response
+        .error_for_status()
+        .context("Running lrv rejected review notes")?
+        .json()
+        .await?;
+    println!("{}", serde_json::to_string(&result)?);
+    Ok(())
 }
 
 fn validate_review_notes(notes: &[ReviewNote]) -> Result<()> {
@@ -828,6 +865,9 @@ async fn main() -> Result<()> {
     if let Some(selector) = &args.recover {
         recover_stored_review(selector, &args.format.parse()?)?;
         return Ok(());
+    }
+    if let Some(path) = &args.add_notes {
+        return add_notes_to_review(path).await;
     }
     if let Some(path) = args.validate_review_notes {
         match load_review_notes_file(&path) {
