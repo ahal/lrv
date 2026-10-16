@@ -45,6 +45,28 @@ export type AppConfig = {
 
 export type AppConfigInput = Partial<AppConfig>;
 
+export type ReviewAction = 'comment' | 'accept' | 'request-changes';
+
+export type PhabRevisionStatus = {
+  id: string;
+  title: string;
+  url: string;
+  commit_idxs: number[];
+  own: boolean;
+  closed: boolean;
+  publishable: boolean;
+  reason?: string;
+  published: boolean;
+};
+
+export type PhabStatus = { user: string; error?: string; revisions: PhabRevisionStatus[] };
+export type PublishTabState = {
+  action: ReviewAction;
+  overall: string;
+  error?: string;
+  busy?: boolean;
+};
+
 export type AppContextData = {
   title?: string;
   working_directory?: string;
@@ -52,6 +74,7 @@ export type AppContextData = {
   is_public?: boolean;
   claude_skill_installed?: boolean;
   comment_store_error?: string | null;
+  phabricator_available?: boolean;
 };
 
 export type UserTheme = {

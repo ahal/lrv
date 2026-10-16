@@ -11220,7 +11220,7 @@ var NavigationMethods = class {
 					this.openCommentOnCurrentFocus();
 					break;
 				case "submitReview":
-					this.showSubmitConfirmation();
+					document.getElementById("submit-review")?.click();
 					break;
 				case "showHelp":
 					this.showKeyboardHelp();
@@ -12306,6 +12306,15 @@ function parseQueuedReviewNoteBody(body) {
 	if (source) parsed.source = source;
 	return parsed;
 }
+function commentKey(comment) {
+	return JSON.stringify([
+		comment.file,
+		comment.line,
+		comment.side,
+		comment.commit_idx ?? 0,
+		comment.body
+	]);
+}
 var DialogMethods = class {
 	showKeyboardHelp() {
 		const { overlay, modal, body, close } = openModal({
@@ -12523,15 +12532,16 @@ var DialogMethods = class {
 		}, 0);
 	}
 	async showSubmitConfirmation() {
-		const comments = this.commentManager.getComments();
-		const submissionComments = [...comments];
+		const submissionComments = this.commentManager.getComments().filter((c) => !this.publishedCommentKeys.has(commentKey(c)));
+		const comments = submissionComments;
+		const submitLabel = "Submit Review";
 		let submit = () => {};
 		const footerContent = [el("button", {
 			className: "btn-secondary cancel-submit-btn",
 			text: "Cancel"
 		}), el("button", {
 			className: "btn-primary confirm-submit-btn",
-			text: "Submit Review"
+			text: submitLabel
 		})];
 		const { overlay, modal, body, footer, close } = openModal({
 			title: submissionComments.length === 0 ? "Submit Review" : `Review Comments (${submissionComments.length})`,
@@ -12562,6 +12572,10 @@ var DialogMethods = class {
 		});
 		summaryInput.value = this.overallReviewComment;
 		summaryField.appendChild(summaryInput);
+		const errorBox = el("div", { className: "submit-error" });
+		errorBox.hidden = true;
+		body.appendChild(errorBox);
+		if (this.publishedRevisionIds.size) body.appendChild(el("p", { text: `Already published to ${[...this.publishedRevisionIds].join(", ")}` }));
 		body.appendChild(summaryField);
 		const commentsByFile = {};
 		submissionComments.forEach((comment) => {
@@ -12579,6 +12593,65 @@ var DialogMethods = class {
 				})
 			]));
 		}
+		await this.renderSubmitComments(body, submissionComments);
+		submit = async () => {
+			const submitBtn = footer.querySelector(".confirm-submit-btn");
+			if (!submitBtn || submitBtn.disabled) return;
+			errorBox.hidden = true;
+			this.overallReviewComment = summaryInput.value.trim();
+			submitBtn.disabled = true;
+			submitBtn.textContent = "Submitting...";
+			try {
+				const resp = await fetch("/api/complete", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						comments,
+						overall_comment: this.overallReviewComment || void 0
+					})
+				});
+				if (!resp.ok) {
+					const detail = (await resp.text()).trim();
+					throw new Error(detail || `HTTP ${resp.status}`);
+				}
+				this.reviewSubmitted = true;
+				await this.clearPersistedComments();
+				this.commentManager.setComments([]);
+				this.overallReviewComment = "";
+				this.updateDecorations();
+				this.renderFileList();
+				if (this.currentFileIsCommit) this.loadCommitView();
+				submitBtn.textContent = "Submitted!";
+				const submitReviewBtn = document.getElementById("submit-review");
+				if (submitReviewBtn) {
+					submitReviewBtn.disabled = true;
+					submitReviewBtn.textContent = "Review Submitted";
+				}
+				setTimeout(() => {
+					close();
+					if (this.config.auto_close_tab) window.close();
+				}, 1e3);
+			} catch (error) {
+				errorBox.textContent = `Failed to submit review: ${error instanceof Error ? error.message : error}`;
+				errorBox.hidden = false;
+				submitBtn.disabled = false;
+				submitBtn.textContent = submitLabel;
+			}
+		};
+		const cancelSubmitBtn = footer.querySelector(".cancel-submit-btn");
+		const confirmSubmitBtn = footer.querySelector(".confirm-submit-btn");
+		if (cancelSubmitBtn) cancelSubmitBtn.onclick = close;
+		if (confirmSubmitBtn) confirmSubmitBtn.onclick = submit;
+		setTimeout(() => {
+			const f = footer.querySelector(".confirm-submit-btn");
+			if (f) f.focus();
+		}, 0);
+	}
+	async renderSubmitComments(body, comments) {
+		const commentsByFile = {};
+		comments.forEach((c) => {
+			(commentsByFile[c.file] ??= []).push(c);
+		});
 		const fileContents = {};
 		await Promise.all(Object.keys(commentsByFile).map(async (filePath) => {
 			if (filePath === "(commit)") return;
@@ -12596,7 +12669,7 @@ var DialogMethods = class {
 				}
 			}
 		}));
-		submissionComments.forEach((comment) => {
+		comments.forEach((comment) => {
 			const preview = el("div", { className: "comment-preview" });
 			const isCommitComment = comment.file === "(commit)";
 			const locationText = isCommitComment ? `Commit message line ${commentLineLabel(comment)}` : `${comment.file}:${commentLineLabel(comment)}`;
@@ -12635,53 +12708,6 @@ var DialogMethods = class {
 			preview.appendChild(this.renderSubmitCommentBody(comment));
 			body.appendChild(preview);
 		});
-		submit = async () => {
-			const submitBtn = footer.querySelector(".confirm-submit-btn");
-			if (!submitBtn) return;
-			this.overallReviewComment = summaryInput.value.trim();
-			submitBtn.disabled = true;
-			submitBtn.textContent = "Submitting...";
-			try {
-				const resp = await fetch("/api/complete", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						comments,
-						overall_comment: this.overallReviewComment || void 0
-					})
-				});
-				if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-				this.reviewSubmitted = true;
-				await this.clearPersistedComments();
-				this.commentManager.setComments([]);
-				this.overallReviewComment = "";
-				this.updateDecorations();
-				this.renderFileList();
-				if (this.currentFileIsCommit) this.loadCommitView();
-				submitBtn.textContent = "Submitted!";
-				const submitReviewBtn = document.getElementById("submit-review");
-				if (submitReviewBtn) {
-					submitReviewBtn.disabled = true;
-					submitReviewBtn.textContent = "Review Submitted";
-				}
-				setTimeout(() => {
-					close();
-					if (this.config.auto_close_tab) window.close();
-				}, 1e3);
-			} catch (error) {
-				alert(`Failed to submit review: ${error}`);
-				submitBtn.disabled = false;
-				submitBtn.textContent = "Submit Review";
-			}
-		};
-		const cancelSubmitBtn = footer.querySelector(".cancel-submit-btn");
-		const confirmSubmitBtn = footer.querySelector(".confirm-submit-btn");
-		if (cancelSubmitBtn) cancelSubmitBtn.onclick = close;
-		if (confirmSubmitBtn) confirmSubmitBtn.onclick = submit;
-		setTimeout(() => {
-			const f = footer.querySelector(".confirm-submit-btn");
-			if (f) f.focus();
-		}, 0);
 	}
 	renderSubmitCommentBody(comment) {
 		const container = el("div", { className: "comment-preview-text" });
@@ -12722,6 +12748,257 @@ var DialogMethods = class {
 		return container;
 	}
 };
+//#endregion
+//#region web/src/publish-dialog-methods.ts
+var PublishDialogMethods = class {
+	prefetchPhabricator() {
+		this.phabStatus ??= fetchJSON("/api/phabricator").catch((error) => {
+			this.phabStatus = null;
+			throw error;
+		});
+		return this.phabStatus;
+	}
+	async showPublishDialog() {
+		let active = "";
+		let publish = async () => {};
+		const closeButton = el("button", {
+			className: "btn-secondary",
+			text: "Close"
+		});
+		const publishButton = el("button", {
+			className: "btn-primary publish-revision",
+			text: "Publish"
+		});
+		publishButton.disabled = true;
+		const { body, close } = openModal({
+			title: "Publish to Phabricator",
+			titleId: "publish-title",
+			modalClass: "submit-review-modal publish-dialog",
+			footerContent: [closeButton, publishButton],
+			onKeydown: (event) => {
+				if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+					event.preventDefault();
+					publish();
+				}
+			}
+		});
+		closeButton.onclick = close;
+		body.appendChild(el("p", { text: "Validating Phabricator revisions…" }));
+		let status;
+		try {
+			status = await this.prefetchPhabricator();
+		} catch (error) {
+			body.replaceChildren(el("div", {
+				className: "submit-error",
+				text: String(error)
+			}));
+			return;
+		}
+		body.replaceChildren(el("p", { text: status.user ? `as @${status.user}` : "" }));
+		if (status.error) body.appendChild(el("div", {
+			className: "submit-error",
+			text: status.error
+		}));
+		const originals = this.commentManager.getComments().filter((c) => !this.publishedCommentKeys.has(commentKey(c)));
+		const forRevision = (id) => {
+			const revision = status.revisions.find((r) => r.id === id);
+			return originals.filter((c) => revision.commit_idxs.includes(c.commit_idx ?? 0) && !isAddress(c));
+		};
+		const unassigned = originals.filter((c) => isAddress(c) || !status.revisions.some((r) => r.commit_idxs.includes(c.commit_idx ?? 0)));
+		const tabs = el("div", {
+			className: "publish-tabs",
+			attrs: { role: "tablist" }
+		});
+		const panel = el("div", {
+			className: "publish-panel",
+			attrs: { role: "tabpanel" }
+		});
+		body.append(tabs, panel);
+		active = status.revisions.find((r) => !r.published)?.id ?? status.revisions[0]?.id ?? "";
+		let rendering = 0;
+		const render = () => {
+			const generation = ++rendering;
+			tabs.replaceChildren();
+			tabs.hidden = status.revisions.length + Number(unassigned.length > 0) <= 1;
+			for (const revision of status.revisions) {
+				const badge = revision.published ? "✓" : !revision.publishable ? "⚠" : `· ${forRevision(revision.id).length}`;
+				const tab = el("button", {
+					className: "publish-tab",
+					text: `${revision.id} ${badge}`,
+					attrs: {
+						role: "tab",
+						"aria-selected": String(active === revision.id),
+						title: revision.reason ?? ""
+					}
+				});
+				tab.onclick = () => {
+					active = revision.id;
+					render();
+				};
+				tabs.appendChild(tab);
+			}
+			if (unassigned.length) {
+				const tab = el("button", {
+					className: "publish-tab",
+					text: `Not published · ${unassigned.length}`,
+					attrs: {
+						role: "tab",
+						"aria-selected": String(active === "unassigned")
+					}
+				});
+				tab.onclick = () => {
+					active = "unassigned";
+					render();
+				};
+				tabs.appendChild(tab);
+			}
+			panel.replaceChildren();
+			publishButton.hidden = active === "unassigned";
+			if (active === "unassigned") {
+				panel.appendChild(el("p", { text: "These comments are for the agent. Close this dialog and choose Submit To.. → Agent." }));
+				this.renderSubmitComments(panel, unassigned);
+				return;
+			}
+			const revision = status.revisions.find((r) => r.id === active);
+			if (!revision) return;
+			let state = this.publishTabStates.get(active);
+			if (!state) {
+				state = {
+					action: "comment",
+					overall: ""
+				};
+				this.publishTabStates.set(active, state);
+			}
+			const tabState = state;
+			const comments = forRevision(active);
+			const updateButton = () => {
+				publishButton.disabled = !!status.error || !revision.publishable || revision.published || !!tabState.busy || !comments.length && !tabState.overall.trim() && tabState.action === "comment";
+				publishButton.textContent = revision.published ? "Published ✓" : tabState.busy ? "Publishing…" : `Publish ${revision.id}`;
+			};
+			panel.appendChild(el("a", {
+				className: "auto-link",
+				text: `${revision.id} ${revision.title} ↗`,
+				attrs: {
+					href: revision.url,
+					target: "_blank",
+					rel: "noopener noreferrer"
+				}
+			}));
+			panel.appendChild(el("p", { text: `Commit ${revision.commit_idxs.map((i) => i + 1).join(", ")}/${this.seriesInfo?.commits.length ?? 1}` }));
+			if (revision.reason) panel.appendChild(el("div", {
+				className: "submit-error",
+				text: revision.reason
+			}));
+			if (revision.closed) panel.appendChild(el("p", {
+				className: "submit-publish-note",
+				text: "This revision is closed or abandoned."
+			}));
+			const actions = el("div", {
+				className: "publish-verdict",
+				attrs: {
+					role: "group",
+					"aria-label": "Verdict"
+				}
+			});
+			for (const [value, label] of [
+				["comment", "Comment"],
+				["accept", "Accept"],
+				["request-changes", "Request Changes"]
+			]) {
+				const button = el("button", {
+					text: label,
+					attrs: {
+						"aria-pressed": String(tabState.action === value),
+						title: revision.own && value !== "comment" ? "This is your own revision; you can only comment." : ""
+					}
+				});
+				button.disabled = revision.published || !!tabState.busy || revision.own && value !== "comment";
+				button.onclick = () => {
+					tabState.action = value;
+					render();
+				};
+				actions.appendChild(button);
+			}
+			panel.appendChild(actions);
+			if (revision.own) panel.appendChild(el("p", {
+				className: "submit-publish-note",
+				text: `You are the author of ${revision.id}, so Phabricator only lets you comment.`
+			}));
+			const input = el("textarea", {
+				className: "submit-summary-input",
+				attrs: {
+					"aria-label": `Overall comment for ${revision.id}`,
+					placeholder: `Overall comment for ${revision.id}`
+				}
+			});
+			input.value = tabState.overall;
+			input.disabled = revision.published || !!tabState.busy;
+			input.oninput = () => {
+				tabState.overall = input.value;
+				updateButton();
+			};
+			panel.appendChild(input);
+			if (tabState.error) panel.appendChild(el("div", {
+				className: "submit-error",
+				text: tabState.error
+			}));
+			const preview = el("div");
+			panel.appendChild(preview);
+			const plainComments = comments.map(unwrapReply);
+			this.renderSubmitComments(preview, plainComments).then(() => {
+				if (generation !== rendering) preview.remove();
+			});
+			panel.appendChild(el("p", {
+				className: "submit-publish-note",
+				text: `Any unsubmitted drafts you have on ${revision.id} are published.`
+			}));
+			updateButton();
+			publish = async () => {
+				if (publishButton.disabled || publishButton.hidden) return;
+				tabState.busy = true;
+				delete tabState.error;
+				render();
+				try {
+					const response = await fetch("/api/phabricator/publish", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							revision: revision.id,
+							comments: plainComments,
+							overall_comment: tabState.overall,
+							action: tabState.action
+						})
+					});
+					if (!response.ok) throw new Error((await response.text()).trim() || `HTTP ${response.status}`);
+					revision.published = true;
+					comments.forEach((c) => this.publishedCommentKeys.add(commentKey(c)));
+					this.publishedRevisionIds.add(revision.id);
+					const next = status.revisions.find((r) => r.publishable && !r.published);
+					if (!next) setTimeout(close, 1e3);
+					active = next?.id ?? revision.id;
+				} catch (error) {
+					tabState.error = `Failed to publish review: ${error instanceof Error ? error.message : error}`;
+				} finally {
+					tabState.busy = false;
+					render();
+				}
+			};
+		};
+		publishButton.onclick = () => void publish();
+		render();
+	}
+};
+function isAddress(comment) {
+	const parsed = parseQueuedReviewNoteBody(comment.body);
+	return parsed !== null && !parsed.instruction;
+}
+function unwrapReply(comment) {
+	const parsed = parseQueuedReviewNoteBody(comment.body);
+	return parsed?.instruction ? {
+		...comment,
+		body: parsed.instruction
+	} : comment;
+}
 //#endregion
 //#region web/src/series-methods.ts
 function prGroups(series) {
@@ -13526,6 +13803,10 @@ function applyMixin(TargetClass, MethodsClass) {
 	}
 }
 var MonacoApp = class {
+	publishedCommentKeys = /* @__PURE__ */ new Set();
+	publishedRevisionIds = /* @__PURE__ */ new Set();
+	publishTabStates = /* @__PURE__ */ new Map();
+	phabStatus = null;
 	commentManager;
 	reviewNoteManager;
 	currentFileIndex;
@@ -13916,8 +14197,54 @@ var MonacoApp = class {
 			this.showSettingsModal();
 		});
 		$$1("#help-btn")?.addEventListener("click", () => this.showKeyboardHelp());
-		$$1("#submit-review")?.addEventListener("click", async () => {
+		const submitBtn = $$1("#submit-review");
+		const menu = $$1("#submit-menu");
+		const menuItems = Array.from(menu.querySelectorAll("[role=\"menuitem\"]"));
+		const hasMenu = !!this.context.phabricator_available;
+		if (hasMenu) {
+			submitBtn.textContent = "Submit To..";
+			submitBtn.setAttribute("aria-haspopup", "menu");
+			submitBtn.setAttribute("aria-expanded", "false");
+		}
+		const closeMenu = () => {
+			menu.hidden = true;
+			submitBtn.setAttribute("aria-expanded", "false");
+		};
+		submitBtn.addEventListener("click", () => {
+			if (!hasMenu) {
+				this.showSubmitConfirmation();
+				return;
+			}
+			menu.hidden = !menu.hidden;
+			submitBtn.setAttribute("aria-expanded", String(!menu.hidden));
+			if (!menu.hidden) {
+				menuItems[0]?.focus();
+				this.prefetchPhabricator().catch(() => {});
+			}
+		});
+		menu.addEventListener("keydown", (event) => {
+			if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+			event.preventDefault();
+			const step = event.key === "ArrowDown" ? 1 : -1;
+			const current = menuItems.indexOf(document.activeElement);
+			menuItems[(current + step + menuItems.length) % menuItems.length]?.focus();
+		});
+		document.addEventListener("click", (event) => {
+			if (!(event.target instanceof Node) || !submitBtn.parentElement?.contains(event.target)) closeMenu();
+		});
+		document.addEventListener("keydown", (event) => {
+			if (event.key === "Escape" && !menu.hidden) {
+				closeMenu();
+				submitBtn.focus();
+			}
+		});
+		$$1("#send-to-agent")?.addEventListener("click", () => {
+			closeMenu();
 			this.showSubmitConfirmation();
+		});
+		$$1("#publish-to-phabricator")?.addEventListener("click", () => {
+			closeMenu();
+			this.showPublishDialog();
 		});
 		$$1("#toggle-view")?.addEventListener("click", () => {
 			this.toggleView();
@@ -13974,6 +14301,7 @@ applyMixin(MonacoApp, ReviewNoteMethods);
 applyMixin(MonacoApp, DialogMethods);
 applyMixin(MonacoApp, SeriesMethods);
 applyMixin(MonacoApp, StackedViewMethods);
+applyMixin(MonacoApp, PublishDialogMethods);
 //#endregion
 //#region web/src/main.ts
 document.title = "lrv — Loading…";

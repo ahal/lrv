@@ -235,7 +235,13 @@
         <button id="settings-btn" class="settings-btn">Settings</button>
         <button id="toggle-view" aria-pressed="false">View: Side-by-Side</button>
         <button id="toggle-stacked" aria-pressed="false">Mode: File by file</button>
-        <button id="submit-review">Submit Review</button>
+        <div class="submit-split">
+          <button id="submit-review">Submit</button>
+          <div id="submit-menu" role="menu" hidden>
+            <button id="send-to-agent" role="menuitem">Agent</button>
+            <button id="publish-to-phabricator" role="menuitem">Phabricator</button>
+          </div>
+        </div>
       </div>
     </div>
     <div id="store-error-banner" class="store-error-banner" role="alert" style="display: none">

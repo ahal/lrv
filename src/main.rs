@@ -63,6 +63,7 @@ fn get_project_context() -> ProjectContext {
         is_public: false,
         claude_skill_installed: skill::all_skills_installed(),
         comment_store_error: None,
+        phabricator_available: false,
     }
 }
 
@@ -473,42 +474,6 @@ fn tag_single_commit_notes(notes: &mut [ReviewNote], is_series: bool, commit_cou
     }
 }
 
-/// The Phabricator API token: from the environment, else from `~/.arcrc` (shared with moz-phab
-/// and arc), where it is stored per host.
-fn phabricator_token(base_url: &str) -> Result<String> {
-    if let Ok(token) =
-        std::env::var("PHABRICATOR_API_KEY").or_else(|_| std::env::var("PHABRICATOR_TOKEN"))
-    {
-        return Ok(token);
-    }
-    if let Some(token) =
-        dirs::home_dir().and_then(|home| arcrc_token(&home.join(".arcrc"), base_url))
-    {
-        return Ok(token);
-    }
-    anyhow::bail!(
-        "Set PHABRICATOR_API_KEY or PHABRICATOR_TOKEN (or log in with moz-phab) to load Phabricator comments"
-    )
-}
-
-fn arcrc_token(path: &std::path::Path, base_url: &str) -> Option<String> {
-    let value: serde_json::Value =
-        serde_json::from_str(&std::fs::read_to_string(path).ok()?).ok()?;
-    let normalize = |url: &str| {
-        url.trim_end_matches('/')
-            .trim_end_matches("/api")
-            .to_string()
-    };
-    let wanted = normalize(base_url);
-    value
-        .get("hosts")?
-        .as_object()?
-        .iter()
-        .find(|(host, _)| normalize(host) == wanted)
-        .and_then(|(_, entry)| entry.get("token")?.as_str())
-        .map(str::to_string)
-}
-
 async fn load_phabricator_notes(
     revisions: &[String],
     base_url: &str,
@@ -519,7 +484,7 @@ async fn load_phabricator_notes(
         return Ok(Vec::new());
     }
 
-    let token = phabricator_token(base_url)?;
+    let token = phabricator::phabricator_token(base_url)?;
     let client = PhabricatorClient::new(base_url.to_string(), token)?;
     let mut notes = Vec::new();
 
@@ -549,19 +514,18 @@ async fn load_phabricator_notes(
 /// Load the comments of the Phabricator revision(s) named by the commits' `Differential Revision:`
 /// trailers. `None` when no commit has one. Failures are warnings: the review must open regardless.
 async fn auto_fetch_phab(diffs: &[DiffResponse], include_done: bool) -> Option<Vec<ReviewNote>> {
-    let revisions: Vec<(usize, String, u32)> = diffs
-        .iter()
-        .enumerate()
-        .filter_map(|(i, diff)| {
-            let (base, id) = phabricator::detect_revision(diff.commit_message.as_deref()?)?;
-            Some((i, base, id))
-        })
-        .collect();
+    let messages: Vec<Option<&str>> = diffs.iter().map(|d| d.commit_message.as_deref()).collect();
+    let revisions: Vec<(usize, String, u32)> =
+        phabricator::resolve_phab_targets(&[], "", &messages)
+            .into_iter()
+            .enumerate()
+            .filter_map(|(i, target)| target.map(|t| (i, t.base_url, t.id)))
+            .collect();
     if revisions.is_empty() {
         return None;
     }
 
-    let token = match phabricator_token(&revisions[0].1) {
+    let token = match phabricator::phabricator_token(&revisions[0].1) {
         Ok(token) => token,
         Err(e) => {
             eprintln!("warning: not loading Phabricator comments: {e:#}");
@@ -961,6 +925,17 @@ async fn main() -> Result<()> {
         .filter(|r| !r.is_empty())
         .cloned()
         .collect();
+    let messages = diffs
+        .iter()
+        .map(|d| d.commit_message.as_deref())
+        .collect::<Vec<_>>();
+    let targets = phabricator::resolve_phab_targets(&named_revisions, &phab_base_url, &messages);
+    let publisher = if targets.iter().any(Option::is_some) {
+        project_context.phabricator_available = true;
+        Some(Arc::new(phabricator::Publisher::new(targets, &diffs)))
+    } else {
+        None
+    };
     review_notes.extend(
         load_phabricator_notes(
             &named_revisions,
@@ -1090,6 +1065,7 @@ async fn main() -> Result<()> {
         is_series,
         pull_requests: Arc::new(pull_requests),
         store,
+        publish: publisher,
     };
 
     // Create router (we'll clone per listener)
@@ -1242,6 +1218,11 @@ async fn main() -> Result<()> {
         is_series,
         overall_comment,
     );
+    let output = if let Some(publisher) = &state.publish {
+        output::with_published(output, &output_format, publisher.published_urls().await)
+    } else {
+        output
+    };
     println!("{}", output);
 
     Ok(())

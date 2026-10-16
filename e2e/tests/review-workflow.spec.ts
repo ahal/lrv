@@ -620,6 +620,245 @@ test.describe('Review Workflow E2E', () => {
     await expect(page.locator('text=Review Submitted')).toBeVisible({ timeout: 3000 });
   });
 
+  test('submit failures are shown in the dialog and can be retried', async ({ page }) => {
+    let attempts = 0;
+    await page.route('**/api/complete', (route) => {
+      attempts += 1;
+      return route.fulfill(attempts === 1 ? { status: 500, body: 'boom' } : { status: 200 });
+    });
+    await openApp(page);
+    await page.locator('#submit-review').click();
+    await page.locator('.confirm-submit-btn').click();
+    await expect(page.locator('.submit-error')).toHaveText('Failed to submit review: boom');
+    await expect(page.locator('.confirm-submit-btn')).toBeEnabled();
+    await page.locator('.confirm-submit-btn').click();
+    await expect(page.locator('.submit-error')).toBeHidden();
+    await expect(page.locator('#submit-review')).toHaveText('Review Submitted');
+  });
+
+  test('submit is a plain button without detected revisions', async ({ page }) => {
+    await openApp(page);
+    const submit = page.locator('#submit-review');
+    await expect(submit).toHaveText('Submit');
+    await expect(submit).not.toHaveAttribute('aria-haspopup');
+    expect(await submit.evaluate((button) => getComputedStyle(button, '::after').content)).toBe(
+      'none',
+    );
+    await submit.click();
+    await expect(page.locator('#submit-menu')).toBeHidden();
+    await expect(page.locator('.submit-review-modal')).toBeVisible();
+  });
+
+  test('publish dialog keeps per-revision state, retries, locks and advances, then closes when done', async ({
+    page,
+  }) => {
+    await page.route('**/api/context', async (route) => {
+      const response = await route.fetch();
+      await route.fulfill({
+        response,
+        json: { ...(await response.json()), phabricator_available: true },
+      });
+    });
+    await page.route('**/api/phabricator', (route) =>
+      route.fulfill({
+        json: {
+          user: 'reviewer',
+          revisions: [
+            {
+              id: 'D123',
+              title: 'First revision',
+              url: 'https://phab.example/D123',
+              commit_idxs: [0],
+              own: false,
+              closed: false,
+              publishable: true,
+              published: false,
+            },
+            {
+              id: 'D124',
+              title: 'Own revision',
+              url: 'https://phab.example/D124',
+              commit_idxs: [1],
+              own: true,
+              closed: true,
+              publishable: true,
+              published: false,
+            },
+            {
+              id: 'D125',
+              title: '',
+              url: 'https://phab.example/D125',
+              commit_idxs: [2],
+              own: false,
+              closed: false,
+              publishable: false,
+              reason: 'Diff mismatch',
+              published: false,
+            },
+          ],
+        },
+      }),
+    );
+    const bodies: any[] = [];
+    await page.route('**/api/phabricator/publish', async (route) => {
+      bodies.push(route.request().postDataJSON());
+      await route.fulfill(
+        bodies.length === 1
+          ? { status: 502, body: 'boom' }
+          : { json: { url: 'https://phab.example/D123' } },
+      );
+    });
+    await openApp(page);
+    await expect(page.locator('#submit-review')).toHaveText('Submit To..');
+    const arrow = await page
+      .locator('#submit-review')
+      .evaluate((button) => getComputedStyle(button, '::after').content);
+    expect(arrow).toBe('"▾"');
+    await page.locator('#submit-review').click();
+    await expect(page.locator('#submit-menu')).toContainText('Agent');
+    await page.locator('#publish-to-phabricator').click();
+    const dialog = page.locator('.publish-dialog');
+    await expect(dialog.getByRole('tab')).toHaveCount(3);
+    await expect(dialog).toContainText('as @reviewer');
+    await expect(dialog.locator('.publish-revision')).toBeDisabled();
+    await dialog.getByRole('tab', { name: 'D125' }).click();
+    await expect(dialog.getByRole('tab', { name: 'D125' })).toHaveAttribute(
+      'title',
+      'Diff mismatch',
+    );
+    await expect(dialog.locator('.publish-revision')).toBeDisabled();
+    await dialog.getByRole('tab', { name: 'D124' }).click();
+    await expect(dialog.getByRole('button', { name: 'Accept', exact: true })).toBeDisabled();
+    await expect(dialog.getByRole('button', { name: 'Request Changes' })).toBeDisabled();
+    await expect(dialog).toContainText('closed or abandoned');
+    await expect(dialog).toContainText('You are the author of D124');
+    await dialog.getByRole('tab', { name: 'D123' }).click();
+    await dialog.getByRole('textbox').fill('Overall for D123');
+    await dialog.getByRole('button', { name: 'Request Changes' }).click();
+    await dialog
+      .locator('.submit-modal-footer')
+      .getByRole('button', { name: 'Close', exact: true })
+      .click();
+    await page.locator('#submit-review').click();
+    await page.locator('#publish-to-phabricator').click();
+    await expect(dialog.getByRole('textbox')).toHaveValue('Overall for D123');
+    await dialog.locator('.publish-revision').click();
+    await expect(dialog.locator('.submit-error')).toContainText('boom');
+    await expect(dialog.locator('.publish-revision')).toBeEnabled();
+    await dialog.getByRole('textbox').press('Control+Enter');
+    await expect(dialog.getByRole('tab', { name: 'D124' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await dialog.getByRole('tab', { name: 'D123' }).click();
+    await expect(dialog.locator('.publish-revision')).toHaveText('Published ✓');
+    await expect(dialog.getByRole('textbox')).toBeDisabled();
+    expect(bodies[1].action).toBe('request-changes');
+    expect(bodies[1].overall_comment).toBe('Overall for D123');
+    // D124 is still publishable, so the dialog stays open.
+    await dialog.getByRole('tab', { name: 'D124' }).click();
+    await dialog.getByRole('textbox').fill('Reply on D124');
+    await dialog.locator('.publish-revision').click();
+    // D125 can't be published, so once D124 is the dialog closes itself.
+    await expect(dialog).toHaveCount(0, { timeout: 3000 });
+    expect(bodies[2]).toMatchObject({ revision: 'D124', overall_comment: 'Reply on D124' });
+    await expect(page.locator('#submit-review')).toBeEnabled();
+  });
+
+  test('publishing unwraps replies, leaves Address items for the agent and omits published comments', async ({
+    page,
+  }) => {
+    await page.route('**/api/context', async (route) => {
+      const response = await route.fetch();
+      await route.fulfill({
+        response,
+        json: { ...(await response.json()), phabricator_available: true },
+      });
+    });
+    await page.route('**/api/phabricator', (route) =>
+      route.fulfill({
+        json: {
+          user: 'reviewer',
+          revisions: [
+            {
+              id: 'D123',
+              title: 'Revision',
+              url: 'https://phab.example/D123',
+              commit_idxs: [0],
+              own: false,
+              closed: false,
+              publishable: true,
+              published: false,
+            },
+          ],
+        },
+      }),
+    );
+    await page.route('**/api/review-notes', (route) =>
+      route.fulfill({
+        json: ['test.txt', 'file2.txt', 'file3.txt'].flatMap((file) => [
+          {
+            id: file + '-reply',
+            file,
+            line: 1,
+            side: 'new',
+            body: 'Why is this needed?',
+            author: 'Author',
+          },
+          {
+            id: file + '-address',
+            file,
+            line: 2,
+            side: 'new',
+            body: 'Please fix this.',
+            author: 'Author',
+          },
+        ]),
+      }),
+    );
+    let published: any;
+    await page.route('**/api/phabricator/publish', async (route) => {
+      published = route.request().postDataJSON();
+      await route.fulfill({ json: { url: 'https://phab.example/D123' } });
+    });
+    let sent: any;
+    await page.route('**/api/complete', async (route) => {
+      sent = route.request().postDataJSON();
+      await route.fulfill({ status: 200, body: '' });
+    });
+    await openApp(page);
+    const note = page.locator('.review-note').first();
+    await expect(note.locator('button', { hasText: 'Address' })).toHaveCount(1);
+    await expect(note.locator('button', { hasText: 'Ignore' })).toHaveCount(1);
+    await note.locator('button', { hasText: 'Reply' }).click();
+    await note.locator('.review-note-reply-text').fill('Because of the cache.');
+    await note.locator('button', { hasText: 'Queue' }).click();
+    await page.locator('.review-note').nth(1).locator('button', { hasText: 'Address' }).click();
+    await page.locator('#submit-review').click();
+    await page.locator('#publish-to-phabricator').click();
+    const dialog = page.locator('.publish-dialog');
+    await expect(dialog.locator('.comment-preview-text')).toHaveText('Because of the cache.');
+    await dialog.getByRole('tab', { name: 'Not published' }).click();
+    await expect(dialog).toContainText('Please fix this.');
+    await dialog.getByRole('tab', { name: 'D123' }).click();
+    await dialog.locator('.publish-revision').click();
+    await expect(dialog.locator('.publish-revision')).toHaveText('Published ✓');
+    expect(published.comments).toHaveLength(1);
+    expect(published.comments[0].body).toBe('Because of the cache.');
+    await dialog
+      .locator('.submit-modal-footer')
+      .getByRole('button', { name: 'Close', exact: true })
+      .click();
+    await page.locator('#submit-review').click();
+    await page.locator('#send-to-agent').click();
+    await expect(page.locator('.submit-review-modal')).toContainText('Already published to D123');
+    await expect(page.locator('.comment-preview')).toHaveCount(1);
+    await page.locator('.confirm-submit-btn').click();
+    await expect(page.locator('#submit-review')).toHaveText('Review Submitted');
+    expect(sent.comments).toHaveLength(1);
+    expect(sent.comments[0].body).toContain('Address this review comment');
+  });
+
   test('stacked mode should add, edit, and delete a comment', async ({ page }) => {
     await openStackedView(page);
 

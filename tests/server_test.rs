@@ -31,6 +31,7 @@ fn test_app_state_construction() {
         is_public: false,
         claude_skill_installed: false,
         comment_store_error: None,
+        phabricator_available: false,
     };
 
     let (shutdown_tx, _rx) = tokio::sync::mpsc::channel::<()>(1);
@@ -53,6 +54,7 @@ fn test_app_state_construction() {
         is_series: false,
         pull_requests: Default::default(),
         store: None,
+        publish: None,
     };
 }
 
@@ -84,6 +86,7 @@ fn test_create_router() {
         is_public: false,
         claude_skill_installed: false,
         comment_store_error: None,
+        phabricator_available: false,
     };
 
     let (shutdown_tx, _rx) = tokio::sync::mpsc::channel::<()>(1);
@@ -105,6 +108,7 @@ fn test_create_router() {
         is_series: false,
         pull_requests: Default::default(),
         store: None,
+        publish: None,
     };
 
     // Should not panic
@@ -138,6 +142,7 @@ async fn test_review_note_api_round_trip() {
         is_public: false,
         claude_skill_installed: false,
         comment_store_error: None,
+        phabricator_available: false,
     };
 
     let (shutdown_tx, _rx) = tokio::sync::mpsc::channel::<()>(1);
@@ -159,9 +164,21 @@ async fn test_review_note_api_round_trip() {
         is_series: false,
         pull_requests: Default::default(),
         store: None,
+        publish: None,
     };
 
     let app = lrv::server::create_router(state, false);
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/phabricator")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
     let note = serde_json::json!({
         "id": "n1",
         "file": "src/lib.rs",

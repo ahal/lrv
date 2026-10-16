@@ -123,6 +123,16 @@ pub enum Side {
     Old,
 }
 
+/// How a review published to a code host ends: a plain comment, or a verdict.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ReviewAction {
+    #[default]
+    Comment,
+    Accept,
+    RequestChanges,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReviewComplete {
     pub comments: Vec<Comment>,
@@ -168,6 +178,8 @@ impl ReviewNote {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReviewOutput {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub published: Option<Vec<String>>,
     pub status: String,
     pub comments: Vec<Comment>,
     pub summary: String,
@@ -187,6 +199,8 @@ pub struct CommitReview {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SeriesReviewOutput {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub published: Option<Vec<String>>,
     pub status: String,
     pub summary: String,
     pub commits: Vec<CommitReview>,
@@ -204,6 +218,8 @@ pub struct ProjectContext {
     /// Set when no comment database could be opened, so comments are not
     /// saved for recovery.
     pub comment_store_error: Option<String>,
+    #[serde(default)]
+    pub phabricator_available: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

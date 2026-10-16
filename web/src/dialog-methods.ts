@@ -16,7 +16,7 @@ type QueuedReviewNoteBody = {
   source?: string;
 };
 
-function parseQueuedReviewNoteBody(body: string): QueuedReviewNoteBody | null {
+export function parseQueuedReviewNoteBody(body: string): QueuedReviewNoteBody | null {
   const lines = body.replace(/\r\n?/g, '\n').trim().split('\n');
   let source: string | undefined;
 
@@ -78,7 +78,19 @@ function parseQueuedReviewNoteBody(body: string): QueuedReviewNoteBody | null {
   return parsed;
 }
 
+export function commentKey(comment: ReviewComment): string {
+  return JSON.stringify([
+    comment.file,
+    comment.line,
+    comment.side,
+    comment.commit_idx ?? 0,
+    comment.body,
+  ]);
+}
+
 export class DialogMethods {
+  declare publishedCommentKeys: Set<string>;
+  declare publishedRevisionIds: Set<string>;
   declare config: AppContext['config'];
   declare isInline: boolean;
   declare currentFileIndex: number;
@@ -410,13 +422,16 @@ export class DialogMethods {
   }
 
   async showSubmitConfirmation() {
-    const comments = this.commentManager.getComments();
-    const submissionComments = [...comments];
+    const submissionComments = this.commentManager
+      .getComments()
+      .filter((c) => !this.publishedCommentKeys.has(commentKey(c)));
+    const comments = submissionComments;
+    const submitLabel = 'Submit Review';
     let submit: () => void | Promise<void> = () => {};
 
     const footerContent = [
       el('button', { className: 'btn-secondary cancel-submit-btn', text: 'Cancel' }),
-      el('button', { className: 'btn-primary confirm-submit-btn', text: 'Submit Review' }),
+      el('button', { className: 'btn-primary confirm-submit-btn', text: submitLabel }),
     ];
 
     const { overlay, modal, body, footer, close } = openModal({
@@ -452,6 +467,16 @@ export class DialogMethods {
     }) as HTMLTextAreaElement;
     summaryInput.value = this.overallReviewComment;
     summaryField.appendChild(summaryInput);
+
+    const errorBox = el('div', { className: 'submit-error' });
+    errorBox.hidden = true;
+    body.appendChild(errorBox);
+
+    if (this.publishedRevisionIds.size) {
+      body.appendChild(
+        el('p', { text: `Already published to ${[...this.publishedRevisionIds].join(', ')}` }),
+      );
+    }
     body.appendChild(summaryField);
 
     const commentsByFile: Record<string, ReviewComment[]> = {};
@@ -482,6 +507,87 @@ export class DialogMethods {
       );
     }
 
+    await this.renderSubmitComments(body, submissionComments);
+
+    submit = async () => {
+      const submitBtn = footer.querySelector<HTMLButtonElement>('.confirm-submit-btn');
+      if (!submitBtn || submitBtn.disabled) {
+        return;
+      }
+      errorBox.hidden = true;
+      this.overallReviewComment = summaryInput.value.trim();
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+
+      try {
+        const resp = await fetch('/api/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            comments,
+            overall_comment: this.overallReviewComment || undefined,
+          }),
+        });
+        if (!resp.ok) {
+          const detail = (await resp.text()).trim();
+          throw new Error(detail || `HTTP ${resp.status}`);
+        }
+        this.reviewSubmitted = true;
+
+        await this.clearPersistedComments();
+        this.commentManager.setComments([]);
+        this.overallReviewComment = '';
+        this.updateDecorations();
+        this.renderFileList();
+        if (this.currentFileIsCommit) {
+          this.loadCommitView();
+        }
+
+        submitBtn.textContent = 'Submitted!';
+        const submitReviewBtn = document.getElementById(
+          'submit-review',
+        ) as HTMLButtonElement | null;
+        if (submitReviewBtn) {
+          submitReviewBtn.disabled = true;
+          submitReviewBtn.textContent = 'Review Submitted';
+        }
+
+        setTimeout(() => {
+          close();
+          if (this.config.auto_close_tab) {
+            window.close();
+          }
+        }, 1000);
+      } catch (error) {
+        errorBox.textContent = `Failed to submit review: ${error instanceof Error ? error.message : error}`;
+        errorBox.hidden = false;
+        submitBtn.disabled = false;
+        submitBtn.textContent = submitLabel;
+      }
+    };
+
+    const cancelSubmitBtn = footer.querySelector<HTMLButtonElement>('.cancel-submit-btn');
+    const confirmSubmitBtn = footer.querySelector<HTMLButtonElement>('.confirm-submit-btn');
+    if (cancelSubmitBtn) {
+      cancelSubmitBtn.onclick = close;
+    }
+    if (confirmSubmitBtn) {
+      confirmSubmitBtn.onclick = submit;
+    }
+
+    setTimeout(() => {
+      const f = footer.querySelector<HTMLElement>('.confirm-submit-btn');
+      if (f) {
+        f.focus();
+      }
+    }, 0);
+  }
+
+  async renderSubmitComments(body: HTMLElement, comments: ReviewComment[]) {
+    const commentsByFile: Record<string, ReviewComment[]> = {};
+    comments.forEach((c) => {
+      (commentsByFile[c.file] ??= []).push(c);
+    });
     const fileContents: Record<string, string[]> = {};
     await Promise.all(
       Object.keys(commentsByFile).map(async (filePath) => {
@@ -511,7 +617,7 @@ export class DialogMethods {
       }),
     );
 
-    submissionComments.forEach((comment) => {
+    comments.forEach((comment) => {
       const preview = el('div', { className: 'comment-preview' });
 
       const isCommitComment = comment.file === '(commit)';
@@ -555,76 +661,6 @@ export class DialogMethods {
       preview.appendChild(this.renderSubmitCommentBody(comment));
       body.appendChild(preview);
     });
-
-    submit = async () => {
-      const submitBtn = footer.querySelector<HTMLButtonElement>('.confirm-submit-btn');
-      if (!submitBtn) {
-        return;
-      }
-      this.overallReviewComment = summaryInput.value.trim();
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Submitting...';
-
-      try {
-        const resp = await fetch('/api/complete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            comments,
-            overall_comment: this.overallReviewComment || undefined,
-          }),
-        });
-        if (!resp.ok) {
-          throw new Error(`HTTP ${resp.status}`);
-        }
-        this.reviewSubmitted = true;
-
-        await this.clearPersistedComments();
-        this.commentManager.setComments([]);
-        this.overallReviewComment = '';
-        this.updateDecorations();
-        this.renderFileList();
-        if (this.currentFileIsCommit) {
-          this.loadCommitView();
-        }
-
-        submitBtn.textContent = 'Submitted!';
-        const submitReviewBtn = document.getElementById(
-          'submit-review',
-        ) as HTMLButtonElement | null;
-        if (submitReviewBtn) {
-          submitReviewBtn.disabled = true;
-          submitReviewBtn.textContent = 'Review Submitted';
-        }
-
-        setTimeout(() => {
-          close();
-          if (this.config.auto_close_tab) {
-            window.close();
-          }
-        }, 1000);
-      } catch (error) {
-        alert(`Failed to submit review: ${error}`);
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit Review';
-      }
-    };
-
-    const cancelSubmitBtn = footer.querySelector<HTMLButtonElement>('.cancel-submit-btn');
-    const confirmSubmitBtn = footer.querySelector<HTMLButtonElement>('.confirm-submit-btn');
-    if (cancelSubmitBtn) {
-      cancelSubmitBtn.onclick = close;
-    }
-    if (confirmSubmitBtn) {
-      confirmSubmitBtn.onclick = submit;
-    }
-
-    setTimeout(() => {
-      const f = footer.querySelector<HTMLElement>('.confirm-submit-btn');
-      if (f) {
-        f.focus();
-      }
-    }, 0);
   }
 
   private renderSubmitCommentBody(comment: ReviewComment): HTMLElement {
