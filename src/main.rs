@@ -24,7 +24,10 @@ use tokio::sync::{mpsc, Mutex, Notify};
 use crate::output::OutputFormat;
 use crate::phabricator::{PhabricatorClient, Publisher, RevisionStatusInfo};
 use crate::server::{create_router, AppState};
-use crate::types::{CommentLine, DiffResponse, LineType, PrInfo, ProjectContext, ReviewNote, Side};
+use crate::types::{
+    assign_note_ids, tag_single_commit_notes, CommentLine, DiffResponse, LineType, PrInfo,
+    ProjectContext, ReviewNote, Side,
+};
 use lrv::repository;
 
 fn get_project_context() -> ProjectContext {
@@ -459,20 +462,6 @@ fn validate_review_notes(notes: &[ReviewNote]) -> Result<()> {
         );
     }
     Ok(())
-}
-
-/// The series UI only shows notes whose `commit_idx` matches the selected commit, but loaders
-/// leave it unset when there is a single diff. Pin those notes to commit 0 so they stay visible
-/// in a one-commit series.
-fn tag_single_commit_notes(notes: &mut [ReviewNote], is_series: bool, commit_count: usize) {
-    if !is_series || commit_count != 1 {
-        return;
-    }
-    for note in notes {
-        if note.commit_idx.is_none() {
-            note.commit_idx = Some(0);
-        }
-    }
 }
 
 async fn load_phabricator_notes(
@@ -1068,6 +1057,7 @@ async fn main() -> Result<()> {
         }
     }
     tag_single_commit_notes(&mut review_notes, is_series, diffs.len());
+    assign_note_ids(&mut review_notes);
 
     // Setup shutdown channel
     let (shutdown_tx, mut shutdown_rx) = mpsc::channel::<()>(1);
@@ -1296,45 +1286,4 @@ async fn main() -> Result<()> {
     println!("{}", output);
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn note(file: &str, commit_idx: Option<usize>) -> ReviewNote {
-        ReviewNote {
-            id: None,
-            file: file.to_string(),
-            line: CommentLine::Single(1),
-            side: Side::New,
-            body: "x".to_string(),
-            author: None,
-            date: None,
-            source_url: None,
-            commit_idx,
-            read_only: false,
-        }
-    }
-
-    #[test]
-    fn single_commit_series_notes_are_pinned_to_commit_zero() {
-        let mut notes = vec![
-            note("(commit)", None),
-            note("a.rs", None),
-            note("b.rs", Some(0)),
-        ];
-        tag_single_commit_notes(&mut notes, true, 1);
-        let got: Vec<_> = notes.iter().map(|n| n.commit_idx).collect();
-        assert_eq!(got, [Some(0), Some(0), Some(0)]);
-    }
-
-    #[test]
-    fn notes_untouched_outside_single_commit_series() {
-        for (is_series, count) in [(false, 1), (true, 2)] {
-            let mut notes = vec![note("a.rs", None)];
-            tag_single_commit_notes(&mut notes, is_series, count);
-            assert_eq!(notes[0].commit_idx, None);
-        }
-    }
 }

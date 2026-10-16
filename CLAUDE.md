@@ -69,5 +69,6 @@ Any comment UX change (shortcuts, edit, delete, validation) must go in both.
 
 Required: `file`, `line` (int or `[start, end]`), `side` (`"new"`/`"old"`), `body`.
 Optional: `id`, `author`, `date`, `source_url`, `commit_idx`, `read_only` (note is shown without Address/Reply/Ignore).
+Notes without `id` get one derived from their content (`assign_note_ids`), so ids alone decide which notes are the same, on the server and in the browser.
 Commit-message-level: `file: "(commit)"`, `line: 1`, `side: "new"`.
 Pull-request-level comments (`--github-pr` fills them from the PR conversation and review summaries) are read-only `file: "(commit)"` notes like Phabricator's general comments (`ReviewNote::overall`), placed on the last commit of a series. Notes without `commit_idx` in a one-commit series are pinned to commit 0 (`tag_single_commit_notes`).

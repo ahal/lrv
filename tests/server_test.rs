@@ -161,7 +161,7 @@ async fn test_review_note_api_round_trip() {
         new_caches: std::sync::Arc::new(vec![tokio::sync::Mutex::new(
             std::collections::HashMap::new(),
         )]),
-        is_series: false,
+        is_series: true,
         pull_requests: Default::default(),
         store: None,
         publish: None,
@@ -187,6 +187,8 @@ async fn test_review_note_api_round_trip() {
         "body": "please consider this\nsecond line",
         "author": "Reviewer"
     });
+    let plain =
+        serde_json::json!({"file": "src/lib.rs", "line": 1, "side": "new", "body": "no id"});
 
     let post = app
         .clone()
@@ -195,13 +197,63 @@ async fn test_review_note_api_round_trip() {
                 .method("POST")
                 .uri("/api/review-notes")
                 .header("content-type", "application/json")
-                .body(Body::from(note.to_string()))
+                .body(Body::from(serde_json::json!([note]).to_string()))
                 .unwrap(),
         )
         .await
         .unwrap();
     assert_eq!(post.status(), StatusCode::OK);
 
+    for (batch, expected, status) in [
+        (
+            serde_json::json!([note]),
+            serde_json::json!({"added": 0, "skipped": 1}),
+            StatusCode::OK,
+        ),
+        (
+            serde_json::json!([plain, plain]),
+            serde_json::json!({"added": 1, "skipped": 1}),
+            StatusCode::OK,
+        ),
+        (
+            serde_json::json!([plain]),
+            serde_json::json!({"added": 0, "skipped": 1}),
+            StatusCode::OK,
+        ),
+        (
+            serde_json::json!([{"file": "a", "line": 0, "side": "new", "body": "bad"}]),
+            serde_json::Value::Null,
+            StatusCode::BAD_REQUEST,
+        ),
+        (
+            serde_json::json!([{"file": "a", "line": 1, "side": "new", "body": "bad", "commit_idx": 1}]),
+            serde_json::Value::Null,
+            StatusCode::BAD_REQUEST,
+        ),
+    ] {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/review-notes")
+                    .header("content-type", "application/json")
+                    .body(Body::from(batch.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), status);
+        if status == StatusCode::OK {
+            let bytes = axum::body::to_bytes(response.into_body(), 1024)
+                .await
+                .unwrap();
+            assert_eq!(
+                serde_json::from_slice::<serde_json::Value>(&bytes).unwrap(),
+                expected
+            );
+        }
+    }
     let get = app
         .oneshot(
             Request::builder()
@@ -217,8 +269,11 @@ async fn test_review_note_api_round_trip() {
         .unwrap();
     let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(value[0]["id"], "n1");
+    assert_eq!(value[0]["commit_idx"], 0);
     assert_eq!(value[0]["line"], serde_json::json!([3, 4]));
     assert_eq!(value[0]["body"], "please consider this\nsecond line");
+    assert_eq!(value.as_array().unwrap().len(), 2);
+    assert!(value[1]["id"].as_str().unwrap().starts_with("lrv-"));
 }
 
 /// Test that comments can be stored in AppState

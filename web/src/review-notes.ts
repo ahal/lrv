@@ -79,15 +79,7 @@ export class ReviewNoteManager {
   }
 
   private isSameNote(a: ReviewNote, b: ReviewNote): boolean {
-    if (a.id && b.id) {
-      return a.id === b.id;
-    }
-    return (
-      a.file === b.file &&
-      a.side === b.side &&
-      JSON.stringify(a.line) === JSON.stringify(b.line) &&
-      a.body === b.body &&
-      a.commit_idx === b.commit_idx
-    );
+    // The server assigns every note an id, so it alone decides which notes are the same.
+    return a === b || (a.id !== undefined && a.id === b.id);
   }
 }

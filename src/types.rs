@@ -278,3 +278,95 @@ pub struct PullRequests {
     /// Per commit, an index into `prs`.
     pub commit_prs: Vec<Option<usize>>,
 }
+
+/// The series UI only shows notes whose `commit_idx` matches the selected commit, but loaders
+/// leave it unset when there is a single diff. Pin those notes to commit 0 so they stay visible
+/// in a one-commit series.
+pub fn tag_single_commit_notes(notes: &mut [ReviewNote], is_series: bool, commit_count: usize) {
+    if !is_series || commit_count != 1 {
+        return;
+    }
+    for note in notes {
+        if note.commit_idx.is_none() {
+            note.commit_idx = Some(0);
+        }
+    }
+}
+
+/// Give every note without an `id` one derived from its content, so the server and the browser
+/// identify notes the same way and resending an id-less note is still recognised as a duplicate.
+/// Call after `tag_single_commit_notes`, since `commit_idx` is part of the identity.
+pub fn assign_note_ids(notes: &mut [ReviewNote]) {
+    for note in notes {
+        if note.id.is_none() {
+            let key =
+                serde_json::json!([note.file, note.side, note.line, note.commit_idx, note.body]);
+            let mut hash = 0xcbf29ce484222325u64;
+            for byte in key.to_string().bytes() {
+                hash ^= u64::from(byte);
+                hash = hash.wrapping_mul(0x100000001b3);
+            }
+            note.id = Some(format!("lrv-{hash:016x}"));
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn note(file: &str, commit_idx: Option<usize>) -> ReviewNote {
+        ReviewNote {
+            id: None,
+            file: file.to_string(),
+            line: CommentLine::Single(1),
+            side: Side::New,
+            body: "x".to_string(),
+            author: None,
+            date: None,
+            source_url: None,
+            commit_idx,
+            read_only: false,
+        }
+    }
+
+    #[test]
+    fn single_commit_series_notes_are_pinned_to_commit_zero() {
+        let mut notes = vec![
+            note("(commit)", None),
+            note("a.rs", None),
+            note("b.rs", Some(0)),
+        ];
+        tag_single_commit_notes(&mut notes, true, 1);
+        let got: Vec<_> = notes.iter().map(|n| n.commit_idx).collect();
+        assert_eq!(got, [Some(0), Some(0), Some(0)]);
+    }
+
+    #[test]
+    fn notes_untouched_outside_single_commit_series() {
+        for (is_series, count) in [(false, 1), (true, 2)] {
+            let mut notes = vec![note("a.rs", None)];
+            tag_single_commit_notes(&mut notes, is_series, count);
+            assert_eq!(notes[0].commit_idx, None);
+        }
+    }
+
+    #[test]
+    fn note_ids_are_derived_from_content() {
+        let mut notes = vec![
+            note("a.rs", None),
+            note("a.rs", None),
+            note("a.rs", Some(0)),
+            ReviewNote {
+                id: Some("given".to_string()),
+                ..note("a.rs", None)
+            },
+        ];
+        assign_note_ids(&mut notes);
+        let ids: Vec<_> = notes.iter().map(|n| n.id.clone().unwrap()).collect();
+        assert!(ids[0].starts_with("lrv-"));
+        assert_eq!(ids[0], ids[1]);
+        assert_ne!(ids[0], ids[2]);
+        assert_eq!(ids[3], "given");
+    }
+}

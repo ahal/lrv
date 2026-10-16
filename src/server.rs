@@ -1368,14 +1368,28 @@ async fn get_review_notes(State(state): State<AppState>) -> Json<Vec<ReviewNote>
 
 async fn add_review_note(
     State(state): State<AppState>,
-    Json(note): Json<ReviewNote>,
-) -> StatusCode {
-    if !note.is_valid() {
-        return StatusCode::BAD_REQUEST;
+    Json(mut batch): Json<Vec<ReviewNote>>,
+) -> Response {
+    if batch
+        .iter()
+        .any(|note| !note.is_valid() || note.commit_idx.is_some_and(|idx| idx >= state.diffs.len()))
+    {
+        return StatusCode::BAD_REQUEST.into_response();
     }
+    tag_single_commit_notes(&mut batch, state.is_series, state.diffs.len());
+    assign_note_ids(&mut batch);
     let mut notes = state.review_notes.lock().await;
-    notes.push(note);
-    StatusCode::OK
+    let mut added = 0;
+    let mut skipped = 0;
+    for note in batch {
+        if notes.iter().any(|existing| existing.id == note.id) {
+            skipped += 1;
+        } else {
+            notes.push(note);
+            added += 1;
+        }
+    }
+    Json(serde_json::json!({ "added": added, "skipped": skipped })).into_response()
 }
 
 async fn complete_review(

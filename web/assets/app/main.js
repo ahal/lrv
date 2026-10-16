@@ -585,8 +585,7 @@ var ReviewNoteManager = class {
 		this.listeners.forEach((l) => l());
 	}
 	isSameNote(a, b) {
-		if (a.id && b.id) return a.id === b.id;
-		return a.file === b.file && a.side === b.side && JSON.stringify(a.line) === JSON.stringify(b.line) && a.body === b.body && a.commit_idx === b.commit_idx;
+		return a === b || a.id !== void 0 && a.id === b.id;
 	}
 };
 //#endregion
