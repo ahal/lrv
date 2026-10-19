@@ -44,6 +44,7 @@ async function startServer(port: number = 0, options?: { title?: string }): Prom
 
     serverProcess = spawn('bash', ['-c', cmd], {
       stdio: ['inherit', 'pipe', 'pipe'],
+      detached: true,
       env: {
         ...process.env,
         XDG_CONFIG_HOME: path.join(testRepoPath, '.config'),
@@ -269,15 +270,19 @@ async function recoverStoredComments(): Promise<Array<{ body: string }>> {
  * Stop the server and capture output
  */
 async function stopServer(): Promise<string> {
-  return new Promise(async (resolve) => {
-    if (!serverProcess) {
+  return new Promise((resolve) => {
+    // Capture the process: tests restart the server right after stopping it, so the fallback
+    // timer must not kill whatever `serverProcess` points to by then.
+    const p = serverProcess;
+    if (!p) {
       resolve('');
       return;
     }
+    serverProcess = null;
 
     let output = '';
 
-    serverProcess.stdout?.on('data', (data) => {
+    p.stdout?.on('data', (data) => {
       const text = data.toString();
       output += text;
       try {
@@ -287,36 +292,30 @@ async function stopServer(): Promise<string> {
       } catch {}
     });
 
-    serverProcess.on('close', () => {
-      serverProcess = null;
+    const timer = setTimeout(() => {
+      try {
+        if (p.pid) {
+          process.kill(-p.pid, 'SIGKILL');
+        }
+      } catch {
+        // Ignore
+      }
+      resolve(output);
+    }, 2000);
+
+    p.on('close', () => {
+      clearTimeout(timer);
       resolve(output);
     });
 
     // Kill the entire process group to ensure child processes are killed
-    if (serverProcess.pid) {
+    if (p.pid) {
       try {
-        process.kill(-serverProcess.pid, 'SIGTERM');
-      } catch (e) {
+        process.kill(-p.pid, 'SIGTERM');
+      } catch {
         // Process might already be dead
       }
     }
-
-    // Avoid aggressive pkill; rely on process group kill for speed and safety
-
-    // Force kill after timeout
-    setTimeout(() => {
-      if (serverProcess) {
-        try {
-          if (serverProcess.pid) {
-            process.kill(-serverProcess.pid, 'SIGKILL');
-          }
-        } catch (e) {
-          // Ignore
-        }
-        serverProcess = null;
-      }
-      resolve(output);
-    }, 2000);
   });
 }
 

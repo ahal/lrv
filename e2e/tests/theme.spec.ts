@@ -27,6 +27,7 @@ async function startServer(port: number = 0): Promise<void> {
     serverUrl = null;
     serverProcess = spawn('bash', ['-c', cmd], {
       stdio: ['inherit', 'pipe', 'pipe'],
+      detached: true,
       env: {
         ...process.env,
         XDG_CONFIG_HOME: path.join(testRepoPath, '.config'),
