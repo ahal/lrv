@@ -412,6 +412,7 @@ test.describe('Review Workflow E2E', () => {
   });
 
   test('should add a comment via line number click', async ({ page }) => {
+    await page.setViewportSize({ width: 2560, height: 1440 });
     await openApp(page);
 
     // Wait for editor to be ready
@@ -426,9 +427,38 @@ test.describe('Review Workflow E2E', () => {
 
     // Comment dialog should appear
     await expect(page.locator('.inline-comment-box')).toBeVisible({ timeout: 2000 });
+    const commentBoxGeometry = await page.locator('.inline-comment-box').evaluate((box) => {
+      const boxRect = box.getBoundingClientRect();
+      const paneRect = box.closest('.monaco-editor')!.getBoundingClientRect();
+      const probe = document.createElement('span');
+      probe.style.cssText =
+        'position:fixed;visibility:hidden;white-space:nowrap;width:80ch;box-sizing:border-box';
+      probe.style.font = getComputedStyle(box).font;
+      document.body.append(probe);
+      const eightyChWidth = probe.getBoundingClientRect().width;
+      probe.remove();
+      return {
+        boxWidth: boxRect.width,
+        eightyChWidth,
+        boxLeft: boxRect.left,
+        boxRight: boxRect.right,
+        paneLeft: paneRect.left,
+        paneRight: paneRect.right,
+        borderRadius: getComputedStyle(box.querySelector('textarea')!).borderRadius,
+      };
+    });
+    expect(commentBoxGeometry.boxWidth).toBeLessThan(commentBoxGeometry.eightyChWidth);
+    expect(commentBoxGeometry.boxLeft).toBeGreaterThanOrEqual(commentBoxGeometry.paneLeft);
+    expect(commentBoxGeometry.boxRight).toBeLessThanOrEqual(commentBoxGeometry.paneRight);
+    expect(commentBoxGeometry.borderRadius).toBe('0px');
 
     // Fill in comment
-    await page.locator('.comment-textarea').fill('This is a test comment');
+    await page.locator('.comment-textarea').fill('x'.repeat(500));
+    const textareaSize = await page.locator('.comment-textarea').evaluate((textarea) => ({
+      scrollWidth: textarea.scrollWidth,
+      clientWidth: textarea.clientWidth,
+    }));
+    expect(textareaSize.scrollWidth).toBeLessThanOrEqual(textareaSize.clientWidth);
 
     // Save comment
     await page.locator('.save-btn').click();
@@ -901,6 +931,49 @@ test.describe('Review Workflow E2E', () => {
     await page.locator('.stacked-comment-box .stacked-comment-del').click();
     await expect(page.locator('#comment-count')).toHaveText('0');
     await expect(page.locator('.stacked-comment-box')).toHaveCount(0);
+  });
+
+  test('stacked comment input stays within the code area', async ({ page }) => {
+    await page.setViewportSize({ width: 2560, height: 1440 });
+    await openStackedView(page);
+    const lineNumber = page
+      .locator('.stacked-code-view diffs-container [data-interactive-line-numbers]')
+      .first();
+    await lineNumber.waitFor({ state: 'visible', timeout: 10000 });
+    await lineNumber.click({ position: { x: 8, y: 8 } });
+    const form = page.locator('.stacked-comment-form');
+    await expect(form).toBeVisible({ timeout: 3000 });
+
+    const geometry = await form.evaluate((node) => {
+      const formRect = node.getBoundingClientRect();
+      const cellRect = node.parentElement!.getBoundingClientRect();
+      const textarea = node.querySelector('textarea')!;
+      const probe = document.createElement('span');
+      probe.style.cssText =
+        'position:fixed;visibility:hidden;white-space:nowrap;width:80ch;box-sizing:border-box';
+      probe.style.font = getComputedStyle(node).font;
+      document.body.append(probe);
+      const eightyChWidth = probe.getBoundingClientRect().width;
+      probe.remove();
+      return {
+        formWidth: formRect.width,
+        cellWidth: cellRect.width,
+        eightyChWidth,
+        borderRadius: getComputedStyle(textarea).borderRadius,
+      };
+    });
+    expect(geometry.formWidth).toBeLessThan(geometry.eightyChWidth);
+    expect(geometry.formWidth).toBeLessThanOrEqual(geometry.cellWidth);
+    expect(geometry.formWidth).toBeLessThan(geometry.cellWidth);
+    expect(geometry.borderRadius).toBe('0px');
+
+    const textarea = form.locator('.stacked-comment-ta');
+    await textarea.fill('x'.repeat(500));
+    const scroll = await textarea.evaluate((node) => ({
+      scrollWidth: node.scrollWidth,
+      clientWidth: node.clientWidth,
+    }));
+    expect(scroll.scrollWidth).toBeLessThanOrEqual(scroll.clientWidth);
   });
 
   test('stacked mode should not open a comment when clicking code', async ({ page }) => {

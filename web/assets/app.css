@@ -1174,14 +1174,18 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  width: min(calc(80ch - 2px), 100%);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .stacked-comment-ta {
   width: 100%;
+  min-width: 0;
   background: var(--bg-primary);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: 0;
   padding: 6px 8px;
   font: inherit;
   font-size: 12px;
@@ -1569,6 +1573,8 @@ body {
 }
 
 .inline-comment-box {
+  width: min(calc(80ch - 2px), calc(100vw - 32px));
+  box-sizing: border-box;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-sm);
@@ -1583,12 +1589,12 @@ body {
 
 .comment-textarea {
   width: 100%;
+  min-width: 0;
   min-height: 80px;
-  field-sizing: content;
   background: var(--bg-elevated);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: 0;
   padding: 8px;
   font-family: var(--font-sans);
   font-size: 12px;

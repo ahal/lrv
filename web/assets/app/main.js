@@ -11965,9 +11965,13 @@ var CommentsUIMethods = class {
 		}
 		const existingIndex = this.commentManager.findComment(file, monacoLineNumber, side);
 		const existingComment = existingIndex >= 0 ? this.commentManager.comments[existingIndex] : null;
-		const editorWidth = targetEditor.getLayoutInfo().contentWidth;
 		const domNode = el("div", { className: "inline-comment-box" });
-		domNode.style.width = `${editorWidth}px`;
+		const updateMaxWidth = () => {
+			const pane = domNode.closest(".monaco-editor")?.getBoundingClientRect();
+			const editorNode = targetEditor.getDomNode();
+			const availableWidth = pane ? pane.width - 32 : editorNode?.getBoundingClientRect().width ?? 0;
+			domNode.style.maxWidth = `${Math.max(0, Math.min(availableWidth, window.innerWidth - 32))}px`;
+		};
 		const modKey = MOD_KEY_LABEL;
 		const title = el("h3", { text: `Line ${existingComment ? commentLineLabel(existingComment) : this.commentLineLabel(commentLine)}${existingComment ? " - Edit" : ""}` });
 		const textarea = el("textarea", {
@@ -12012,7 +12016,12 @@ var CommentsUIMethods = class {
 			})
 		};
 		targetEditor.addContentWidget(widget);
+		updateMaxWidth();
 		targetEditor.layoutContentWidget(widget);
+		const layoutListener = targetEditor.onDidLayoutChange(() => {
+			updateMaxWidth();
+			targetEditor.layoutContentWidget(widget);
+		});
 		this.currentWidget = widget;
 		this.currentWidgetEditor = targetEditor;
 		const saveBtn = domNode.querySelector(".save-btn");
@@ -12033,6 +12042,7 @@ var CommentsUIMethods = class {
 		textarea.addEventListener("keydown", handleKeydown);
 		const cleanup = () => {
 			targetEditor.removeContentWidget(widget);
+			layoutListener.dispose();
 			this.currentWidget = null;
 			textarea.removeEventListener("keydown", handleKeydown);
 			textarea.removeEventListener("input", autoResize);
