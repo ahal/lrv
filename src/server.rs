@@ -250,18 +250,23 @@ fn resolve_old_content(diff: &DiffResponse, working_dir: &str, req_path: &str) -
         let repo = working_dir;
         let old_key = fe.old_path.clone().unwrap_or_else(|| fe.path.clone());
 
-        if !repository::is_jj_repo(repo) {
-            if let Some(oid) = &fe.old_blob {
-                if !is_null_oid(oid) {
-                    let output = std::process::Command::new("git")
-                        .current_dir(repo)
-                        .args(["cat-file", "-p", oid])
-                        .output();
-                    if let Ok(output) = output {
-                        if output.status.success() {
-                            if let Ok(s) = String::from_utf8(output.stdout) {
-                                return s;
-                            }
+        // The `index <old>..<new>` OIDs in a `jj diff --git` patch point into
+        // jj's Git object store, so they identify the exact old content even
+        // when the patch carries no revision metadata to load it from.
+        if let Some(oid) = &fe.old_blob {
+            if repository::is_jj_repo(repo) {
+                if let Some(content) = cat_file_from_jj_store(repo, oid) {
+                    return content;
+                }
+            } else {
+                let output = std::process::Command::new("git")
+                    .current_dir(repo)
+                    .args(["cat-file", "-p", oid])
+                    .output();
+                if let Ok(output) = output {
+                    if output.status.success() {
+                        if let Ok(s) = String::from_utf8(output.stdout) {
+                            return s;
                         }
                     }
                 }
@@ -326,7 +331,8 @@ fn resolve_old_content(diff: &DiffResponse, working_dir: &str, req_path: &str) -
         }
     }
 
-    // A jj-only repository has no Git object database to query.
+    // A jj-only repository has no *checkout* to query, but it does keep a Git
+    // object store, which is reachable through `cat_file_from_jj_store`.
     if repository::is_jj_repo(working_dir) {
         return String::new();
     }
@@ -434,6 +440,68 @@ pub async fn prefetch_old_files(state: AppState, commit_idx: usize) {
     }
 
     while set.join_next().await.is_some() {}
+}
+
+// A `jj git init` repository may or may not be colocated with a Git checkout.
+// When it is, `git` in the working directory finds the objects; when it is not,
+// the objects live in the internal store and must be reached with `GIT_DIR`.
+// Returns the working directory itself for colocated repos so callers can keep
+// passing it as `current_dir`.
+fn jj_git_dir(working_dir: &str) -> Option<std::path::PathBuf> {
+    if Path::new(working_dir).join(".git").exists() {
+        return Some(std::path::PathBuf::from(working_dir));
+    }
+    let store = Path::new(working_dir).join(".jj/repo/store");
+    // `type` is `git` for the built-in Git backend; the object directory is
+    // `store/git` unless `git_target` points somewhere else (e.g. a bare repo).
+    let is_git = fs::read_to_string(store.join("type"))
+        .map(|t| t.trim() == "git")
+        .unwrap_or(false);
+    if !is_git {
+        return None;
+    }
+    let target = fs::read_to_string(store.join("git_target"))
+        .ok()
+        .map(|t| t.trim().to_string())
+        .filter(|t| !t.is_empty());
+    match target {
+        Some(target) if target != "git" => {
+            let candidate = store.join(target);
+            candidate.is_dir().then_some(candidate)
+        }
+        _ => {
+            let candidate = store.join("git");
+            candidate.is_dir().then_some(candidate)
+        }
+    }
+}
+
+/// Read a Git object by (possibly abbreviated) OID from a jj repository's
+/// object store.
+///
+/// `jj diff --git` emits `index <old>..<new>` lines whose OIDs are real Git
+/// objects even in a jj-only repository, so this recovers exact file contents
+/// for a patch that carries no revision metadata.
+fn cat_file_from_jj_store(working_dir: &str, oid: &str) -> Option<String> {
+    if oid.is_empty() || is_null_oid(oid) {
+        return None;
+    }
+    let git_dir = jj_git_dir(working_dir)?;
+    let mut command = std::process::Command::new("git");
+    // For a colocated repo the objects are reachable from the working
+    // directory, which keeps Git's normal discovery working.
+    if git_dir != Path::new(working_dir) {
+        command.env("GIT_DIR", &git_dir);
+    }
+    let output = command
+        .current_dir(working_dir)
+        .args(["cat-file", "-p", oid])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    String::from_utf8(output.stdout).ok()
 }
 
 // Batch-fetch blobs via a single `git cat-file --batch` invocation.
@@ -986,17 +1054,20 @@ async fn get_file_content(
                 content_new = if let Some(fe) = find_file(&diff.files, &query.path) {
                     let mut content = String::new();
 
-                    if !repository::is_jj_repo(repo) {
-                        if let Some(oid) = &fe.new_blob {
-                            if let Ok(output) = std::process::Command::new("git")
-                                .current_dir(repo)
-                                .args(["cat-file", "-p", oid])
-                                .output()
-                            {
-                                if output.status.success() {
-                                    if let Ok(s) = String::from_utf8(output.stdout) {
-                                        content = s;
-                                    }
+                    if let Some(oid) = &fe.new_blob {
+                        // jj's Git object store holds the OIDs from the patch's
+                        // `index` line, so the exact new content is reachable
+                        // even when the diff names no revision.
+                        if repository::is_jj_repo(repo) {
+                            content = cat_file_from_jj_store(repo, oid).unwrap_or_default();
+                        } else if let Ok(output) = std::process::Command::new("git")
+                            .current_dir(repo)
+                            .args(["cat-file", "-p", oid])
+                            .output()
+                        {
+                            if output.status.success() {
+                                if let Ok(s) = String::from_utf8(output.stdout) {
+                                    content = s;
                                 }
                             }
                         }
@@ -1095,6 +1166,11 @@ async fn get_file_raw(
                         .unwrap_or_else(|_| failed_output());
                     if out.status.success() {
                         out.stdout
+                    } else if let Some(content) = file_entry
+                        .and_then(|file| file.new_blob.as_deref())
+                        .and_then(|oid| cat_file_from_jj_store(repo, oid))
+                    {
+                        content.into_bytes()
                     } else {
                         let joined = base_path.join(rel_path);
                         let file_path =
@@ -1105,23 +1181,13 @@ async fn get_file_raw(
                         std::fs::read(&file_path).map_err(|_| StatusCode::NOT_FOUND)?
                     }
                 } else {
-                    let joined = base_path.join(rel_path);
-                    let file_path =
-                        std::fs::canonicalize(&joined).map_err(|_| StatusCode::NOT_FOUND)?;
-                    if !file_path.starts_with(&base_canon) {
-                        return Err(StatusCode::FORBIDDEN);
-                    }
-                    std::fs::read(&file_path).map_err(|_| StatusCode::NOT_FOUND)?
-                }
-            } else if let Some(file) = file_entry {
-                if let Some(oid) = &file.new_blob {
-                    let output = std::process::Command::new("git")
-                        .current_dir(repo)
-                        .args(["cat-file", "-p", oid])
-                        .output()
-                        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-                    if output.status.success() {
-                        output.stdout
+                    // No revision metadata (e.g. a bare `jj diff` patch): the
+                    // patch's `index` OID still identifies the exact new side.
+                    if let Some(content) = file_entry
+                        .and_then(|file| file.new_blob.as_deref())
+                        .and_then(|oid| cat_file_from_jj_store(repo, oid))
+                    {
+                        content.into_bytes()
                     } else {
                         let joined = base_path.join(rel_path);
                         let file_path =
@@ -1130,6 +1196,30 @@ async fn get_file_raw(
                             return Err(StatusCode::FORBIDDEN);
                         }
                         std::fs::read(&file_path).map_err(|_| StatusCode::NOT_FOUND)?
+                    }
+                }
+            } else if let Some(file) = file_entry {
+                if let Some(oid) = &file.new_blob {
+                    // The OIDs in the patch's `index` line are real Git objects.
+                    let from_blob = {
+                        let output = std::process::Command::new("git")
+                            .current_dir(repo)
+                            .args(["cat-file", "-p", oid])
+                            .output()
+                            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+                        output.status.success().then_some(output.stdout)
+                    };
+                    match from_blob {
+                        Some(bytes) => bytes,
+                        None => {
+                            let joined = base_path.join(rel_path);
+                            let file_path = std::fs::canonicalize(&joined)
+                                .map_err(|_| StatusCode::NOT_FOUND)?;
+                            if !file_path.starts_with(&base_canon) {
+                                return Err(StatusCode::FORBIDDEN);
+                            }
+                            std::fs::read(&file_path).map_err(|_| StatusCode::NOT_FOUND)?
+                        }
                     }
                 } else {
                     let joined = base_path.join(rel_path);
@@ -1157,29 +1247,40 @@ async fn get_file_raw(
             }
 
             if repository::is_jj_repo(repo) {
-                let old_key = file.old_path.clone().unwrap_or_else(|| file.path.clone());
-                let cmd_old = |rev: &str| -> std::process::Output {
-                    std::process::Command::new("jj")
-                        .current_dir(repo)
-                        .args(["file", "show", "-r", rev, "--", &old_key])
-                        .output()
-                        .unwrap_or_else(|_| failed_output())
-                };
-                let revs = jj_old_revisions(diff);
-                let mut result = None;
-                for rev in &revs {
-                    let out = cmd_old(rev);
-                    if out.status.success() {
-                        result = Some(out.stdout);
-                        break;
-                    }
-                }
-                if let Some(content) = result {
-                    content
-                } else if !file.is_binary {
-                    resolve_old_content(diff, repo, &query.path).into_bytes()
+                // Prefer the exact old content identified by the patch's
+                // `index` OID over `@-`/`@`, which only describe the working
+                // copy and are wrong when reviewing another revision.
+                if let Some(content) = file
+                    .old_blob
+                    .as_deref()
+                    .and_then(|oid| cat_file_from_jj_store(repo, oid))
+                {
+                    content.into_bytes()
                 } else {
-                    return Err(StatusCode::NOT_FOUND);
+                    let old_key = file.old_path.clone().unwrap_or_else(|| file.path.clone());
+                    let cmd_old = |rev: &str| -> std::process::Output {
+                        std::process::Command::new("jj")
+                            .current_dir(repo)
+                            .args(["file", "show", "-r", rev, "--", &old_key])
+                            .output()
+                            .unwrap_or_else(|_| failed_output())
+                    };
+                    let revs = jj_old_revisions(diff);
+                    let mut result = None;
+                    for rev in &revs {
+                        let out = cmd_old(rev);
+                        if out.status.success() {
+                            result = Some(out.stdout);
+                            break;
+                        }
+                    }
+                    if let Some(content) = result {
+                        content
+                    } else if !file.is_binary {
+                        resolve_old_content(diff, repo, &query.path).into_bytes()
+                    } else {
+                        return Err(StatusCode::NOT_FOUND);
+                    }
                 }
             } else if let Some(oid) = &file.old_blob {
                 if !is_null_oid(oid) {
