@@ -508,6 +508,60 @@ fn jj_revision_arg(rest: &str) -> Option<String> {
     Some(revision_arg.to_string())
 }
 
+/// Resolve the revision named by a `jj show`/`jj diff` argument to a full
+/// commit id. Returns `None` when the revision cannot be resolved (unknown
+/// revision, or `jj` missing), in which case the diff is used as-is.
+fn resolve_jj_commit_id(revision: &str, working_dir: &str) -> Option<String> {
+    let output = Command::new("jj")
+        .current_dir(working_dir)
+        .args([
+            "log",
+            "--no-graph",
+            "-r",
+            revision,
+            "-T",
+            "commit_id",
+            "--limit",
+            "1",
+        ])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let id = String::from_utf8(output.stdout).ok()?.trim().to_string();
+    (!id.is_empty() && id.chars().all(|c| c.is_ascii_hexdigit())).then_some(id)
+}
+
+/// Ensure the diff text carries `Commit ID:` metadata for the revision it
+/// describes.
+///
+/// `jj diff` output has no revision identity, so the server falls back to
+/// reading the working copy — which is wrong whenever the reviewed revision is
+/// not `@`, the exact bug reported in issue #6. Prefixing the patch with the
+/// resolved commit id makes both the new side (`jj file show -r <id>`) and the
+/// old side (`parents(<id>)`) load from the reviewed revision instead.
+fn diff_text_with_jj_revision(diff_text: String, cmd: Option<&str>, working_dir: &str) -> String {
+    // `jj show`/`git show` patches already start with the commit id.
+    if diff_text.starts_with("commit ")
+        || diff_text.starts_with("Commit ID:")
+        || !repository::is_jj_repo(working_dir)
+    {
+        return diff_text;
+    }
+    let revision = cmd.and_then(|cmd| {
+        let (_, rest) = split_jj_diff_command(cmd)?;
+        jj_revision_arg(rest)
+    });
+    let Some(revision) = revision else {
+        return diff_text;
+    };
+    match resolve_jj_commit_id(&revision, working_dir) {
+        Some(id) => format!("Commit ID: {id}\n{diff_text}"),
+        None => diff_text,
+    }
+}
+
 fn load_review_notes_file(path: &str) -> Result<Vec<ReviewNote>> {
     let text = if path == "-" {
         let mut text = String::new();
@@ -1029,6 +1083,7 @@ async fn main() -> Result<()> {
         (parsed, pre_old, pre_new, true)
     } else {
         // Get diff text from stdin, file, or command
+        let cmd_for_revision = args.cmd.clone();
         let diff_text = if let Some(file_path) = args.file {
             std::fs::read_to_string(&file_path)
                 .context(format!("Failed to read file: {}", file_path))?
@@ -1062,6 +1117,12 @@ async fn main() -> Result<()> {
         if diff_text.trim().is_empty() {
             anyhow::bail!("No diff provided. Pipe diff to stdin, use --file, or --cmd");
         }
+
+        // A `jj diff` patch names no revision, so the server would otherwise
+        // read file contents from the working copy. Re-attach the reviewed
+        // revision's commit id when we can identify it.
+        let diff_text =
+            diff_text_with_jj_revision(diff_text, cmd_for_revision.as_deref(), &working_dir);
 
         let diff = diff::parse_diff(&diff_text)?;
 
