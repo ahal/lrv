@@ -445,6 +445,69 @@ fn get_commit_diff_text(commit_id: &str, working_dir: &str) -> Result<String> {
     }
 }
 
+// `jj diff --git` emits a bare patch, so lrv cannot tell which revision the
+// patch describes and falls back to reading files from the current checkout.
+// `jj show --git` has the same patch format plus the `Commit ID:` metadata
+// needed to load both sides from the selected revision, so switch the direct
+// `jj diff` command form when the user pinned a single revision.
+fn command_with_jj_revision_metadata(cmd: &str) -> String {
+    let Some((prefix, rest)) = split_jj_diff_command(cmd) else {
+        return cmd.to_string();
+    };
+    if jj_revision_arg(rest).is_none() {
+        return cmd.to_string();
+    }
+    format!("{prefix}jj show{rest}")
+}
+
+/// Split a command whose first word is `jj diff` into the untouched prefix
+/// (`""`, leading whitespace, or `cd foo && `) and the arguments after
+/// `jj diff`. Commands that merely contain `jj diff` later, quote it, or use
+/// another subcommand return `None` so they are never rewritten.
+fn split_jj_diff_command(cmd: &str) -> Option<(&str, &str)> {
+    let cmd = cmd.trim_end();
+    let jj_at = cmd.find("jj diff")?;
+    let prefix = &cmd[..jj_at];
+    // Only allow whitespace or a `&&`/`;` chain before `jj diff`, so that
+    // `echo 'jj diff'` or `grep "jj diff" file` are left alone.
+    let trimmed = prefix.trim();
+    if !trimmed.is_empty() && !trimmed.ends_with("&&") && !trimmed.ends_with(';') {
+        return None;
+    }
+    let rest = &cmd[jj_at + "jj diff".len()..];
+    if !rest.is_empty() && !rest.starts_with(char::is_whitespace) {
+        return None;
+    }
+    Some((prefix, rest))
+}
+
+/// The revision passed to `jj diff`, if it names a single revision.
+///
+/// Ranges and unions (`a::b`, `a|b`, `a..b`) describe several commits, while
+/// lrv's single-diff mode expects one revision's metadata, so they are
+/// rejected and leave the command untouched.
+fn jj_revision_arg(rest: &str) -> Option<String> {
+    let args: Vec<_> = rest.split_whitespace().collect();
+    let revision_arg = args
+        .iter()
+        .position(|arg| *arg == "-r" || *arg == "--revisions")
+        .and_then(|idx| args.get(idx + 1).copied())
+        .or_else(|| {
+            args.iter().find_map(|arg| {
+                arg.strip_prefix("--revisions=")
+                    .or_else(|| arg.strip_prefix("-r").filter(|r| !r.is_empty()))
+            })
+        })?;
+    if revision_arg.contains("::")
+        || revision_arg.contains('|')
+        || revision_arg.contains("..")
+        || revision_arg.starts_with('-')
+    {
+        return None;
+    }
+    Some(revision_arg.to_string())
+}
+
 fn load_review_notes_file(path: &str) -> Result<Vec<ReviewNote>> {
     let text = if path == "-" {
         let mut text = String::new();
@@ -971,6 +1034,7 @@ async fn main() -> Result<()> {
                 .context(format!("Failed to read file: {}", file_path))?
         } else if let Some(cmd) = args.cmd {
             let spinner = Spinner::start("Running command");
+            let cmd = command_with_jj_revision_metadata(&cmd);
             let output = if cfg!(target_os = "windows") {
                 Command::new("cmd").args(["/C", &cmd]).output()
             } else {
@@ -1387,4 +1451,61 @@ async fn main() -> Result<()> {
     println!("{}", output);
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // `jj diff -r <rev> --git` names no revision in its output, so lrv rewrites
+    // it to `jj show` to pick up the `Commit ID:` metadata (issue #6).
+    #[test]
+    fn jj_diff_with_a_single_revision_is_rewritten_to_jj_show() {
+        for cmd in [
+            "jj diff -r pso --git",
+            "jj diff --git -r pso",
+            "jj diff -rpso --git",
+            "jj diff --revisions pso --git",
+            "jj diff --revisions=pso --git",
+            "  jj diff -r pso --git  ",
+            "cd /repo && jj diff -r pso --git",
+        ] {
+            let got = command_with_jj_revision_metadata(cmd);
+            assert!(got.contains("jj show"), "{cmd:?} -> {got:?}");
+            assert!(got.contains("pso"), "{cmd:?} -> {got:?}");
+        }
+    }
+
+    #[test]
+    fn commands_without_a_single_revision_are_left_alone() {
+        for cmd in [
+            // No revision pinned: the patch describes @ vs @-, so jj show is
+            // not applicable.
+            "jj diff --git",
+            // Ranges and unions span several commits.
+            "jj diff -r 'a::b' --git",
+            "jj diff -r 'a|b' --git",
+            "jj diff -r 'a..b' --git",
+            // Not a jj diff invocation.
+            "git diff",
+            "jj log -p",
+            "jj show -r pso --git",
+            "echo jj diff -r pso",
+            "grep 'jj diff' notes.txt",
+        ] {
+            assert_eq!(
+                command_with_jj_revision_metadata(cmd),
+                cmd,
+                "should be untouched: {cmd:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn jj_revision_arg_ignores_dash_prefixed_values() {
+        // `-r --git` means the user forgot the revision; do not treat the flag
+        // as a revision name.
+        assert_eq!(jj_revision_arg(" -r --git"), None);
+        assert_eq!(jj_revision_arg(" -r pso --git").as_deref(), Some("pso"));
+    }
 }
