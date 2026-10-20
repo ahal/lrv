@@ -12,8 +12,9 @@ mod types;
 
 use anyhow::{Context, Result};
 use clap::{ArgAction, Parser};
-use lrv::netutil;
+use lrv::{discovery, netutil};
 use moz_cli_version_check::VersionChecker;
+use std::collections::HashMap;
 use std::env;
 use std::io::{Read, Write};
 use std::process::Command;
@@ -21,9 +22,12 @@ use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex, Notify};
 
 use crate::output::OutputFormat;
-use crate::phabricator::PhabricatorClient;
+use crate::phabricator::{PhabricatorClient, Publisher, RevisionStatusInfo};
 use crate::server::{create_router, AppState};
-use crate::types::{CommentLine, DiffResponse, LineType, PrInfo, ProjectContext, ReviewNote, Side};
+use crate::types::{
+    assign_note_ids, tag_single_commit_notes, CommentLine, DiffResponse, LineType, PrInfo,
+    ProjectContext, ReviewNote, Side,
+};
 use lrv::repository;
 
 fn get_project_context() -> ProjectContext {
@@ -260,6 +264,10 @@ struct Args {
     #[arg(long)]
     validate_review_notes: Option<String>,
 
+    /// Add review notes to the running review for this repository (- reads stdin)
+    #[arg(long, value_name = "PATH|-")]
+    add_notes: Option<String>,
+
     /// List review sessions stored in the local comment database and exit
     #[arg(long)]
     list_reviews: bool,
@@ -438,12 +446,45 @@ fn get_commit_diff_text(commit_id: &str, working_dir: &str) -> Result<String> {
 }
 
 fn load_review_notes_file(path: &str) -> Result<Vec<ReviewNote>> {
-    let text = std::fs::read_to_string(path)
-        .context(format!("Failed to read review notes file: {}", path))?;
+    let text = if path == "-" {
+        let mut text = String::new();
+        std::io::stdin()
+            .read_to_string(&mut text)
+            .context("Failed to read review notes from stdin")?;
+        text
+    } else {
+        std::fs::read_to_string(path)
+            .context(format!("Failed to read review notes file: {}", path))?
+    };
     let notes: Vec<ReviewNote> =
         serde_json::from_str(&text).context("Failed to parse review notes JSON")?;
     validate_review_notes(&notes)?;
     Ok(notes)
+}
+
+async fn add_notes_to_review(path: &str) -> Result<()> {
+    let notes = load_review_notes_file(path)?;
+    let cwd = env::current_dir()?;
+    let root = repository::root(&cwd).unwrap_or_else(|| cwd.clone());
+    let missing = || format!("No running lrv found for {}", root.display());
+    let info = discovery::find(&cwd).with_context(missing)?;
+    let response = reqwest::Client::new()
+        .post(format!("{}/api/review-notes", info.url))
+        .bearer_auth(&info.token)
+        .json(&notes)
+        .send()
+        .await
+        .with_context(missing)?;
+    if response.status() == reqwest::StatusCode::UNAUTHORIZED {
+        anyhow::bail!("Another lrv now holds the port advertised for {}; run --add-notes again after restarting the review", root.display());
+    }
+    let result: serde_json::Value = response
+        .error_for_status()
+        .context("Running lrv rejected review notes")?
+        .json()
+        .await?;
+    println!("{}", serde_json::to_string(&result)?);
+    Ok(())
 }
 
 fn validate_review_notes(notes: &[ReviewNote]) -> Result<()> {
@@ -460,17 +501,28 @@ fn validate_review_notes(notes: &[ReviewNote]) -> Result<()> {
     Ok(())
 }
 
-/// The series UI only shows notes whose `commit_idx` matches the selected commit, but loaders
-/// leave it unset when there is a single diff. Pin those notes to commit 0 so they stay visible
-/// in a one-commit series.
-fn tag_single_commit_notes(notes: &mut [ReviewNote], is_series: bool, commit_count: usize) {
-    if !is_series || commit_count != 1 {
-        return;
-    }
-    for note in notes {
-        if note.commit_idx.is_none() {
-            note.commit_idx = Some(0);
+/// Wait for Ctrl-C or SIGTERM and return the conventional exit code (128 + signal number), so
+/// `kill` and process managers also get the discovery entry removed.
+async fn shutdown_signal() -> i32 {
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{signal, SignalKind};
+        match signal(SignalKind::terminate()) {
+            Ok(mut terminate) => tokio::select! {
+                _ = tokio::signal::ctrl_c() => 130,
+                _ = terminate.recv() => 143,
+            },
+            Err(e) => {
+                tracing::warn!("Failed to listen for SIGTERM: {e}");
+                let _ = tokio::signal::ctrl_c().await;
+                130
+            }
         }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = tokio::signal::ctrl_c().await;
+        130
     }
 }
 
@@ -513,7 +565,11 @@ async fn load_phabricator_notes(
 
 /// Load the comments of the Phabricator revision(s) named by the commits' `Differential Revision:`
 /// trailers. `None` when no commit has one. Failures are warnings: the review must open regardless.
-async fn auto_fetch_phab(diffs: &[DiffResponse], include_done: bool) -> Option<Vec<ReviewNote>> {
+async fn auto_fetch_phab(
+    diffs: &[DiffResponse],
+    include_done: bool,
+    skip: &HashMap<usize, &RevisionStatusInfo>,
+) -> Option<Vec<ReviewNote>> {
     let messages: Vec<Option<&str>> = diffs.iter().map(|d| d.commit_message.as_deref()).collect();
     let revisions: Vec<(usize, String, u32)> =
         phabricator::resolve_phab_targets(&[], "", &messages)
@@ -534,6 +590,13 @@ async fn auto_fetch_phab(diffs: &[DiffResponse], include_done: bool) -> Option<V
     };
     let mut notes = Vec::new();
     for (i, base, id) in revisions {
+        if let Some(revision) = skip.get(&i) {
+            eprintln!(
+                "warning: not loading comments from D{id}: {}; update your checkout (e.g. moz-phab patch D{id})",
+                revision.reason.as_deref().unwrap_or_default()
+            );
+            continue;
+        }
         eprintln!("Loading review comments from Phabricator D{id}...");
         let fetched = async {
             let client = PhabricatorClient::new(base, token.clone())?;
@@ -565,6 +628,41 @@ async fn auto_fetch_phab(diffs: &[DiffResponse], include_done: bool) -> Option<V
         }
     }
     Some(notes)
+}
+
+async fn outdated_phab_revisions(publisher: &Publisher) -> Vec<RevisionStatusInfo> {
+    let validation = match tokio::time::timeout(
+        std::time::Duration::from_secs(30),
+        publisher.validate(),
+    )
+    .await
+    {
+        Ok(validation) => validation,
+        Err(_) => {
+            eprintln!("warning: couldn't check whether the Phabricator revisions are up to date: timed out");
+            return Vec::new();
+        }
+    };
+    if let Some(error) = &validation.error {
+        eprintln!(
+            "warning: couldn't check whether the Phabricator revisions are up to date: {error}"
+        );
+        return Vec::new();
+    }
+    for revision in &validation.revisions {
+        if !revision.outdated {
+            if let Some(reason) = &revision.reason {
+                eprintln!(
+                    "warning: couldn't check whether {} is up to date: {reason}",
+                    revision.id
+                );
+            }
+        }
+    }
+    phabricator::foreign_outdated(validation)
+        .into_iter()
+        .cloned()
+        .collect()
 }
 
 /// Assign each commit to the PR it belongs to; `commits` are the indices of each PR's commits.
@@ -768,6 +866,9 @@ async fn main() -> Result<()> {
         recover_stored_review(selector, &args.format.parse()?)?;
         return Ok(());
     }
+    if let Some(path) = &args.add_notes {
+        return add_notes_to_review(path).await;
+    }
     if let Some(path) = args.validate_review_notes {
         match load_review_notes_file(&path) {
             Ok(notes) => {
@@ -936,6 +1037,34 @@ async fn main() -> Result<()> {
     } else {
         None
     };
+    // Explicitly requested comments win; fetching on top of them would duplicate notes.
+    let explicit_comments = !args.phab_revisions.is_empty()
+        || args.phab_mcp_comments.is_some()
+        || args.github_pr_comments.is_some()
+        || args.github_pr.is_some();
+    let config_fetch = user_config.auto_fetch_comments && !explicit_comments;
+    let outdated = match &publisher {
+        Some(publisher) if !args.phab_revisions.is_empty() || config_fetch => {
+            outdated_phab_revisions(publisher).await
+        }
+        _ => Vec::new(),
+    };
+    // An explicit --phab-revision aborts; comments fetched because of the config are skipped.
+    if !args.phab_revisions.is_empty() && !outdated.is_empty() {
+        let reasons = outdated
+            .iter()
+            .filter_map(|revision| revision.reason.as_deref())
+            .collect::<Vec<_>>()
+            .join("\n");
+        anyhow::bail!(
+            "{reasons}\nUpdate your checkout (e.g. `moz-phab patch {}`) or run without --phab-revision.",
+            outdated[0].id
+        );
+    }
+    let skip = outdated
+        .iter()
+        .flat_map(|revision| revision.commit_idxs.iter().map(move |&idx| (idx, revision)))
+        .collect();
     review_notes.extend(
         load_phabricator_notes(
             &named_revisions,
@@ -946,7 +1075,7 @@ async fn main() -> Result<()> {
         .await?,
     );
     if named_revisions.len() < args.phab_revisions.len() {
-        match auto_fetch_phab(&diffs, args.phab_include_done).await {
+        match auto_fetch_phab(&diffs, args.phab_include_done, &skip).await {
             Some(notes) => review_notes.extend(notes),
             None => eprintln!("warning: no commit has a Differential Revision trailer"),
         }
@@ -981,13 +1110,8 @@ async fn main() -> Result<()> {
         }
         None => {}
     }
-    // Explicitly requested comments win; fetching on top of them would duplicate notes.
-    let explicit_comments = !args.phab_revisions.is_empty()
-        || args.phab_mcp_comments.is_some()
-        || args.github_pr_comments.is_some()
-        || args.github_pr.is_some();
-    if user_config.auto_fetch_comments && !explicit_comments {
-        match auto_fetch_phab(&diffs, args.phab_include_done).await {
+    if config_fetch {
+        match auto_fetch_phab(&diffs, args.phab_include_done, &skip).await {
             Some(notes) => review_notes.extend(notes),
             None => {
                 if let Some((notes, prs)) = auto_fetch_github(&diffs).await {
@@ -998,6 +1122,7 @@ async fn main() -> Result<()> {
         }
     }
     tag_single_commit_notes(&mut review_notes, is_series, diffs.len());
+    assign_note_ids(&mut review_notes);
 
     // Setup shutdown channel
     let (shutdown_tx, mut shutdown_rx) = mpsc::channel::<()>(1);
@@ -1052,7 +1177,10 @@ async fn main() -> Result<()> {
     };
 
     // Create app state
+    let agent_token = discovery::new_token()?;
     let state = AppState {
+        notes_version: std::sync::Arc::new(tokio::sync::watch::channel(0).0),
+        agent_token: Arc::from(agent_token.clone()),
         diffs: Arc::new(diffs),
         comments: Arc::new(Mutex::new(Vec::new())),
         overall_comment: Arc::new(Mutex::new(None)),
@@ -1152,6 +1280,27 @@ async fn main() -> Result<()> {
         }
     }
 
+    let discovery_root = repository::root(&env::current_dir()?).unwrap_or(env::current_dir()?);
+    let first_addr = &listeners[0].0;
+    let host = if first_addr == "0.0.0.0" {
+        "127.0.0.1"
+    } else {
+        first_addr
+    };
+    let host = if host.contains(':') {
+        format!("[{host}]")
+    } else {
+        host.to_string()
+    };
+    if let Err(e) = discovery::write(&discovery::ServerInfo {
+        pid: std::process::id(),
+        url: format!("http://{host}:{actual_port}"),
+        token: agent_token,
+        root: discovery_root.clone(),
+    }) {
+        tracing::warn!("Failed to advertise running review: {e:#}");
+    }
+
     for (addr, _) in &listeners {
         if addr == "0.0.0.0" {
             for iface in get_network_interfaces() {
@@ -1193,7 +1342,13 @@ async fn main() -> Result<()> {
     }
 
     // Wait for either shutdown signal or server error
+    let mut signal_exit_code = None;
+    let mut server_result = Ok(());
     tokio::select! {
+        code = shutdown_signal() => {
+            signal_exit_code = Some(code);
+            shutdown_notify.notify_waiters();
+        }
         _ = shutdown_rx.recv() => {
             tracing::info!("Received shutdown signal");
             shutdown_notify.notify_waiters();
@@ -1204,9 +1359,15 @@ async fn main() -> Result<()> {
             }
             Ok(())
         } => {
-            result.context("Server error")?;
+            server_result = result.context("Server error");
         }
     }
+
+    discovery::remove_if_ours(&discovery_root, std::process::id());
+    if let Some(code) = signal_exit_code {
+        std::process::exit(code);
+    }
+    server_result?;
 
     // Output comments
     let comments = state.comments.lock().await;
@@ -1226,45 +1387,4 @@ async fn main() -> Result<()> {
     println!("{}", output);
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn note(file: &str, commit_idx: Option<usize>) -> ReviewNote {
-        ReviewNote {
-            id: None,
-            file: file.to_string(),
-            line: CommentLine::Single(1),
-            side: Side::New,
-            body: "x".to_string(),
-            author: None,
-            date: None,
-            source_url: None,
-            commit_idx,
-            read_only: false,
-        }
-    }
-
-    #[test]
-    fn single_commit_series_notes_are_pinned_to_commit_zero() {
-        let mut notes = vec![
-            note("(commit)", None),
-            note("a.rs", None),
-            note("b.rs", Some(0)),
-        ];
-        tag_single_commit_notes(&mut notes, true, 1);
-        let got: Vec<_> = notes.iter().map(|n| n.commit_idx).collect();
-        assert_eq!(got, [Some(0), Some(0), Some(0)]);
-    }
-
-    #[test]
-    fn notes_untouched_outside_single_commit_series() {
-        for (is_series, count) in [(false, 1), (true, 2)] {
-            let mut notes = vec![note("a.rs", None)];
-            tag_single_commit_notes(&mut notes, is_series, count);
-            assert_eq!(notes[0].commit_idx, None);
-        }
-    }
 }

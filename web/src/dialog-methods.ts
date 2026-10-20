@@ -9,75 +9,6 @@ import { KEYBOARD_SHORTCUTS } from './shortcuts';
 import type { AppContext } from './types/app';
 import { appendLinkifiedText } from './linkify';
 
-type QueuedReviewNoteBody = {
-  instruction?: string;
-  author?: string;
-  quote: string;
-  source?: string;
-};
-
-export function parseQueuedReviewNoteBody(body: string): QueuedReviewNoteBody | null {
-  const lines = body.replace(/\r\n?/g, '\n').trim().split('\n');
-  let source: string | undefined;
-
-  for (let idx = lines.length - 1; idx >= 0; idx -= 1) {
-    const line = lines[idx]?.trim() ?? '';
-    if (!line) {
-      continue;
-    }
-    const sourceMatch = line.match(/^Source:\s+(https?:\/\/\S+)$/);
-    if (sourceMatch) {
-      source = sourceMatch[1];
-      lines.splice(idx, lines.length - idx);
-    }
-    break;
-  }
-
-  while (lines.length > 0 && !lines[lines.length - 1]?.trim()) {
-    lines.pop();
-  }
-
-  const introIndex = lines.findIndex((line) =>
-    /^(?:Address this review comment|Review comment)(?: from .+)?:$/.test(line.trim()),
-  );
-  if (introIndex === -1) {
-    return null;
-  }
-
-  const intro = lines[introIndex]?.trim() ?? '';
-  const quote = lines
-    .slice(introIndex + 1)
-    .map((line) => {
-      if (line === '>') {
-        return '';
-      }
-      if (line.startsWith('> ')) {
-        return line.slice(2);
-      }
-      return line;
-    })
-    .join('\n')
-    .trim();
-  if (!quote) {
-    return null;
-  }
-
-  const instruction = lines.slice(0, introIndex).join('\n').trim();
-  const author = intro.match(/review comment from (.+):$/i)?.[1];
-
-  const parsed: QueuedReviewNoteBody = { quote };
-  if (instruction) {
-    parsed.instruction = instruction;
-  }
-  if (author) {
-    parsed.author = author;
-  }
-  if (source) {
-    parsed.source = source;
-  }
-  return parsed;
-}
-
 export function commentKey(comment: ReviewComment): string {
   return JSON.stringify([
     comment.file,
@@ -665,9 +596,9 @@ export class DialogMethods {
 
   private renderSubmitCommentBody(comment: ReviewComment): HTMLElement {
     const container = el('div', { className: 'comment-preview-text' });
-    const parsed = parseQueuedReviewNoteBody(comment.body);
+    const note = comment.in_reply_to;
 
-    if (!parsed) {
+    if (!note) {
       const plain = el('div', { className: 'comment-preview-body-plain' });
       appendLinkifiedText(plain, comment.body);
       container.appendChild(plain);
@@ -677,7 +608,7 @@ export class DialogMethods {
     const actionText = el('div', { className: 'comment-preview-action-text' });
     appendLinkifiedText(
       actionText,
-      parsed.instruction ?? 'Ask the agent to address this review comment.',
+      comment.body.trim() || 'Ask the agent to address this review comment.',
     );
     container.appendChild(
       el('div', { className: 'comment-preview-action' }, [
@@ -689,21 +620,21 @@ export class DialogMethods {
     const reviewTitleChildren: Node[] = [
       el('span', { className: 'comment-preview-review-label', text: 'Reviewer comment' }),
     ];
-    if (parsed.author) {
+    if (note.author) {
       reviewTitleChildren.push(
-        el('span', { className: 'comment-preview-review-author', text: parsed.author }),
+        el('span', { className: 'comment-preview-review-author', text: note.author }),
       );
     }
 
     const quote = el('blockquote', { className: 'comment-preview-quote' });
-    appendLinkifiedText(quote, parsed.quote);
+    appendLinkifiedText(quote, note.body);
 
     const reviewChildren: Node[] = [
       el('div', { className: 'comment-preview-review-title' }, reviewTitleChildren),
       quote,
     ];
 
-    if (parsed.source) {
+    if (note.source_url) {
       reviewChildren.push(
         el('div', { className: 'comment-preview-source' }, [
           el('span', { text: 'Source' }),
@@ -711,7 +642,7 @@ export class DialogMethods {
             className: 'auto-link',
             text: 'Open in Phabricator',
             attrs: {
-              href: parsed.source,
+              href: note.source_url,
               target: '_blank',
               rel: 'noopener noreferrer',
             },

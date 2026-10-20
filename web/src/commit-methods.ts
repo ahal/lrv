@@ -1,5 +1,10 @@
 import { clearEl, el } from './dom';
-import { commentContainsLine, commentLineLabel, commentStartLine } from './comments';
+import {
+  commentContainsLine,
+  commentDisplayText,
+  commentLineLabel,
+  commentStartLine,
+} from './comments';
 import { appendLinkifiedText } from './linkify';
 import { openModal } from './modal';
 import { MOD_KEY_LABEL } from './platform';
@@ -327,7 +332,7 @@ export class CommitMethods {
         body.style.fontFamily = 'var(--font-sans)';
         body.style.fontSize = '13px';
         body.style.flex = '1';
-        body.textContent = c.body;
+        body.textContent = commentDisplayText(c);
 
         const del = el('button', { className: 'btn-danger', text: 'Delete' });
         del.style.fontSize = '11px';

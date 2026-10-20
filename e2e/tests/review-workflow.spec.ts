@@ -44,6 +44,7 @@ async function startServer(port: number = 0, options?: { title?: string }): Prom
 
     serverProcess = spawn('bash', ['-c', cmd], {
       stdio: ['inherit', 'pipe', 'pipe'],
+      detached: true,
       env: {
         ...process.env,
         XDG_CONFIG_HOME: path.join(testRepoPath, '.config'),
@@ -269,15 +270,19 @@ async function recoverStoredComments(): Promise<Array<{ body: string }>> {
  * Stop the server and capture output
  */
 async function stopServer(): Promise<string> {
-  return new Promise(async (resolve) => {
-    if (!serverProcess) {
+  return new Promise((resolve) => {
+    // Capture the process: tests restart the server right after stopping it, so the fallback
+    // timer must not kill whatever `serverProcess` points to by then.
+    const p = serverProcess;
+    if (!p) {
       resolve('');
       return;
     }
+    serverProcess = null;
 
     let output = '';
 
-    serverProcess.stdout?.on('data', (data) => {
+    p.stdout?.on('data', (data) => {
       const text = data.toString();
       output += text;
       try {
@@ -287,36 +292,30 @@ async function stopServer(): Promise<string> {
       } catch {}
     });
 
-    serverProcess.on('close', () => {
-      serverProcess = null;
+    const timer = setTimeout(() => {
+      try {
+        if (p.pid) {
+          process.kill(-p.pid, 'SIGKILL');
+        }
+      } catch {
+        // Ignore
+      }
+      resolve(output);
+    }, 2000);
+
+    p.on('close', () => {
+      clearTimeout(timer);
       resolve(output);
     });
 
     // Kill the entire process group to ensure child processes are killed
-    if (serverProcess.pid) {
+    if (p.pid) {
       try {
-        process.kill(-serverProcess.pid, 'SIGTERM');
-      } catch (e) {
+        process.kill(-p.pid, 'SIGTERM');
+      } catch {
         // Process might already be dead
       }
     }
-
-    // Avoid aggressive pkill; rely on process group kill for speed and safety
-
-    // Force kill after timeout
-    setTimeout(() => {
-      if (serverProcess) {
-        try {
-          if (serverProcess.pid) {
-            process.kill(-serverProcess.pid, 'SIGKILL');
-          }
-        } catch (e) {
-          // Ignore
-        }
-        serverProcess = null;
-      }
-      resolve(output);
-    }, 2000);
   });
 }
 
@@ -765,7 +764,7 @@ test.describe('Review Workflow E2E', () => {
     await expect(page.locator('#submit-review')).toBeEnabled();
   });
 
-  test('publishing unwraps replies, leaves Address items for the agent and omits published comments', async ({
+  test('publishing sends only reply bodies, leaves Address items for the agent and omits published comments', async ({
     page,
   }) => {
     await page.route('**/api/context', async (route) => {
@@ -856,7 +855,34 @@ test.describe('Review Workflow E2E', () => {
     await page.locator('.confirm-submit-btn').click();
     await expect(page.locator('#submit-review')).toHaveText('Review Submitted');
     expect(sent.comments).toHaveLength(1);
-    expect(sent.comments[0].body).toContain('Address this review comment');
+    expect(sent.comments[0].body).toBe('');
+    expect(sent.comments[0].in_reply_to).toEqual({
+      id: `${sent.comments[0].file}-address`,
+      author: 'Author',
+      body: 'Please fix this.',
+    });
+  });
+
+  test('undoing a queued review note removes its comment', async ({ page }) => {
+    await page.route('**/api/review-notes', (route) =>
+      route.fulfill({
+        json: ['test.txt', 'file2.txt', 'file3.txt'].map((file) => ({
+          id: file,
+          file,
+          line: 2,
+          side: 'new',
+          body: 'Please fix this.',
+        })),
+      }),
+    );
+    await openApp(page);
+    const note = page.locator('.review-note').first();
+    await note.locator('button', { hasText: 'Address' }).click();
+    await expect(note).toContainText('Queued for agent');
+    await expect(page.locator('#comment-count')).toHaveText('1');
+    await note.locator('button', { hasText: 'Undo' }).click();
+    await expect(note.locator('button', { hasText: 'Address' })).toHaveCount(1);
+    await expect(page.locator('#comment-count')).toHaveText('0');
   });
 
   test('stacked mode should add, edit, and delete a comment', async ({ page }) => {

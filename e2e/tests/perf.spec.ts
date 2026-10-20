@@ -104,6 +104,7 @@ async function startServer(port: number = 0): Promise<void> {
     fs.writeFileSync(serverLog, `[start] ${new Date().toISOString()}\nCMD: ${cmd}\n`);
     serverProcess = spawn('bash', ['-c', cmd], {
       stdio: ['inherit', 'pipe', 'pipe'],
+      detached: true,
       env: {
         ...process.env,
         XDG_CONFIG_HOME: path.join(testRepoPath, '.config'),

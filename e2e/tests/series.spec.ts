@@ -39,6 +39,7 @@ async function startSeriesServer(
 
     serverProcess = spawn('bash', ['-c', cmd], {
       stdio: ['inherit', 'pipe', 'pipe'],
+      detached: true,
       env: {
         ...process.env,
         ...extraEnv,
@@ -99,30 +100,30 @@ async function startSeriesServer(
 
 async function stopServer(): Promise<void> {
   return new Promise((resolve) => {
-    if (!serverProcess) {
+    // Capture the process so the fallback timer can't kill a server started after this one.
+    const p = serverProcess;
+    if (!p) {
       resolve();
       return;
     }
-    serverProcess.on('close', () => {
-      serverProcess = null;
-      resolve();
-    });
-    if (serverProcess.pid) {
+    serverProcess = null;
+    const timer = setTimeout(() => {
       try {
-        process.kill(-serverProcess.pid, 'SIGTERM');
+        if (p.pid) {
+          process.kill(-p.pid, 'SIGKILL');
+        }
       } catch {}
-    }
-    setTimeout(() => {
-      if (serverProcess) {
-        try {
-          if (serverProcess.pid) {
-            process.kill(-serverProcess.pid, 'SIGKILL');
-          }
-        } catch {}
-        serverProcess = null;
-      }
       resolve();
     }, 2000);
+    p.on('close', () => {
+      clearTimeout(timer);
+      resolve();
+    });
+    if (p.pid) {
+      try {
+        process.kill(-p.pid, 'SIGTERM');
+      } catch {}
+    }
   });
 }
 
@@ -359,6 +360,7 @@ test.describe('Series: first commit has no file changes', () => {
     await new Promise<void>((resolve, reject) => {
       proc = spawn('bash', ['-c', cmd], {
         stdio: ['inherit', 'pipe', 'pipe'],
+        detached: true,
         env: {
           ...process.env,
           XDG_CONFIG_HOME: path.join(repoDir!, '.config'),
@@ -459,6 +461,7 @@ test.describe('Series: stacked-mode comments stay scoped to their own commit', (
     await new Promise<void>((resolve, reject) => {
       proc = spawn('bash', ['-c', cmd], {
         stdio: ['inherit', 'pipe', 'pipe'],
+        detached: true,
         env: {
           ...process.env,
           XDG_CONFIG_HOME: path.join(repoDir!, '.config'),
@@ -747,6 +750,7 @@ test.describe('Series: overall feedback is series-wide, not attached to a single
     await new Promise<void>((resolve, reject) => {
       proc = spawn('bash', ['-c', cmd], {
         stdio: ['inherit', 'pipe', 'pipe'],
+        detached: true,
         env: {
           ...process.env,
           XDG_CONFIG_HOME: path.join(repoDir!, '.config'),

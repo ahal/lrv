@@ -88,6 +88,9 @@ lrv --phab-mcp-comments /tmp/phab.md ...
 - Wait for the user to submit comments.
 - Plan one fix per comment before touching any code. Never skip a comment.
 - Apply all fixes directly. No explanations or commentary.
+- A comment with `in_reply_to` responds to a review note (`author`, `body`,
+  `source_url`). An empty `body` means address that note; otherwise `body` is
+  the user's reply, which tells you how they want it handled.
 - If the user asks for a local LLM pre-review, perform the review before
   starting `lrv`, write a JSON array of review notes, and pass it with
   `--review-notes-file`. Do not make `lrv` call a model.
@@ -105,3 +108,17 @@ lrv --phab-mcp-comments /tmp/phab.md ...
   `commit_message`, and a `comments` list. Work through the array in order:
   for each commit that has comments, edit that commit and apply all its fixes,
   then return to the top of the stack before moving on.
+
+## Adding notes to a running review
+
+When the user already has lrv open, write notes JSON using the same schema
+as `--review-notes-file`, then run this from the repository:
+
+```bash
+lrv --add-notes /tmp/notes.json
+```
+
+Notes appear in the open page without a reload. Re-running the same batch
+is a no-op; the command reports added and skipped counts. Use `-` instead
+of a file to read JSON from stdin. Never start a second lrv just to show
+notes in an existing review.

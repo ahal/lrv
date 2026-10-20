@@ -3,7 +3,9 @@ use axum::{
     http::{Request, StatusCode},
 };
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::Mutex;
+use tokio_stream::StreamExt;
 use tower::util::ServiceExt;
 
 /// Test that AppState can be created with all required fields
@@ -41,6 +43,8 @@ fn test_app_state_construction() {
         diffs: Arc::new(vec![diff_data]),
         comments: Arc::new(Mutex::new(vec![])),
         overall_comment: Arc::new(Mutex::new(None)),
+        notes_version: std::sync::Arc::new(tokio::sync::watch::channel(0).0),
+        agent_token: Arc::from("test-token"),
         review_notes: Arc::new(Mutex::new(vec![])),
         shutdown_tx: Arc::new(Mutex::new(Some(shutdown_tx))),
         config: Arc::new(Mutex::new(config)),
@@ -95,6 +99,8 @@ fn test_create_router() {
         diffs: Arc::new(vec![diff_data]),
         comments: Arc::new(Mutex::new(vec![])),
         overall_comment: Arc::new(Mutex::new(None)),
+        notes_version: std::sync::Arc::new(tokio::sync::watch::channel(0).0),
+        agent_token: Arc::from("test-token"),
         review_notes: Arc::new(Mutex::new(vec![])),
         shutdown_tx: Arc::new(Mutex::new(Some(shutdown_tx))),
         config: Arc::new(Mutex::new(config)),
@@ -151,6 +157,8 @@ async fn test_review_note_api_round_trip() {
         diffs: Arc::new(vec![diff_data]),
         comments: Arc::new(Mutex::new(vec![])),
         overall_comment: Arc::new(Mutex::new(None)),
+        notes_version: std::sync::Arc::new(tokio::sync::watch::channel(0).0),
+        agent_token: Arc::from("test-token"),
         review_notes: Arc::new(Mutex::new(vec![])),
         shutdown_tx: Arc::new(Mutex::new(Some(shutdown_tx))),
         config: Arc::new(Mutex::new(config)),
@@ -161,7 +169,7 @@ async fn test_review_note_api_round_trip() {
         new_caches: std::sync::Arc::new(vec![tokio::sync::Mutex::new(
             std::collections::HashMap::new(),
         )]),
-        is_series: false,
+        is_series: true,
         pull_requests: Default::default(),
         store: None,
         publish: None,
@@ -179,6 +187,41 @@ async fn test_review_note_api_round_trip() {
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    for token in [None, Some("Bearer wrong-token")] {
+        let mut request = Request::builder()
+            .method("POST")
+            .uri("/api/review-notes")
+            .header("content-type", "application/json");
+        if let Some(token) = token {
+            request = request.header("authorization", token);
+        }
+        let response = app
+            .clone()
+            .oneshot(request.body(Body::from("[]")).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+    let events = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/events")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(events.status(), StatusCode::OK);
+    let mut stream = events.into_body().into_data_stream();
+    let frame = tokio::time::timeout(Duration::from_secs(2), stream.next())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    let frame = String::from_utf8(frame.to_vec()).unwrap();
+    assert!(frame.contains("event: notes"));
+    assert!(frame.contains("data: {\"version\":0}"));
     let note = serde_json::json!({
         "id": "n1",
         "file": "src/lib.rs",
@@ -187,6 +230,8 @@ async fn test_review_note_api_round_trip() {
         "body": "please consider this\nsecond line",
         "author": "Reviewer"
     });
+    let plain =
+        serde_json::json!({"file": "src/lib.rs", "line": 1, "side": "new", "body": "no id"});
 
     let post = app
         .clone()
@@ -194,14 +239,87 @@ async fn test_review_note_api_round_trip() {
             Request::builder()
                 .method("POST")
                 .uri("/api/review-notes")
+                .header("authorization", "Bearer test-token")
                 .header("content-type", "application/json")
-                .body(Body::from(note.to_string()))
+                .body(Body::from(serde_json::json!([note]).to_string()))
                 .unwrap(),
         )
         .await
         .unwrap();
     assert_eq!(post.status(), StatusCode::OK);
+    let frame = tokio::time::timeout(Duration::from_secs(2), stream.next())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    let frame = String::from_utf8(frame.to_vec()).unwrap();
+    assert!(frame.contains("event: notes"));
+    assert!(frame.contains("data: {\"version\":1}"));
 
+    for (batch, expected, status) in [
+        (
+            serde_json::json!([note]),
+            serde_json::json!({"added": 0, "skipped": 1}),
+            StatusCode::OK,
+        ),
+        (
+            serde_json::json!([plain, plain]),
+            serde_json::json!({"added": 1, "skipped": 1}),
+            StatusCode::OK,
+        ),
+        (
+            serde_json::json!([plain]),
+            serde_json::json!({"added": 0, "skipped": 1}),
+            StatusCode::OK,
+        ),
+        (
+            serde_json::json!([{"file": "a", "line": 0, "side": "new", "body": "bad"}]),
+            serde_json::Value::Null,
+            StatusCode::BAD_REQUEST,
+        ),
+        (
+            serde_json::json!([{"file": "a", "line": 1, "side": "new", "body": "bad", "commit_idx": 1}]),
+            serde_json::Value::Null,
+            StatusCode::BAD_REQUEST,
+        ),
+    ] {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/review-notes")
+                    .header("authorization", "Bearer test-token")
+                    .header("content-type", "application/json")
+                    .body(Body::from(batch.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), status);
+        if status == StatusCode::OK {
+            let bytes = axum::body::to_bytes(response.into_body(), 1024)
+                .await
+                .unwrap();
+            assert_eq!(
+                serde_json::from_slice::<serde_json::Value>(&bytes).unwrap(),
+                expected
+            );
+        }
+    }
+    // Only the batch that added a note bumps the version.
+    let frame = tokio::time::timeout(Duration::from_secs(2), stream.next())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    let frame = String::from_utf8(frame.to_vec()).unwrap();
+    assert!(frame.contains("data: {\"version\":2}"));
+    assert!(
+        tokio::time::timeout(Duration::from_millis(100), stream.next())
+            .await
+            .is_err()
+    );
     let get = app
         .oneshot(
             Request::builder()
@@ -217,8 +335,11 @@ async fn test_review_note_api_round_trip() {
         .unwrap();
     let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(value[0]["id"], "n1");
+    assert_eq!(value[0]["commit_idx"], 0);
     assert_eq!(value[0]["line"], serde_json::json!([3, 4]));
     assert_eq!(value[0]["body"], "please consider this\nsecond line");
+    assert_eq!(value.as_array().unwrap().len(), 2);
+    assert!(value[1]["id"].as_str().unwrap().starts_with("lrv-"));
 }
 
 /// Test that comments can be stored in AppState
@@ -237,6 +358,7 @@ async fn test_comment_storage() {
             side: lrv::types::Side::New,
             body: "test comment".to_string(),
             commit_idx: None,
+            in_reply_to: None,
         });
     }
 

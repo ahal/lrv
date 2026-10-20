@@ -458,6 +458,16 @@ const clearEl = (node) => {
 };
 //#endregion
 //#region web/src/comments.ts
+/** A reply with no body only asks the agent to address the note, so it is never published. */
+function isAddressRequest(comment) {
+	return comment.in_reply_to !== void 0 && !comment.body.trim();
+}
+/** Text to show for a comment, which for a bare address request is a description of it. */
+function commentDisplayText(comment) {
+	if (!isAddressRequest(comment)) return comment.body;
+	const author = comment.in_reply_to?.author;
+	return `Address review comment${author ? ` from ${author}` : ""}`;
+}
 function commentStartLine(comment) {
 	return Array.isArray(comment.line) ? comment.line[0] : comment.line;
 }
@@ -542,6 +552,14 @@ var ReviewNoteManager = class {
 		this.notes = [...notes];
 		this.notifyListeners();
 	}
+	mergeNotes(notes) {
+		let added = false;
+		for (const note of notes) if (!this.notes.some((existing) => this.isSameNote(existing, note))) {
+			this.notes.push(note);
+			added = true;
+		}
+		if (added) this.notifyListeners();
+	}
 	addNote(note) {
 		if (this.currentCommitIdx !== null && note.commit_idx === void 0) note = {
 			...note,
@@ -575,8 +593,7 @@ var ReviewNoteManager = class {
 		this.listeners.forEach((l) => l());
 	}
 	isSameNote(a, b) {
-		if (a.id && b.id) return a.id === b.id;
-		return a.file === b.file && a.side === b.side && JSON.stringify(a.line) === JSON.stringify(b.line) && a.body === b.body && a.commit_idx === b.commit_idx;
+		return a === b || a.id !== void 0 && a.id === b.id;
 	}
 };
 //#endregion
@@ -637,6 +654,48 @@ async function fetchJSON(url, options) {
 			hideFetchSpinnerMaybe();
 		}
 	}
+}
+//#endregion
+//#region web/src/live-events.ts
+function startLiveEvents(app) {
+	const source = new EventSource("/api/events");
+	let pending = null;
+	let timer = null;
+	let fetching = false;
+	let refreshAgain = false;
+	const merge = () => {
+		timer = null;
+		if (!pending) return;
+		if (document.querySelector(".review-note-reply")) {
+			timer = setTimeout(merge, 500);
+			return;
+		}
+		app.reviewNoteManager.mergeNotes(pending);
+		pending = null;
+	};
+	const refresh = async () => {
+		if (fetching) {
+			refreshAgain = true;
+			return;
+		}
+		fetching = true;
+		try {
+			do {
+				refreshAgain = false;
+				pending = await fetchJSON("/api/review-notes");
+				if (timer === null) merge();
+			} while (refreshAgain);
+		} catch (error) {
+			console.warn("Failed to load live review notes", error);
+		} finally {
+			fetching = false;
+		}
+	};
+	source.addEventListener("notes", () => void refresh());
+	window.addEventListener("pagehide", () => {
+		source.close();
+		if (timer !== null) clearTimeout(timer);
+	}, { once: true });
 }
 //#endregion
 //#region web/src/config.ts
@@ -11784,7 +11843,7 @@ var CommitMethods = class {
 			body.style.fontFamily = "var(--font-sans)";
 			body.style.fontSize = "13px";
 			body.style.flex = "1";
-			body.textContent = c.body;
+			body.textContent = commentDisplayText(c);
 			const del = el("button", {
 				className: "btn-danger",
 				text: "Delete"
@@ -11878,7 +11937,7 @@ var CommentsUIMethods = class {
 			options: {
 				isWholeLine: true,
 				glyphMarginClassName: "codicon codicon-comment",
-				glyphMarginHoverMessage: { value: comment.body }
+				glyphMarginHoverMessage: { value: commentDisplayText(comment) }
 			}
 		}));
 		const originalDecorations = comments.filter((c) => c.side === "old").map((comment) => ({
@@ -11886,7 +11945,7 @@ var CommentsUIMethods = class {
 			options: {
 				isWholeLine: true,
 				glyphMarginClassName: "codicon codicon-comment",
-				glyphMarginHoverMessage: { value: comment.body }
+				glyphMarginHoverMessage: { value: commentDisplayText(comment) }
 			}
 		}));
 		this.modifiedDecorations = modifiedEditor.deltaDecorations(this.modifiedDecorations, modifiedDecorations);
@@ -12171,10 +12230,8 @@ var ReviewNoteMethods = class {
 			undo.addEventListener("click", (event) => {
 				event.preventDefault();
 				event.stopPropagation();
-				this.reviewNoteManager.updateNote(note, {
-					disposition: "open",
-					instruction: void 0
-				});
+				this.unqueueReviewNote(note);
+				this.reviewNoteManager.updateNote(note, { disposition: "open" });
 			});
 			actions.appendChild(undo);
 			return actions;
@@ -12250,62 +12307,33 @@ var ReviewNoteMethods = class {
 			file: note.file,
 			line: note.line,
 			side: note.side,
-			body: this.formatReviewNoteInstruction(note, instruction)
+			body: instruction ?? "",
+			in_reply_to: replyTarget(note)
 		};
 		this.commentManager.addComment(note.commit_idx === void 0 ? comment : {
 			...comment,
 			commit_idx: note.commit_idx
 		});
-		this.reviewNoteManager.updateNote(note, instruction === void 0 ? { disposition: "addressed" } : {
-			disposition: "addressed",
-			instruction
-		});
+		this.reviewNoteManager.updateNote(note, { disposition: "addressed" });
 	}
-	formatReviewNoteInstruction(note, instruction) {
-		const author = note.author ? ` from ${note.author}` : "";
-		const quoted = note.body.split("\n").map((line) => `> ${line}`).join("\n");
-		const source = note.source_url ? `\n\nSource: ${note.source_url}` : "";
-		if (instruction) return `${instruction}\n\nReview comment${author}:\n${quoted}${source}`;
-		return `Address this review comment${author}:\n${quoted}${source}`;
+	unqueueReviewNote(note) {
+		const index = this.commentManager.comments.findIndex(({ in_reply_to: target }) => target !== void 0 && target.id === note.id && target.author === note.author && target.body === note.body);
+		if (index >= 0) this.commentManager.removeComment(index);
 	}
 	reviewNoteHeightPx(note) {
 		const visualLines = note.body.split("\n").reduce((total, line) => total + Math.max(1, Math.ceil(line.length / 86)), 0);
 		return Math.max(124, Math.min(460, 88 + visualLines * 18));
 	}
 };
+function replyTarget(note) {
+	const target = { body: note.body };
+	if (note.id !== void 0) target.id = note.id;
+	if (note.author !== void 0) target.author = note.author;
+	if (note.source_url !== void 0) target.source_url = note.source_url;
+	return target;
+}
 //#endregion
 //#region web/src/dialog-methods.ts
-function parseQueuedReviewNoteBody(body) {
-	const lines = body.replace(/\r\n?/g, "\n").trim().split("\n");
-	let source;
-	for (let idx = lines.length - 1; idx >= 0; idx -= 1) {
-		const line = lines[idx]?.trim() ?? "";
-		if (!line) continue;
-		const sourceMatch = line.match(/^Source:\s+(https?:\/\/\S+)$/);
-		if (sourceMatch) {
-			source = sourceMatch[1];
-			lines.splice(idx, lines.length - idx);
-		}
-		break;
-	}
-	while (lines.length > 0 && !lines[lines.length - 1]?.trim()) lines.pop();
-	const introIndex = lines.findIndex((line) => /^(?:Address this review comment|Review comment)(?: from .+)?:$/.test(line.trim()));
-	if (introIndex === -1) return null;
-	const intro = lines[introIndex]?.trim() ?? "";
-	const quote = lines.slice(introIndex + 1).map((line) => {
-		if (line === ">") return "";
-		if (line.startsWith("> ")) return line.slice(2);
-		return line;
-	}).join("\n").trim();
-	if (!quote) return null;
-	const instruction = lines.slice(0, introIndex).join("\n").trim();
-	const author = intro.match(/review comment from (.+):$/i)?.[1];
-	const parsed = { quote };
-	if (instruction) parsed.instruction = instruction;
-	if (author) parsed.author = author;
-	if (source) parsed.source = source;
-	return parsed;
-}
 function commentKey(comment) {
 	return JSON.stringify([
 		comment.file,
@@ -12711,15 +12739,15 @@ var DialogMethods = class {
 	}
 	renderSubmitCommentBody(comment) {
 		const container = el("div", { className: "comment-preview-text" });
-		const parsed = parseQueuedReviewNoteBody(comment.body);
-		if (!parsed) {
+		const note = comment.in_reply_to;
+		if (!note) {
 			const plain = el("div", { className: "comment-preview-body-plain" });
 			appendLinkifiedText(plain, comment.body);
 			container.appendChild(plain);
 			return container;
 		}
 		const actionText = el("div", { className: "comment-preview-action-text" });
-		appendLinkifiedText(actionText, parsed.instruction ?? "Ask the agent to address this review comment.");
+		appendLinkifiedText(actionText, comment.body.trim() || "Ask the agent to address this review comment.");
 		container.appendChild(el("div", { className: "comment-preview-action" }, [el("span", {
 			className: "comment-preview-action-badge",
 			text: "Queued"
@@ -12728,18 +12756,18 @@ var DialogMethods = class {
 			className: "comment-preview-review-label",
 			text: "Reviewer comment"
 		})];
-		if (parsed.author) reviewTitleChildren.push(el("span", {
+		if (note.author) reviewTitleChildren.push(el("span", {
 			className: "comment-preview-review-author",
-			text: parsed.author
+			text: note.author
 		}));
 		const quote = el("blockquote", { className: "comment-preview-quote" });
-		appendLinkifiedText(quote, parsed.quote);
+		appendLinkifiedText(quote, note.body);
 		const reviewChildren = [el("div", { className: "comment-preview-review-title" }, reviewTitleChildren), quote];
-		if (parsed.source) reviewChildren.push(el("div", { className: "comment-preview-source" }, [el("span", { text: "Source" }), el("a", {
+		if (note.source_url) reviewChildren.push(el("div", { className: "comment-preview-source" }, [el("span", { text: "Source" }), el("a", {
 			className: "auto-link",
 			text: "Open in Phabricator",
 			attrs: {
-				href: parsed.source,
+				href: note.source_url,
 				target: "_blank",
 				rel: "noopener noreferrer"
 			}
@@ -12802,9 +12830,9 @@ var PublishDialogMethods = class {
 		const originals = this.commentManager.getComments().filter((c) => !this.publishedCommentKeys.has(commentKey(c)));
 		const forRevision = (id) => {
 			const revision = status.revisions.find((r) => r.id === id);
-			return originals.filter((c) => revision.commit_idxs.includes(c.commit_idx ?? 0) && !isAddress(c));
+			return originals.filter((c) => revision.commit_idxs.includes(c.commit_idx ?? 0) && !isAddressRequest(c));
 		};
-		const unassigned = originals.filter((c) => isAddress(c) || !status.revisions.some((r) => r.commit_idxs.includes(c.commit_idx ?? 0)));
+		const unassigned = originals.filter((c) => isAddressRequest(c) || !status.revisions.some((r) => r.commit_idxs.includes(c.commit_idx ?? 0)));
 		const tabs = el("div", {
 			className: "publish-tabs",
 			attrs: { role: "tablist" }
@@ -12944,7 +12972,7 @@ var PublishDialogMethods = class {
 			}));
 			const preview = el("div");
 			panel.appendChild(preview);
-			const plainComments = comments.map(unwrapReply);
+			const plainComments = comments.map(({ in_reply_to: _note, ...comment }) => comment);
 			this.renderSubmitComments(preview, plainComments).then(() => {
 				if (generation !== rendering) preview.remove();
 			});
@@ -12988,17 +13016,6 @@ var PublishDialogMethods = class {
 		render();
 	}
 };
-function isAddress(comment) {
-	const parsed = parseQueuedReviewNoteBody(comment.body);
-	return parsed !== null && !parsed.instruction;
-}
-function unwrapReply(comment) {
-	const parsed = parseQueuedReviewNoteBody(comment.body);
-	return parsed?.instruction ? {
-		...comment,
-		body: parsed.instruction
-	} : comment;
-}
 //#endregion
 //#region web/src/series-methods.ts
 function prGroups(series) {
@@ -13621,7 +13638,7 @@ var StackedViewMethods = class {
 		});
 		const body = el("div", {
 			className: "stacked-comment-body",
-			text: comment.body
+			text: commentDisplayText(comment)
 		});
 		const actions = el("div", { className: "stacked-comment-actions-row" });
 		const edit = el("button", {
@@ -13997,6 +14014,7 @@ var MonacoApp = class {
 					const reviewTime = document.getElementById("review-time");
 					if (reviewTime) reviewTime.textContent = (/* @__PURE__ */ new Date()).toLocaleString();
 					this.renderProjectInfo();
+					startLiveEvents(this);
 					window.Perf.mark("init:final-paint-wait:start");
 					requestAnimationFrame(() => requestAnimationFrame(() => {
 						window.Perf.mark("init:final-paint-wait:end");

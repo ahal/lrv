@@ -50,6 +50,8 @@ fn make_state_with_root(root: &str) -> lrv::server::AppState {
         diffs: Arc::new(vec![diff_data]),
         comments: Arc::new(Mutex::new(vec![])),
         overall_comment: Arc::new(Mutex::new(None)),
+        notes_version: std::sync::Arc::new(tokio::sync::watch::channel(0).0),
+        agent_token: Arc::from("test-token"),
         review_notes: Arc::new(Mutex::new(vec![])),
         shutdown_tx: Arc::new(Mutex::new(Some(shutdown_tx))),
         config: Arc::new(Mutex::new(config)),

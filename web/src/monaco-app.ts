@@ -2,6 +2,7 @@ import { $, clearEl, el } from './dom';
 import { CommentManager } from './comments';
 import { ReviewNoteManager } from './review-notes';
 import { fetchJSON } from './api';
+import { startLiveEvents } from './live-events';
 import { DEFAULT_APP_CONFIG, resolveAppConfig } from './config';
 import {
   buildCommentDraftKey,
@@ -333,6 +334,7 @@ export class MonacoApp {
           }
           // Set project info
           this.renderProjectInfo();
+          startLiveEvents(this);
           // Wait for paint and record init end
           window.Perf.mark('init:final-paint-wait:start');
           requestAnimationFrame(() =>

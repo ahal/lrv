@@ -7,6 +7,7 @@ fn test_text_output_single_and_range_lines() {
             side: lrv::types::Side::New,
             body: "single line".to_string(),
             commit_idx: None,
+            in_reply_to: None,
         },
         lrv::types::Comment {
             file: "b.rs".to_string(),
@@ -14,6 +15,7 @@ fn test_text_output_single_and_range_lines() {
             side: lrv::types::Side::Old,
             body: "range line".to_string(),
             commit_idx: None,
+            in_reply_to: None,
         },
     ];
 
@@ -32,6 +34,7 @@ fn test_json_output_line_shape() {
             side: lrv::types::Side::New,
             body: "single".to_string(),
             commit_idx: None,
+            in_reply_to: None,
         },
         lrv::types::Comment {
             file: "b.rs".to_string(),
@@ -39,6 +42,7 @@ fn test_json_output_line_shape() {
             side: lrv::types::Side::Old,
             body: "range".to_string(),
             commit_idx: None,
+            in_reply_to: None,
         },
     ];
 
@@ -90,6 +94,7 @@ fn test_series_json_output_nested_by_commit() {
             side: lrv::types::Side::New,
             body: "comment on first".to_string(),
             commit_idx: Some(0),
+            in_reply_to: None,
         },
         lrv::types::Comment {
             file: "b.rs".to_string(),
@@ -97,6 +102,7 @@ fn test_series_json_output_nested_by_commit() {
             side: lrv::types::Side::New,
             body: "comment on second".to_string(),
             commit_idx: Some(1),
+            in_reply_to: None,
         },
     ];
 
@@ -201,4 +207,62 @@ fn published_output_includes_destinations() {
         with_published("No comments".to_string(), &OutputFormat::Text, urls),
         "No comments\nReview published to Phabricator:\n  https://phab.example/D123"
     );
+}
+
+fn reply(body: &str) -> lrv::types::Comment {
+    lrv::types::Comment {
+        file: "a.rs".to_string(),
+        line: lrv::types::CommentLine::Single(3),
+        side: lrv::types::Side::New,
+        body: body.to_string(),
+        commit_idx: None,
+        in_reply_to: Some(lrv::types::ReplyTarget {
+            id: Some("42".to_string()),
+            author: Some("alice".to_string()),
+            body: "Why a Vec?\nIt is searched a lot.".to_string(),
+            source_url: Some("https://phab.example/D1#inline-42".to_string()),
+        }),
+    }
+}
+
+#[test]
+fn text_output_quotes_the_note_a_comment_replies_to() {
+    use lrv::output::{format_output, OutputFormat};
+    let text = format_output(vec![reply("")], &OutputFormat::Text, &[], false, None);
+    assert!(text.contains(
+        "a.rs:3 [new]\n  Address this review comment from alice:\n  > Why a Vec?\n  > It is searched a lot.\n  Source: https://phab.example/D1#inline-42\n"
+    ));
+
+    let text = format_output(
+        vec![reply("Use a HashSet.")],
+        &OutputFormat::Text,
+        &[],
+        false,
+        None,
+    );
+    assert!(text
+        .contains("  Use a HashSet.\n  In reply to review comment from alice:\n  > Why a Vec?\n"));
+}
+
+#[test]
+fn json_output_includes_the_note_a_comment_replies_to() {
+    use lrv::output::{format_output, OutputFormat};
+    let json = format_output(vec![reply("")], &OutputFormat::Json, &[], false, None);
+    let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+    let comment = &v["comments"][0];
+    assert_eq!(comment["body"], "");
+    assert_eq!(comment["in_reply_to"]["id"], "42");
+    assert_eq!(comment["in_reply_to"]["author"], "alice");
+    assert_eq!(
+        comment["in_reply_to"]["body"],
+        "Why a Vec?\nIt is searched a lot."
+    );
+
+    let plain = lrv::types::Comment {
+        in_reply_to: None,
+        ..reply("x")
+    };
+    let json = format_output(vec![plain], &OutputFormat::Json, &[], false, None);
+    let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+    assert!(v["comments"][0].get("in_reply_to").is_none());
 }

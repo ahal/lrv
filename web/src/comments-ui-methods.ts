@@ -1,6 +1,12 @@
 import { el } from './dom';
 import { MOD_KEY_LABEL } from './platform';
-import { commentEndLine, commentLineLabel, commentStartLine, type CommentLine } from './comments';
+import {
+  commentDisplayText,
+  commentEndLine,
+  commentLineLabel,
+  commentStartLine,
+  type CommentLine,
+} from './comments';
 import type { AppContext, Side } from './types/app';
 import type { editor } from 'monaco-editor';
 
@@ -45,7 +51,7 @@ export class CommentsUIMethods {
         options: {
           isWholeLine: true,
           glyphMarginClassName: 'codicon codicon-comment',
-          glyphMarginHoverMessage: { value: comment.body },
+          glyphMarginHoverMessage: { value: commentDisplayText(comment) },
         },
       }));
 
@@ -57,7 +63,7 @@ export class CommentsUIMethods {
         options: {
           isWholeLine: true,
           glyphMarginClassName: 'codicon codicon-comment',
-          glyphMarginHoverMessage: { value: comment.body },
+          glyphMarginHoverMessage: { value: commentDisplayText(comment) },
         },
       }));
 
